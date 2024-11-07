@@ -88,5 +88,17 @@
     "name": "r6qbex",
     "participants": [],
     "createdAt": "2024-11-07T12:17:47.860Z"
+  },
+  "8drvt1": {
+    "id": "8drvt1",
+    "name": "8drvt1",
+    "participants": [
+      {
+        "id": "jORxkWgAsCsXUxyGAACT",
+        "name": "AlexDanilov",
+        "vote": null
+      }
+    ],
+    "createdAt": "2024-11-07T14:43:39.591Z"
   }
 }
