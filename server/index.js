@@ -2,28 +2,75 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs/promises';
+import { loadRooms, saveRooms, createRoom } from './rooms.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173", // Vite's default port
+        origin: "http://localhost:5173",
         methods: ["GET", "POST"]
     }
 });
 
-// Store rooms and their participants
-const rooms = new Map();
+// Initialize rooms Map
+let rooms = new Map();
 
+// Ensure rooms.json exists
+const ROOMS_FILE = join(__dirname, 'rooms.json');
+try {
+    await fs.access(ROOMS_FILE);
+} catch {
+    await fs.writeFile(ROOMS_FILE, '{}');
+}
+
+// Load persisted rooms
+try {
+    rooms = await loadRooms();
+} catch (error) {
+    console.error('Error loading rooms:', error);
+    rooms = new Map();
+}
+
+// REST endpoints for room management
+app.get('/api/rooms', async (req, res) => {
+    const roomList = Array.from(rooms.entries()).map(([id, room]) => ({
+        id,
+        name: room.name || id,
+        participantCount: room.size,
+        createdAt: room.createdAt
+    }));
+    res.json(roomList);
+});
+
+app.post('/api/rooms', async (req, res) => {
+    const { roomId, name } = req.body;
+    if (!rooms.has(roomId)) {
+        rooms.set(roomId, createRoom(roomId, name));
+        await saveRooms(rooms);
+        res.json({ success: true, roomId });
+    } else {
+        res.status(400).json({ error: 'Room already exists' });
+    }
+});
+
+// Socket.IO events
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    socket.on('joinRoom', ({ roomId, userName }) => {
+    socket.on('joinRoom', async ({ roomId, userName }) => {
         // Create room if it doesn't exist
         if (!rooms.has(roomId)) {
-            rooms.set(roomId, new Map());
+            rooms.set(roomId, createRoom(roomId));
         }
 
         // Add participant to room
@@ -42,10 +89,11 @@ io.on('connection', (socket) => {
             participants: Array.from(room.values())
         });
 
+        await saveRooms(rooms);
         console.log(`${userName} joined room ${roomId}`);
     });
 
-    socket.on('vote', ({ roomId, vote }) => {
+    socket.on('vote', async ({ roomId, vote }) => {
         const room = rooms.get(roomId);
         if (room && room.has(socket.id)) {
             const participant = room.get(socket.id);
@@ -56,6 +104,8 @@ io.on('connection', (socket) => {
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.values())
             });
+
+            await saveRooms(rooms);
         }
     });
 
@@ -63,7 +113,7 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('votesRevealed');
     });
 
-    socket.on('resetVotes', ({ roomId }) => {
+    socket.on('resetVotes', async ({ roomId }) => {
         const room = rooms.get(roomId);
         if (room) {
             // Reset all votes in the room
@@ -77,26 +127,23 @@ io.on('connection', (socket) => {
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.values())
             });
+
+            await saveRooms(rooms);
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
         console.log('User disconnected:', socket.id);
 
         // Remove participant from their room
         for (const [roomId, room] of rooms.entries()) {
             if (room.has(socket.id)) {
                 room.delete(socket.id);
+                io.to(roomId).emit('participantUpdate', {
+                    participants: Array.from(room.values())
+                });
 
-                // If room is empty, remove it
-                if (room.size === 0) {
-                    rooms.delete(roomId);
-                } else {
-                    // Update remaining participants
-                    io.to(roomId).emit('participantUpdate', {
-                        participants: Array.from(room.values())
-                    });
-                }
+                await saveRooms(rooms);
                 break;
             }
         }
