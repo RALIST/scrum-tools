@@ -1,7 +1,14 @@
+import { FC } from 'react'
 import { Box, Container, Heading, SimpleGrid, Text, Button, VStack, useColorMode } from '@chakra-ui/react'
 import { Link as RouterLink } from 'react-router-dom'
 
-const FeatureCard = ({ title, description, link }) => {
+interface FeatureCardProps {
+    title: string
+    description: string
+    link: string
+}
+
+const FeatureCard: FC<FeatureCardProps> = ({ title, description, link }) => {
     const { colorMode } = useColorMode()
 
     return (
@@ -23,7 +30,7 @@ const FeatureCard = ({ title, description, link }) => {
     )
 }
 
-const Home = () => {
+const Home: FC = () => {
     const { colorMode } = useColorMode()
 
     return (

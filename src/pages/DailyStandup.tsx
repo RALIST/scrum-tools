@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { FC, useState, useEffect } from 'react'
 import {
     Box,
     Container,
@@ -16,26 +16,26 @@ import {
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, TimeIcon } from '@chakra-ui/icons'
 
-const DEFAULT_TIME = 120 // 2 minutes in seconds
-const WARNING_TIME = 30 // Time in seconds when to show warning color
+const DEFAULT_TIME: number = 120 // 2 minutes in seconds
+const WARNING_TIME: number = 30 // Time in seconds when to show warning color
 
-const formatTime = (seconds) => {
+const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-const DailyStandup = () => {
-    const [teamMembers, setTeamMembers] = useState([])
-    const [newMember, setNewMember] = useState('')
-    const [timeLeft, setTimeLeft] = useState(DEFAULT_TIME)
-    const [isRunning, setIsRunning] = useState(false)
-    const [currentSpeaker, setCurrentSpeaker] = useState(null)
+const DailyStandup: FC = () => {
+    const [teamMembers, setTeamMembers] = useState<string[]>([])
+    const [newMember, setNewMember] = useState<string>('')
+    const [timeLeft, setTimeLeft] = useState<number>(DEFAULT_TIME)
+    const [isRunning, setIsRunning] = useState<boolean>(false)
+    const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null)
     const { colorMode } = useColorMode()
     const toast = useToast()
 
     useEffect(() => {
-        let timer
+        let timer: NodeJS.Timeout | undefined
         if (isRunning && timeLeft > 0) {
             timer = setInterval(() => {
                 setTimeLeft((prev) => prev - 1)
@@ -51,32 +51,34 @@ const DailyStandup = () => {
             })
         }
 
-        return () => clearInterval(timer)
+        return () => {
+            if (timer) clearInterval(timer)
+        }
     }, [isRunning, timeLeft, toast])
 
-    const handleAddMember = () => {
+    const handleAddMember = (): void => {
         if (newMember.trim()) {
             setTeamMembers([...teamMembers, newMember.trim()])
             setNewMember('')
         }
     }
 
-    const handleRemoveMember = (index) => {
+    const handleRemoveMember = (index: number): void => {
         setTeamMembers(teamMembers.filter((_, i) => i !== index))
     }
 
-    const startTimer = (member) => {
+    const startTimer = (member: string): void => {
         setCurrentSpeaker(member)
         setTimeLeft(DEFAULT_TIME)
         setIsRunning(true)
     }
 
-    const stopTimer = () => {
+    const stopTimer = (): void => {
         setIsRunning(false)
         setCurrentSpeaker(null)
     }
 
-    const getTimeColor = () => {
+    const getTimeColor = (): string => {
         if (timeLeft <= WARNING_TIME) {
             return 'red.500'
         }

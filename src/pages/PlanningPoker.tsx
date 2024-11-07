@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { FC, useState } from 'react'
 import {
     Box,
     Container,
@@ -12,9 +12,15 @@ import {
     useToast
 } from '@chakra-ui/react'
 
-const FIBONACCI_SEQUENCE = ['1', '2', '3', '5', '8', '13', '21', '?']
+const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
 
-const Card = ({ value, isSelected, onClick }) => {
+interface CardProps {
+    value: string
+    isSelected: boolean
+    onClick: () => void
+}
+
+const Card: FC<CardProps> = ({ value, isSelected, onClick }) => {
     const { colorMode } = useColorMode()
 
     return (
@@ -36,12 +42,12 @@ const Card = ({ value, isSelected, onClick }) => {
     )
 }
 
-const PlanningPoker = () => {
-    const [selectedCard, setSelectedCard] = useState(null)
+const PlanningPoker: FC = () => {
+    const [selectedCard, setSelectedCard] = useState<string | null>(null)
     const { colorMode } = useColorMode()
     const toast = useToast()
 
-    const handleCardSelect = (value) => {
+    const handleCardSelect = (value: string) => {
         setSelectedCard(value)
         toast({
             title: 'Vote Recorded',
