@@ -36,7 +36,7 @@ import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 
 const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
-const SOCKET_URL = 'http://localhost:3001'
+const SOCKET_URL = `http://${window.location.hostname}:3001`
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
 
 interface Participant {
