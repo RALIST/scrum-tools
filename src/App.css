@@ -1,0 +1,40 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+}
+
+/* Ad space styling */
+.ad-container {
+  width: 100%;
+  padding: 1rem;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px dashed #ccc;
+  margin: 1rem 0;
+}
+
+.ad-container.horizontal {
+  height: 90px;
+}
+
+.ad-container.vertical {
+  height: 600px;
+  width: 160px;
+}
+
+.ad-container.square {
+  height: 250px;
+  width: 250px;
+  margin: 0 auto;
+}
