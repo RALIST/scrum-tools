@@ -6,35 +6,68 @@
 
 .app {
   min-height: 100vh;
+  min-width: 100vw;
   display: flex;
   flex-direction: column;
 }
 
 .main-content {
   flex: 1;
+  width: 100%;
 }
 
 /* Ad space styling */
 .ad-container {
   width: 100%;
-  padding: 1rem;
+  padding: 0.5rem;
   text-align: center;
   background: rgba(0, 0, 0, 0.02);
   border: 1px dashed #ccc;
-  margin: 1rem 0;
+  margin: 0.5rem 0;
+  overflow: hidden;
 }
 
+/* Responsive ad containers */
 .ad-container.horizontal {
-  height: 90px;
+  height: auto;
+  min-height: 50px;
+  max-height: 90px;
 }
 
 .ad-container.vertical {
-  height: 600px;
-  width: 160px;
+  height: auto;
+  min-height: 250px;
+  max-height: 600px;
+  width: 100%;
+  max-width: 160px;
 }
 
 .ad-container.square {
-  height: 250px;
-  width: 250px;
+  height: auto;
+  aspect-ratio: 1/1;
+  width: 100%;
+  max-width: 250px;
   margin: 0 auto;
+}
+
+/* Media queries for larger screens */
+@media (min-width: 768px) {
+  .ad-container {
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .ad-container.horizontal {
+    height: 90px;
+  }
+
+  .ad-container.vertical {
+    height: 600px;
+    width: 160px;
+  }
+
+  .ad-container.square {
+    height: 250px;
+    width: 250px;
+  }
 }

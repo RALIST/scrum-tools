@@ -1,7 +1,6 @@
 import { FC, useState, useEffect } from 'react'
 import {
     Box,
-    Container,
     Heading,
     Text,
     VStack,
@@ -12,9 +11,11 @@ import {
     ListItem,
     IconButton,
     useColorMode,
-    useToast
+    useToast,
+    Stack
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, TimeIcon } from '@chakra-ui/icons'
+import PageContainer from '../components/PageContainer'
 
 const DEFAULT_TIME: number = 120 // 2 minutes in seconds
 const WARNING_TIME: number = 30 // Time in seconds when to show warning color
@@ -87,57 +88,82 @@ const DailyStandup: FC = () => {
 
     return (
         <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
-            <Container maxW="1200px" py={12}>
-                <VStack spacing={8}>
+            <PageContainer>
+                <VStack spacing={{ base: 6, md: 8 }}>
                     <Box textAlign="center">
-                        <Heading size="xl" mb={4}>
+                        <Heading size={{ base: "lg", md: "xl" }} mb={{ base: 3, md: 4 }}>
                             Daily Standup Timer
                         </Heading>
-                        <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                        <Text
+                            fontSize={{ base: "md", md: "lg" }}
+                            color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
+                            px={{ base: 2, md: 0 }}
+                        >
                             Keep your daily standups focused and time-boxed
                         </Text>
                     </Box>
 
                     <Box
                         w="full"
-                        p={8}
+                        p={{ base: 4, md: 8 }}
                         borderRadius="lg"
                         bg={colorMode === 'light' ? 'white' : 'gray.700'}
                         shadow="md"
                     >
-                        <VStack spacing={6}>
-                            <HStack w="full">
+                        <VStack spacing={{ base: 4, md: 6 }}>
+                            <Stack
+                                w="full"
+                                direction={{ base: "column", md: "row" }}
+                                spacing={{ base: 2, md: 4 }}
+                            >
                                 <Input
                                     placeholder="Add team member"
                                     value={newMember}
                                     onChange={(e) => setNewMember(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleAddMember()}
+                                    size={{ base: "md", md: "md" }}
                                 />
                                 <IconButton
                                     icon={<AddIcon />}
                                     onClick={handleAddMember}
                                     colorScheme="blue"
                                     aria-label="Add team member"
+                                    size={{ base: "md", md: "md" }}
+                                    w={{ base: "full", md: "auto" }}
                                 />
-                            </HStack>
+                            </Stack>
 
-                            <List spacing={3} w="full">
+                            <List spacing={{ base: 2, md: 3 }} w="full">
                                 {teamMembers.map((member, index) => (
                                     <ListItem
                                         key={index}
-                                        p={3}
+                                        p={{ base: 2, md: 3 }}
                                         borderRadius="md"
                                         bg={currentSpeaker === member ? 'blue.100' : 'transparent'}
                                         color={currentSpeaker === member ? 'blue.800' : 'inherit'}
                                     >
-                                        <HStack justify="space-between">
-                                            <Text>{member}</Text>
-                                            <HStack>
+                                        <Stack
+                                            direction={{ base: "column", md: "row" }}
+                                            justify="space-between"
+                                            align={{ base: "stretch", md: "center" }}
+                                            spacing={{ base: 2, md: 0 }}
+                                        >
+                                            <Text
+                                                fontSize={{ base: "md", md: "md" }}
+                                                textAlign={{ base: "center", md: "left" }}
+                                            >
+                                                {member}
+                                            </Text>
+                                            <Stack
+                                                direction="row"
+                                                justify={{ base: "center", md: "flex-end" }}
+                                                spacing={2}
+                                            >
                                                 <IconButton
                                                     icon={<TimeIcon />}
                                                     onClick={() => startTimer(member)}
                                                     colorScheme="green"
-                                                    size="sm"
+                                                    size={{ base: "md", md: "sm" }}
                                                     aria-label="Start timer"
                                                     isDisabled={isRunning}
                                                 />
@@ -145,27 +171,33 @@ const DailyStandup: FC = () => {
                                                     icon={<DeleteIcon />}
                                                     onClick={() => handleRemoveMember(index)}
                                                     colorScheme="red"
-                                                    size="sm"
+                                                    size={{ base: "md", md: "sm" }}
                                                     aria-label="Remove member"
                                                 />
-                                            </HStack>
-                                        </HStack>
+                                            </Stack>
+                                        </Stack>
                                     </ListItem>
                                 ))}
                             </List>
 
                             {currentSpeaker && (
-                                <VStack spacing={4}>
-                                    <Text fontSize="2xl" fontWeight="bold" color={getTimeColor()}>
+                                <VStack spacing={{ base: 3, md: 4 }}>
+                                    <Text
+                                        fontSize={{ base: "xl", md: "2xl" }}
+                                        fontWeight="bold"
+                                        color={getTimeColor()}
+                                    >
                                         {formatTime(timeLeft)}
                                     </Text>
-                                    <Text>
+                                    <Text fontSize={{ base: "md", md: "lg" }}>
                                         Current Speaker: <strong>{currentSpeaker}</strong>
                                     </Text>
                                     <Button
                                         colorScheme="red"
                                         onClick={stopTimer}
                                         isDisabled={!isRunning}
+                                        size={{ base: "md", md: "md" }}
+                                        w={{ base: "full", md: "auto" }}
                                     >
                                         Stop Timer
                                     </Button>
@@ -173,14 +205,18 @@ const DailyStandup: FC = () => {
                             )}
 
                             {teamMembers.length === 0 && (
-                                <Text color={colorMode === 'light' ? 'gray.500' : 'gray.400'}>
+                                <Text
+                                    color={colorMode === 'light' ? 'gray.500' : 'gray.400'}
+                                    fontSize={{ base: "sm", md: "md" }}
+                                    textAlign="center"
+                                >
                                     Add team members to get started
                                 </Text>
                             )}
                         </VStack>
                     </Box>
                 </VStack>
-            </Container>
+            </PageContainer>
         </Box>
     )
 }

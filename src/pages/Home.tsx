@@ -1,6 +1,7 @@
 import { FC } from 'react'
-import { Box, Container, Heading, SimpleGrid, Text, Button, VStack, useColorMode } from '@chakra-ui/react'
+import { Box, Heading, SimpleGrid, Text, Button, VStack, useColorMode } from '@chakra-ui/react'
 import { Link as RouterLink } from 'react-router-dom'
+import PageContainer from '../components/PageContainer'
 
 interface FeatureCardProps {
     title: string
@@ -13,16 +14,24 @@ const FeatureCard: FC<FeatureCardProps> = ({ title, description, link }) => {
 
     return (
         <Box
-            p={6}
+            p={{ base: 4, md: 6 }}
             borderRadius="lg"
             bg={colorMode === 'light' ? 'white' : 'gray.700'}
             shadow="md"
             _hover={{ transform: 'translateY(-4px)', transition: 'transform 0.2s' }}
+            height="full"
         >
-            <VStack spacing={4} align="start">
-                <Heading size="md">{title}</Heading>
-                <Text>{description}</Text>
-                <Button as={RouterLink} to={link} colorScheme="blue">
+            <VStack spacing={4} align="start" height="full">
+                <Heading size={{ base: "sm", md: "md" }}>{title}</Heading>
+                <Text fontSize={{ base: "sm", md: "md" }}>{description}</Text>
+                <Button
+                    as={RouterLink}
+                    to={link}
+                    colorScheme="blue"
+                    size={{ base: "sm", md: "md" }}
+                    mt="auto"
+                    w={{ base: "full", md: "auto" }}
+                >
                     Try Now
                 </Button>
             </VStack>
@@ -35,18 +44,30 @@ const Home: FC = () => {
 
     return (
         <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
-            <Container maxW="1200px" py={12}>
-                <VStack spacing={8} align="stretch">
-                    <Box textAlign="center" mb={8}>
-                        <Heading size="2xl" mb={4}>
+            <PageContainer>
+                <VStack spacing={{ base: 6, md: 8 }} align="stretch">
+                    <Box textAlign="center" mb={{ base: 6, md: 8 }}>
+                        <Heading
+                            size={{ base: "xl", md: "2xl" }}
+                            mb={{ base: 3, md: 4 }}
+                            px={{ base: 2, md: 0 }}
+                        >
                             Welcome to Scrum Tools
                         </Heading>
-                        <Text fontSize="xl" color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                        <Text
+                            fontSize={{ base: "lg", md: "xl" }}
+                            color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
+                            px={{ base: 2, md: 0 }}
+                        >
                             Boost your team's agile workflow with our free scrum tools
                         </Text>
                     </Box>
 
-                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
+                    <SimpleGrid
+                        columns={{ base: 1, sm: 2, lg: 3 }}
+                        spacing={{ base: 4, md: 8 }}
+                        mx={{ base: 2, md: 0 }}
+                    >
                         <FeatureCard
                             title="Planning Poker"
                             description="Estimate user stories efficiently with your team using our real-time planning poker tool."
@@ -79,7 +100,7 @@ const Home: FC = () => {
                         />
                     </SimpleGrid>
                 </VStack>
-            </Container>
+            </PageContainer>
         </Box>
     )
 }

@@ -4,15 +4,10 @@ import type { Socket as ClientSocket } from 'socket.io-client'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
     Box,
-    Container,
     Heading,
-    SimpleGrid,
     Button,
     Text,
     VStack,
-    HStack,
-    useColorMode,
-    useToast,
     Input,
     Modal,
     ModalOverlay,
@@ -28,10 +23,18 @@ import {
     Td,
     Badge,
     IconButton,
+    useColorMode,
+    useToast,
+    Stack,
+    TableContainer,
+    Wrap,
+    WrapItem,
     useClipboard
 } from '@chakra-ui/react'
 import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
+import PageContainer from '../components/PageContainer'
 
+// Rest of the file remains exactly the same
 const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
 const SOCKET_URL = 'http://localhost:3001'
 
@@ -60,9 +63,9 @@ const Card: FC<CardProps> = ({ value, isSelected, onClick, disabled }) => {
 
     return (
         <Button
-            h="120px"
-            w="80px"
-            fontSize="2xl"
+            h={{ base: "100px", md: "120px" }}
+            w={{ base: "70px", md: "80px" }}
+            fontSize={{ base: "xl", md: "2xl" }}
             variant="outline"
             colorScheme={isSelected ? 'blue' : 'gray'}
             bg={isSelected ? (colorMode === 'light' ? 'blue.50' : 'blue.900') : 'transparent'}
@@ -96,13 +99,11 @@ const PlanningPoker: FC = () => {
     const { hasCopied, onCopy } = useClipboard(shareableLink)
 
     useEffect(() => {
-        // Load active rooms
         fetch(`${SOCKET_URL}/api/rooms`)
             .then(res => res.json())
             .then(setActiveRooms)
             .catch(console.error)
 
-        // Check for room in URL
         const roomFromUrl = searchParams.get('room')
         if (roomFromUrl) {
             setRoomId(roomFromUrl)
@@ -149,7 +150,6 @@ const PlanningPoker: FC = () => {
                 status: 'success',
                 duration: 2000,
             })
-            // Update URL with room ID
             navigate(`/planning-poker?room=${roomId}`, { replace: true })
         })
 
@@ -232,24 +232,24 @@ const PlanningPoker: FC = () => {
     }
 
     return (
-        <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
-            <Container maxW="1200px" py={12}>
-                <VStack spacing={8}>
-                    <Box textAlign="center">
-                        <Heading size="xl" mb={4}>
+        <PageContainer>
+            <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
+                <VStack spacing={{ base: 4, md: 8 }}>
+                    <Box textAlign="center" w="full">
+                        <Heading size={{ base: "lg", md: "xl" }} mb={4}>
                             Planning Poker
                         </Heading>
                         {isJoined && (
                             <VStack spacing={2}>
-                                <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                                <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
                                     Room: {roomId}
                                 </Text>
-                                <HStack>
+                                <Stack direction={{ base: "column", md: "row" }} spacing={2} w="full" align="center">
                                     <Input
                                         value={shareableLink}
                                         isReadOnly
                                         size="sm"
-                                        width="auto"
+                                        width={{ base: "full", md: "auto" }}
                                     />
                                     <IconButton
                                         aria-label="Copy link"
@@ -257,7 +257,7 @@ const PlanningPoker: FC = () => {
                                         onClick={onCopy}
                                         size="sm"
                                     />
-                                </HStack>
+                                </Stack>
                             </VStack>
                         )}
                     </Box>
@@ -265,69 +265,79 @@ const PlanningPoker: FC = () => {
                     {isJoined ? (
                         <Box
                             w="full"
-                            p={8}
+                            p={{ base: 4, md: 8 }}
                             borderRadius="lg"
                             bg={colorMode === 'light' ? 'white' : 'gray.700'}
                             shadow="md"
                         >
-                            <VStack spacing={8}>
-                                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+                            <VStack spacing={{ base: 4, md: 8 }}>
+                                <Wrap spacing={4} justify="center">
                                     {FIBONACCI_SEQUENCE.map((value) => (
-                                        <Card
-                                            key={value}
-                                            value={value}
-                                            isSelected={selectedCard === value}
-                                            onClick={() => handleCardSelect(value)}
-                                            disabled={isRevealed}
-                                        />
+                                        <WrapItem key={value}>
+                                            <Card
+                                                value={value}
+                                                isSelected={selectedCard === value}
+                                                onClick={() => handleCardSelect(value)}
+                                                disabled={isRevealed}
+                                            />
+                                        </WrapItem>
                                     ))}
-                                </SimpleGrid>
+                                </Wrap>
 
-                                <HStack spacing={4} wrap="wrap" justify="center">
+                                <Stack
+                                    direction={{ base: "column", md: "row" }}
+                                    spacing={4}
+                                    justify="center"
+                                    w="full"
+                                >
                                     <Button
                                         colorScheme="blue"
                                         onClick={handleRevealVotes}
                                         disabled={isRevealed}
+                                        w={{ base: "full", md: "auto" }}
                                     >
                                         Reveal Votes
                                     </Button>
                                     <Button
                                         colorScheme="orange"
                                         onClick={handleResetVotes}
+                                        w={{ base: "full", md: "auto" }}
                                     >
                                         New Round
                                     </Button>
-                                </HStack>
+                                </Stack>
 
-                                <Box w="full">
-                                    <Table variant="simple">
-                                        <Thead>
-                                            <Tr>
-                                                <Th>Participant</Th>
-                                                <Th>Status</Th>
-                                                {isRevealed && <Th>Vote</Th>}
-                                            </Tr>
-                                        </Thead>
-                                        <Tbody>
-                                            {participants.map((participant) => (
-                                                <Tr key={participant.id}>
-                                                    <Td>{participant.name}</Td>
-                                                    <Td>
-                                                        <Badge
-                                                            colorScheme={participant.vote ? 'green' : 'yellow'}
-                                                        >
-                                                            {participant.vote ? 'Voted' : 'Not Voted'}
-                                                        </Badge>
-                                                    </Td>
-                                                    {isRevealed && (
-                                                        <Td>{participant.vote || 'No vote'}</Td>
-                                                    )}
+                                <Box w="full" overflowX="auto">
+                                    <TableContainer>
+                                        <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                                            <Thead>
+                                                <Tr>
+                                                    <Th>Participant</Th>
+                                                    <Th>Status</Th>
+                                                    {isRevealed && <Th>Vote</Th>}
                                                 </Tr>
-                                            ))}
-                                        </Tbody>
-                                    </Table>
+                                            </Thead>
+                                            <Tbody>
+                                                {participants.map((participant) => (
+                                                    <Tr key={participant.id}>
+                                                        <Td>{participant.name}</Td>
+                                                        <Td>
+                                                            <Badge
+                                                                colorScheme={participant.vote ? 'green' : 'yellow'}
+                                                            >
+                                                                {participant.vote ? 'Voted' : 'Not Voted'}
+                                                            </Badge>
+                                                        </Td>
+                                                        {isRevealed && (
+                                                            <Td>{participant.vote || 'No vote'}</Td>
+                                                        )}
+                                                    </Tr>
+                                                ))}
+                                            </Tbody>
+                                        </Table>
+                                    </TableContainer>
                                     {isRevealed && (
-                                        <Text mt={4} fontWeight="bold">
+                                        <Text mt={4} fontWeight="bold" textAlign={{ base: "center", md: "left" }}>
                                             Average (excluding '?'): {calculateAverage()}
                                         </Text>
                                     )}
@@ -337,71 +347,74 @@ const PlanningPoker: FC = () => {
                     ) : (
                         <Box
                             w="full"
-                            p={8}
+                            p={{ base: 4, md: 8 }}
                             borderRadius="lg"
                             bg={colorMode === 'light' ? 'white' : 'gray.700'}
                             shadow="md"
                         >
                             <VStack spacing={4}>
                                 <Heading size="md">Active Rooms</Heading>
-                                <Table variant="simple">
-                                    <Thead>
-                                        <Tr>
-                                            <Th>Room ID</Th>
-                                            <Th>Participants</Th>
-                                            <Th>Action</Th>
-                                        </Tr>
-                                    </Thead>
-                                    <Tbody>
-                                        {activeRooms.map((room) => (
-                                            <Tr key={room.id}>
-                                                <Td>{room.id}</Td>
-                                                <Td>{room.participantCount}</Td>
-                                                <Td>
-                                                    <Button
-                                                        size="sm"
-                                                        colorScheme="blue"
-                                                        onClick={() => handleJoinExistingRoom(room.id)}
-                                                    >
-                                                        Join
-                                                    </Button>
-                                                </Td>
-                                            </Tr>
-                                        ))}
-                                    </Tbody>
-                                </Table>
+                                <Box w="full" overflowX="auto">
+                                    <TableContainer>
+                                        <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                                            <Thead>
+                                                <Tr>
+                                                    <Th>Room ID</Th>
+                                                    <Th>Participants</Th>
+                                                    <Th>Action</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {activeRooms.map((room) => (
+                                                    <Tr key={room.id}>
+                                                        <Td>{room.id}</Td>
+                                                        <Td>{room.participantCount}</Td>
+                                                        <Td>
+                                                            <Button
+                                                                size="sm"
+                                                                colorScheme="blue"
+                                                                onClick={() => handleJoinExistingRoom(room.id)}
+                                                            >
+                                                                Join
+                                                            </Button>
+                                                        </Td>
+                                                    </Tr>
+                                                ))}
+                                            </Tbody>
+                                        </Table>
+                                    </TableContainer>
+                                </Box>
                             </VStack>
                         </Box>
                     )}
                 </VStack>
-            </Container>
-
-            <Modal isOpen={showJoinModal} onClose={() => { }} closeOnOverlayClick={false}>
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Join Planning Poker</ModalHeader>
-                    <ModalBody>
-                        <VStack spacing={4}>
-                            <Input
-                                placeholder="Enter your name"
-                                value={userName}
-                                onChange={(e) => setUserName(e.target.value)}
-                            />
-                            <Input
-                                placeholder="Enter room ID"
-                                value={roomId}
-                                onChange={(e) => setRoomId(e.target.value)}
-                            />
-                        </VStack>
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button colorScheme="blue" onClick={handleJoinRoom}>
-                            Join Room
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
-        </Box>
+                <Modal isOpen={showJoinModal} onClose={() => { }} closeOnOverlayClick={false}>
+                    <ModalOverlay />
+                    <ModalContent mx={4}>
+                        <ModalHeader>Join Planning Poker</ModalHeader>
+                        <ModalBody>
+                            <VStack spacing={4}>
+                                <Input
+                                    placeholder="Enter your name"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
+                                />
+                                <Input
+                                    placeholder="Enter room ID"
+                                    value={roomId}
+                                    onChange={(e) => setRoomId(e.target.value)}
+                                />
+                            </VStack>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button colorScheme="blue" onClick={handleJoinRoom} w="full">
+                                Join Room
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+            </Box >
+        </PageContainer >
     )
 }
 
