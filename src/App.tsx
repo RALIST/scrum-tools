@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import PlanningPoker from './pages/PlanningPoker'
+import PlanningPokerRoom from './pages/PlanningPokerRoom'
 import DailyStandup from './pages/DailyStandup'
 import './App.css'
 
@@ -15,7 +16,7 @@ const App: FC = () => {
                     <Routes>
                         <Route path="/" element={<Home />} />
                         <Route path="/planning-poker" element={<PlanningPoker />} />
-                        <Route path="/planning-poker/:roomId" element={<PlanningPoker />} />
+                        <Route path="/planning-poker/:roomId" element={<PlanningPokerRoom />} />
                         <Route path="/daily-standup" element={<DailyStandup />} />
                     </Routes>
                 </main>
