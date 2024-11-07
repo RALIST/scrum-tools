@@ -1,7 +1,7 @@
 import { FC, useState, useEffect } from 'react'
 import { Manager } from 'socket.io-client'
 import type { Socket as ClientSocket } from 'socket.io-client'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
     Box,
     Heading,
@@ -30,7 +30,9 @@ import {
     Wrap,
     WrapItem,
     useClipboard,
-    useDisclosure
+    useDisclosure,
+    Center,
+    HStack
 } from '@chakra-ui/react'
 import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
@@ -88,18 +90,34 @@ const PlanningPoker: FC = () => {
     const [roomId, setRoomId] = useState<string>('')
     const [userName, setUserName] = useState<string>('')
     const [isJoined, setIsJoined] = useState(false)
-    const [showJoinModal, setShowJoinModal] = useState(true)
+    const [showJoinModal, setShowJoinModal] = useState(false)
+    const [showRoomList, setShowRoomList] = useState(false)
     const [participants, setParticipants] = useState<Participant[]>([])
     const [isRevealed, setIsRevealed] = useState(false)
     const [activeRooms, setActiveRooms] = useState<Room[]>([])
     const { colorMode } = useColorMode()
     const toast = useToast()
-    const [searchParams] = useSearchParams()
     const navigate = useNavigate()
-    const shareableLink = `${window.location.origin}/planning-poker?room=${roomId}`
+    const location = useLocation()
+    const { roomId: roomIdParam } = useParams()
+    const shareableLink = `${window.location.origin}/planning-poker/${roomId}`
     const { hasCopied, onCopy } = useClipboard(shareableLink)
     const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
     const [newUserName, setNewUserName] = useState<string>('')
+
+    // Reset state when navigating to main planning poker page
+    useEffect(() => {
+        if (location.pathname === '/planning-poker' && !roomIdParam) {
+            setIsJoined(false)
+            setShowJoinModal(false)
+            setShowRoomList(false)
+            setRoomId('')
+            setSelectedCard(null)
+            setParticipants([])
+            setIsRevealed(false)
+            socket?.disconnect()
+        }
+    }, [location.pathname, roomIdParam])
 
     useEffect(() => {
         const savedUsername = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY)
@@ -114,11 +132,11 @@ const PlanningPoker: FC = () => {
             .then(setActiveRooms)
             .catch(console.error)
 
-        const roomFromUrl = searchParams.get('room')
-        if (roomFromUrl) {
-            setRoomId(roomFromUrl)
+        if (roomIdParam) {
+            setRoomId(roomIdParam)
+            setShowJoinModal(true)
         }
-    }, [])
+    }, [roomIdParam])
 
     useEffect(() => {
         const manager = new Manager(SOCKET_URL, {
@@ -155,7 +173,7 @@ const PlanningPoker: FC = () => {
                 status: 'success',
                 duration: 2000,
             })
-            navigate(`/planning-poker?room=${roomId}`, { replace: true })
+            navigate(`/planning-poker/${roomId}`, { replace: true })
         })
 
         newSocket.on('participantUpdate', (data: { participants: Participant[] }) => {
@@ -176,6 +194,34 @@ const PlanningPoker: FC = () => {
         }
     }, [roomId])
 
+    const handleCreateRoom = async () => {
+        const newRoomId = Math.random().toString(36).substring(2, 8)
+        try {
+            const response = await fetch(`${SOCKET_URL}/api/rooms`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ roomId: newRoomId }),
+            })
+
+            if (response.ok) {
+                setRoomId(newRoomId)
+                setShowJoinModal(true)
+                navigate(`/planning-poker/${newRoomId}`)
+            } else {
+                throw new Error('Failed to create room')
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to create new room',
+                status: 'error',
+                duration: 2000,
+            })
+        }
+    }
+
     const handleJoinRoom = () => {
         if (!userName.trim() || !roomId.trim()) {
             toast({
@@ -193,6 +239,7 @@ const PlanningPoker: FC = () => {
             socket.emit('joinRoom', { roomId, userName })
             setIsJoined(true)
             setShowJoinModal(false)
+            setShowRoomList(false)
         } else {
             toast({
                 title: 'Connection Error',
@@ -258,6 +305,7 @@ const PlanningPoker: FC = () => {
     const handleJoinExistingRoom = (roomId: string) => {
         setRoomId(roomId)
         setShowJoinModal(true)
+        navigate(`/planning-poker/${roomId}`)
     }
 
     return (
@@ -301,6 +349,29 @@ const PlanningPoker: FC = () => {
                             </VStack>
                         )}
                     </Box>
+
+                    {!isJoined && !showRoomList && !roomIdParam && (
+                        <Center p={8}>
+                            <VStack spacing={4} w={{ base: "full", md: "400px" }}>
+                                <Button
+                                    colorScheme="blue"
+                                    size="lg"
+                                    w="full"
+                                    onClick={handleCreateRoom}
+                                >
+                                    Create New Room
+                                </Button>
+                                <Button
+                                    colorScheme="green"
+                                    size="lg"
+                                    w="full"
+                                    onClick={() => setShowRoomList(true)}
+                                >
+                                    Join Existing Room
+                                </Button>
+                            </VStack>
+                        </Center>
+                    )}
 
                     {isJoined ? (
                         <Box
@@ -384,7 +455,7 @@ const PlanningPoker: FC = () => {
                                 </Box>
                             </VStack>
                         </Box>
-                    ) : (
+                    ) : showRoomList && !roomIdParam ? (
                         <Box
                             w="full"
                             p={{ base: 4, md: 8 }}
@@ -393,7 +464,12 @@ const PlanningPoker: FC = () => {
                             shadow="md"
                         >
                             <VStack spacing={4}>
-                                <Heading size="md">Active Rooms</Heading>
+                                <HStack w="full" justify="space-between">
+                                    <Heading size="md">Active Rooms</Heading>
+                                    <Button size="sm" onClick={() => setShowRoomList(false)}>
+                                        Back
+                                    </Button>
+                                </HStack>
                                 <Box w="full" overflowX="auto">
                                     <TableContainer>
                                         <Table variant="simple" size={{ base: "sm", md: "md" }}>
@@ -426,7 +502,7 @@ const PlanningPoker: FC = () => {
                                 </Box>
                             </VStack>
                         </Box>
-                    )}
+                    ) : null}
                 </VStack>
 
                 <Modal isOpen={showJoinModal} onClose={() => { }} closeOnOverlayClick={false}>
@@ -444,6 +520,7 @@ const PlanningPoker: FC = () => {
                                     placeholder="Enter room ID"
                                     value={roomId}
                                     onChange={(e) => setRoomId(e.target.value)}
+                                    isReadOnly={!!roomIdParam}
                                 />
                             </VStack>
                         </ModalBody>

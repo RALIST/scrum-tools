@@ -15,6 +15,7 @@ const App: FC = () => {
                     <Routes>
                         <Route path="/" element={<Home />} />
                         <Route path="/planning-poker" element={<PlanningPoker />} />
+                        <Route path="/planning-poker/:roomId" element={<PlanningPoker />} />
                         <Route path="/daily-standup" element={<DailyStandup />} />
                     </Routes>
                 </main>
