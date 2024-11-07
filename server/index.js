@@ -93,6 +93,23 @@ io.on('connection', (socket) => {
         console.log(`${userName} joined room ${roomId}`);
     });
 
+    socket.on('changeName', async ({ roomId, newName }) => {
+        const room = rooms.get(roomId);
+        if (room && room.has(socket.id)) {
+            const participant = room.get(socket.id);
+            participant.name = newName;
+            room.set(socket.id, participant);
+
+            // Update all participants
+            io.to(roomId).emit('participantUpdate', {
+                participants: Array.from(room.values())
+            });
+
+            await saveRooms(rooms);
+            console.log(`User ${socket.id} changed name to ${newName} in room ${roomId}`);
+        }
+    });
+
     socket.on('vote', async ({ roomId, vote }) => {
         const room = rooms.get(roomId);
         if (room && room.has(socket.id)) {

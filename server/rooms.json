@@ -4,16 +4,17 @@
     "name": "1",
     "participants": [
       {
-        "id": "8RZRrru34sh1mI9gAABN",
-        "name": "1",
-        "vote": null
-      },
-      {
-        "id": "DDGEZ4a-2KSpgBYKAAAm",
-        "name": "1",
+        "id": "0Otgw6dkaUguSWMvAAAf",
+        "name": "Alex",
         "vote": null
       }
     ],
-    "createdAt": "2024-11-07T10:51:54.184Z"
+    "createdAt": "2024-11-07T11:40:34.052Z"
+  },
+  "112": {
+    "id": "112",
+    "name": "112",
+    "participants": [],
+    "createdAt": "2024-11-07T11:42:53.726Z"
   }
 }

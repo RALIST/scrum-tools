@@ -29,14 +29,15 @@ import {
     TableContainer,
     Wrap,
     WrapItem,
-    useClipboard
+    useClipboard,
+    useDisclosure
 } from '@chakra-ui/react'
 import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 
-// Rest of the file remains exactly the same
 const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
 const SOCKET_URL = 'http://localhost:3001'
+const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
 
 interface Room {
     id: string
@@ -97,6 +98,15 @@ const PlanningPoker: FC = () => {
     const navigate = useNavigate()
     const shareableLink = `${window.location.origin}/planning-poker?room=${roomId}`
     const { hasCopied, onCopy } = useClipboard(shareableLink)
+    const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
+    const [newUserName, setNewUserName] = useState<string>('')
+
+    useEffect(() => {
+        const savedUsername = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY)
+        if (savedUsername) {
+            setUserName(savedUsername)
+        }
+    }, [])
 
     useEffect(() => {
         fetch(`${SOCKET_URL}/api/rooms`)
@@ -124,11 +134,6 @@ const PlanningPoker: FC = () => {
 
         newSocket.on('connect', () => {
             console.log('Connected to server')
-            toast({
-                title: 'Connected to server',
-                status: 'success',
-                duration: 2000,
-            })
         })
 
         newSocket.on('connect_error', (error: Error) => {
@@ -182,6 +187,8 @@ const PlanningPoker: FC = () => {
             return
         }
 
+        localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, userName)
+
         if (socket?.connected) {
             socket.emit('joinRoom', { roomId, userName })
             setIsJoined(true)
@@ -194,6 +201,28 @@ const PlanningPoker: FC = () => {
                 duration: 2000,
             })
         }
+    }
+
+    const handleChangeName = () => {
+        if (!newUserName.trim()) {
+            toast({
+                title: 'Error',
+                description: 'Please enter a valid name',
+                status: 'error',
+                duration: 2000,
+            })
+            return
+        }
+
+        localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, newUserName)
+        setUserName(newUserName)
+        socket?.emit('changeName', { roomId, newName: newUserName })
+        onChangeNameClose()
+        toast({
+            title: 'Name Updated',
+            status: 'success',
+            duration: 2000,
+        })
     }
 
     const handleCardSelect = (value: string) => {
@@ -241,6 +270,17 @@ const PlanningPoker: FC = () => {
                         </Heading>
                         {isJoined && (
                             <VStack spacing={2}>
+                                <Stack direction="row" spacing={2} align="center">
+                                    <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                                        Playing as: {userName}
+                                    </Text>
+                                    <Button size="sm" onClick={() => {
+                                        setNewUserName(userName)
+                                        onChangeNameOpen()
+                                    }}>
+                                        Change Name
+                                    </Button>
+                                </Stack>
                                 <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
                                     Room: {roomId}
                                 </Text>
@@ -388,6 +428,7 @@ const PlanningPoker: FC = () => {
                         </Box>
                     )}
                 </VStack>
+
                 <Modal isOpen={showJoinModal} onClose={() => { }} closeOnOverlayClick={false}>
                     <ModalOverlay />
                     <ModalContent mx={4}>
@@ -413,8 +454,30 @@ const PlanningPoker: FC = () => {
                         </ModalFooter>
                     </ModalContent>
                 </Modal>
-            </Box >
-        </PageContainer >
+
+                <Modal isOpen={isChangeNameOpen} onClose={onChangeNameClose}>
+                    <ModalOverlay />
+                    <ModalContent mx={4}>
+                        <ModalHeader>Change Name</ModalHeader>
+                        <ModalBody>
+                            <Input
+                                placeholder="Enter new name"
+                                value={newUserName}
+                                onChange={(e) => setNewUserName(e.target.value)}
+                            />
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button variant="ghost" mr={3} onClick={onChangeNameClose}>
+                                Cancel
+                            </Button>
+                            <Button colorScheme="blue" onClick={handleChangeName}>
+                                Save
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+            </Box>
+        </PageContainer>
     )
 }
 
