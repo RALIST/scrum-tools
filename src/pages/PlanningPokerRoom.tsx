@@ -76,7 +76,7 @@ const Card: FC<CardProps> = ({ value, isSelected, onClick, disabled }) => {
 }
 
 const PlanningPokerRoom: FC = () => {
-    const [socket, setSocket] = useState<typeof ClientSocket | null>(null)
+    const [socket, setSocket] = useState<ClientSocket | null>(null)
     const [selectedCard, setSelectedCard] = useState<string | null>(null)
     const [userName, setUserName] = useState<string>('')
     const [isJoined, setIsJoined] = useState(false)
