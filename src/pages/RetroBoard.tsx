@@ -17,11 +17,10 @@ import {
     HStack,
     useToast
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
-
-const SOCKET_URL = `https://${window.location.hostname}`
+import config from '../config'
 
 interface RetroCard {
     id: string
@@ -51,6 +50,7 @@ const RetroBoard: FC = () => {
     const [socket, setSocket] = useState<ClientSocket | null>(null)
     const [board, setBoard] = useState<RetroBoard | null>(null)
     const [newCardText, setNewCardText] = useState<{ [key: string]: string }>({})
+    const [hideCards, setHideCards] = useState(false)
 
     useEffect(() => {
         if (!boardId) {
@@ -59,7 +59,7 @@ const RetroBoard: FC = () => {
         }
 
         // First, try to get the board data
-        fetch(`${SOCKET_URL}/api/retro/${boardId}`)
+        fetch(`${config.apiUrl}/retro/${boardId}`)
             .then(res => {
                 if (!res.ok) throw new Error('Board not found')
                 return res.json()
@@ -76,7 +76,7 @@ const RetroBoard: FC = () => {
             })
 
         // Set up socket connection
-        const manager = new Manager(SOCKET_URL, {
+        const manager = new Manager(config.socketUrl, {
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
@@ -135,6 +135,15 @@ const RetroBoard: FC = () => {
         socket.emit('deleteRetroCard', { boardId, cardId })
     }
 
+    const handleToggleCards = () => {
+        setHideCards(!hideCards)
+        toast({
+            title: hideCards ? 'Cards Revealed' : 'Cards Hidden',
+            status: 'info',
+            duration: 2000,
+        })
+    }
+
     return (
         <PageContainer>
             <Helmet>
@@ -144,10 +153,19 @@ const RetroBoard: FC = () => {
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)" p={4}>
                 <VStack spacing={8} align="stretch">
                     <Box textAlign="center">
-                        <Heading as="h1" size="xl" mb={4}>
-                            Retro Board
-                        </Heading>
-                        <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                        <HStack justify="center" spacing={4}>
+                            <Heading as="h1" size="xl">
+                                Retro Board
+                            </Heading>
+                            <IconButton
+                                aria-label={hideCards ? "Show Cards" : "Hide Cards"}
+                                icon={hideCards ? <ViewIcon /> : <ViewOffIcon />}
+                                onClick={handleToggleCards}
+                                colorScheme="purple"
+                                size="sm"
+                            />
+                        </HStack>
+                        <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'} mt={2}>
                             Share your thoughts about the sprint
                         </Text>
                     </Box>
@@ -178,7 +196,7 @@ const RetroBoard: FC = () => {
                                             <Card key={card.id} variant="outline">
                                                 <CardBody>
                                                     <HStack justify="space-between">
-                                                        <Text>{card.text}</Text>
+                                                        <Text>{hideCards ? '[ Hidden ]' : card.text}</Text>
                                                         <IconButton
                                                             aria-label="Delete card"
                                                             icon={<DeleteIcon />}

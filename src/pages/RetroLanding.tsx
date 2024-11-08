@@ -25,8 +25,7 @@ import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
 import SeoText from '../components/SeoText'
 import { retroBoardSeoSections } from '../content/retroBoardSeo'
-
-const SOCKET_URL = `https://${window.location.hostname}`
+import config from '../config'
 
 const RetroLanding: FC = () => {
     const { colorMode } = useColorMode()
@@ -59,7 +58,7 @@ const RetroLanding: FC = () => {
 
     const handleCreateBoard = async () => {
         try {
-            const response = await fetch(`${SOCKET_URL}/api/retro`, {
+            const response = await fetch(`${config.apiUrl}/retro`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -105,7 +104,7 @@ const RetroLanding: FC = () => {
                 title="Retro Board - Team Retrospective Tool"
                 description="Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved."
                 keywords="retro board, retrospective, agile retrospective, team collaboration, sprint retrospective, scrum ceremonies"
-                canonicalUrl="https://scrumtools.app/retro"
+                canonicalUrl={`${config.siteUrl}/retro`}
                 jsonLd={jsonLd}
             />
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">

@@ -14,34 +14,11 @@
    # Connect to PostgreSQL as superuser
    sudo -u postgres psql
 
-   # Create user and database (in psql)
-   CREATE USER scrum_user WITH PASSWORD 'your_password';
-   CREATE DATABASE scrum_tools;
-   GRANT ALL PRIVILEGES ON DATABASE scrum_tools TO scrum_user;
-   \c scrum_tools
-   GRANT ALL ON SCHEMA public TO scrum_user;
-   \q
+   # Run the initialization script
+   \i init.sql
    ```
 
-3. Update PostgreSQL authentication (if needed):
-   ```bash
-   # Edit pg_hba.conf
-   sudo nano /etc/postgresql/14/main/pg_hba.conf
-
-   # Add or modify this line:
-   # local   all   scrum_user   md5
-   
-   # Restart PostgreSQL
-   sudo service postgresql restart
-   ```
-
-4. Initialize schema:
-   ```bash
-   # Run as scrum_user
-   psql -U scrum_user -d scrum_tools -f init.sql
-   ```
-
-5. Configure environment variables:
+3. Configure environment variables:
    ```bash
    # Copy example env file
    cp .env.example .env
@@ -74,7 +51,9 @@ The server will run on port 3001 by default.
 
 ## Database Schema
 
-### Rooms Table
+### Planning Poker Tables
+
+#### Rooms Table
 ```sql
 CREATE TABLE rooms (
     id VARCHAR(255) PRIMARY KEY,
@@ -85,7 +64,7 @@ CREATE TABLE rooms (
 );
 ```
 
-### Participants Table
+#### Participants Table
 ```sql
 CREATE TABLE participants (
     id VARCHAR(255),
@@ -96,45 +75,77 @@ CREATE TABLE participants (
 );
 ```
 
-## Environment Variables
+### Retro Board Tables
 
-- `DB_USER`: PostgreSQL username (default: scrum_user)
-- `DB_HOST`: Database host (default: localhost)
-- `DB_NAME`: Database name (default: scrum_tools)
-- `DB_PASSWORD`: Database password
-- `DB_PORT`: Database port (default: 5432)
+#### Retro Boards Table
+```sql
+CREATE TABLE retro_boards (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Retro Cards Table
+```sql
+CREATE TABLE retro_cards (
+    id VARCHAR(255) PRIMARY KEY,
+    board_id VARCHAR(255) REFERENCES retro_boards(id) ON DELETE CASCADE,
+    column_id VARCHAR(50),
+    text TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## API Endpoints
+
+### Planning Poker
+
+- `GET /api/rooms` - List all planning poker rooms
+- `POST /api/rooms` - Create a new planning poker room
+- `POST /api/rooms/:roomId/verify-password` - Verify room password
+
+### Retro Board
+
+- `GET /api/retro/:boardId` - Get retro board data
+- `POST /api/retro` - Create a new retro board
+
+## Socket.IO Events
+
+### Planning Poker Events
+
+- `joinRoom` - Join a planning poker room
+- `vote` - Submit a vote
+- `revealVotes` - Reveal all votes
+- `resetVotes` - Start a new round
+
+### Retro Board Events
+
+- `joinRetroBoard` - Join a retro board
+- `addRetroCard` - Add a new card
+- `deleteRetroCard` - Delete a card
 
 ## Troubleshooting
 
-### Peer Authentication Failed
-If you see "Peer authentication failed", it means PostgreSQL is using peer authentication instead of password authentication. Follow these steps:
+### Database Connection Issues
 
-1. Edit pg_hba.conf:
+1. Check PostgreSQL service status:
    ```bash
-   sudo nano /etc/postgresql/14/main/pg_hba.conf
+   brew services list
    ```
 
-2. Find the line for local connections and change the authentication method:
-   ```
-   # TYPE  DATABASE        USER            ADDRESS                 METHOD
-   local   all            all                                     md5
-   ```
-
-3. Restart PostgreSQL:
-   ```bash
-   sudo service postgresql restart
-   ```
-
-### Permission Denied
-If you see permission errors when accessing the database:
-
-1. Connect to PostgreSQL as superuser:
-   ```bash
-   sudo -u postgres psql
-   ```
-
-2. Grant necessary permissions:
+2. Verify database user permissions:
    ```sql
-   GRANT ALL PRIVILEGES ON DATABASE scrum_tools TO scrum_user;
-   \c scrum_tools
-   GRANT ALL ON SCHEMA public TO scrum_user;
+   \du scrum_user
+   ```
+
+3. Test connection:
+   ```bash
+   psql -U scrum_user -d scrum_tools -h localhost
+   ```
+
+### Common Errors
+
+- "Peer authentication failed": Update pg_hba.conf to use md5 authentication
+- "Permission denied": Grant necessary privileges to scrum_user
+- "Database does not exist": Run init.sql as superuser

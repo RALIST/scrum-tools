@@ -31,8 +31,8 @@ import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import { SEQUENCES, SequenceType } from '../constants/poker'
 import { JoinRoomModal, ChangeNameModal, RoomSettingsModal } from '../components/modals'
+import config from '../config'
 
-const SOCKET_URL = `https://${window.location.hostname}`
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
 
 interface RoomInfo {
@@ -97,7 +97,7 @@ const PlanningPokerRoom: FC = () => {
     const toast = useToast()
     const navigate = useNavigate()
     const { roomId } = useParams<{ roomId: string }>()
-    const shareableLink = `${window.location.origin}/planning-poker/${roomId}`
+    const shareableLink = `${config.siteUrl}/planning-poker/${roomId}`
     const { hasCopied, onCopy } = useClipboard(shareableLink)
     const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
     const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure()
@@ -128,7 +128,7 @@ const PlanningPokerRoom: FC = () => {
         }
 
         // Check if room is password protected
-        fetch(`${SOCKET_URL}/api/rooms`)
+        fetch(`${config.apiUrl}/rooms`)
             .then(res => res.json())
             .then((rooms: RoomInfo[]) => {
                 const room = rooms.find(r => r.id === roomId)
@@ -138,7 +138,7 @@ const PlanningPokerRoom: FC = () => {
             })
             .catch(console.error)
 
-        const manager = new Manager(SOCKET_URL, {
+        const manager = new Manager(config.socketUrl, {
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
