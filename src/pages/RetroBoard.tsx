@@ -15,9 +15,10 @@ import {
     Card,
     CardBody,
     HStack,
-    useToast
+    useToast,
+    Badge
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import config from '../config'
@@ -34,6 +35,8 @@ interface RetroBoard {
     name: string
     created_at: string
     cards: RetroCard[]
+    timer_running: boolean
+    time_left: number
 }
 
 const COLUMNS = [
@@ -51,6 +54,8 @@ const RetroBoard: FC = () => {
     const [board, setBoard] = useState<RetroBoard | null>(null)
     const [newCardText, setNewCardText] = useState<{ [key: string]: string }>({})
     const [hideCards, setHideCards] = useState(false)
+    const [timeLeft, setTimeLeft] = useState(300)
+    const [isTimerRunning, setIsTimerRunning] = useState(false)
 
     useEffect(() => {
         if (!boardId) {
@@ -64,7 +69,11 @@ const RetroBoard: FC = () => {
                 if (!res.ok) throw new Error('Board not found')
                 return res.json()
             })
-            .then(setBoard)
+            .then(data => {
+                setBoard(data)
+                setIsTimerRunning(data.timer_running)
+                setTimeLeft(data.time_left)
+            })
             .catch(() => {
                 toast({
                     title: 'Error',
@@ -93,14 +102,35 @@ const RetroBoard: FC = () => {
         })
 
         newSocket.on('retroBoardJoined', (data: RetroBoard) => {
+            console.log('Joined retro board:', data)
             setBoard(data)
+            setIsTimerRunning(data.timer_running)
+            setTimeLeft(data.time_left)
         })
 
         newSocket.on('retroBoardUpdated', (data: RetroBoard) => {
+            console.log('Board updated:', data)
             setBoard(data)
         })
 
+        newSocket.on('timerStarted', ({ timeLeft: serverTimeLeft }) => {
+            console.log('Timer started:', serverTimeLeft)
+            setIsTimerRunning(true)
+            setTimeLeft(serverTimeLeft)
+        })
+
+        newSocket.on('timerStopped', () => {
+            console.log('Timer stopped')
+            setIsTimerRunning(false)
+        })
+
+        newSocket.on('timerUpdate', ({ timeLeft: serverTimeLeft }) => {
+            console.log('Timer update:', serverTimeLeft)
+            setTimeLeft(serverTimeLeft)
+        })
+
         newSocket.on('error', (data: { message: string }) => {
+            console.error('Socket error:', data)
             toast({
                 title: 'Error',
                 description: data.message,
@@ -117,9 +147,10 @@ const RetroBoard: FC = () => {
     }, [boardId])
 
     const handleAddCard = (columnId: string) => {
-        if (!newCardText[columnId]?.trim() || !socket || !boardId) return
+        if (!newCardText[columnId]?.trim() || !socket || !boardId || !isTimerRunning) return
 
         const cardId = Math.random().toString(36).substring(7)
+        console.log('Adding card:', { boardId, cardId, columnId, text: newCardText[columnId] })
         socket.emit('addRetroCard', {
             boardId,
             cardId,
@@ -132,6 +163,7 @@ const RetroBoard: FC = () => {
 
     const handleDeleteCard = (cardId: string) => {
         if (!socket || !boardId) return
+        console.log('Deleting card:', { boardId, cardId })
         socket.emit('deleteRetroCard', { boardId, cardId })
     }
 
@@ -142,6 +174,23 @@ const RetroBoard: FC = () => {
             status: 'info',
             duration: 2000,
         })
+    }
+
+    const handleToggleTimer = () => {
+        if (!socket || !boardId) return
+
+        console.log('Toggling timer:', { boardId, currentState: isTimerRunning })
+        if (isTimerRunning) {
+            socket.emit('stopTimer', { boardId })
+        } else {
+            socket.emit('startTimer', { boardId })
+        }
+    }
+
+    const formatTime = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60)
+        const remainingSeconds = seconds % 60
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
     }
 
     return (
@@ -164,10 +213,32 @@ const RetroBoard: FC = () => {
                                 colorScheme="purple"
                                 size="sm"
                             />
+                            <Button
+                                leftIcon={<TimeIcon />}
+                                onClick={handleToggleTimer}
+                                colorScheme={isTimerRunning ? "red" : "green"}
+                                size="sm"
+                            >
+                                {isTimerRunning ? "Stop Timer" : "Start Timer"}
+                            </Button>
+                            <Badge
+                                colorScheme={isTimerRunning ? "green" : "gray"}
+                                fontSize="xl"
+                                px={3}
+                                py={1}
+                                borderRadius="md"
+                            >
+                                {formatTime(timeLeft)}
+                            </Badge>
                         </HStack>
                         <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'} mt={2}>
                             Share your thoughts about the sprint
                         </Text>
+                        {!isTimerRunning && timeLeft < 300 && (
+                            <Text color="red.500" mt={2}>
+                                Timer is paused. Cards cannot be added.
+                            </Text>
+                        )}
                     </Box>
 
                     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
@@ -212,23 +283,25 @@ const RetroBoard: FC = () => {
 
                                     <Box>
                                         <Input
-                                            placeholder="Add a new card"
+                                            placeholder={isTimerRunning ? "Add a new card" : "Timer is paused"}
                                             value={newCardText[column.id] || ''}
                                             onChange={(e) => setNewCardText({
                                                 ...newCardText,
                                                 [column.id]: e.target.value
                                             })}
                                             onKeyPress={(e) => {
-                                                if (e.key === 'Enter') {
+                                                if (e.key === 'Enter' && isTimerRunning) {
                                                     handleAddCard(column.id)
                                                 }
                                             }}
+                                            disabled={!isTimerRunning}
                                         />
                                         <Button
                                             leftIcon={<AddIcon />}
                                             mt={2}
                                             w="full"
                                             onClick={() => handleAddCard(column.id)}
+                                            disabled={!isTimerRunning}
                                         >
                                             Add Card
                                         </Button>

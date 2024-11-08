@@ -63,6 +63,8 @@ const initSchema = async () => {
             CREATE TABLE IF NOT EXISTS retro_boards (
                 id VARCHAR(255) PRIMARY KEY,
                 name VARCHAR(255),
+                timer_running BOOLEAN DEFAULT false,
+                time_left INTEGER DEFAULT 300,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `)
@@ -75,6 +77,24 @@ const initSchema = async () => {
                 text TEXT,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
+        `)
+
+        // Add timer_running and time_left columns if they don't exist
+        await client.query(`
+            DO $$ 
+            BEGIN
+                BEGIN
+                    ALTER TABLE retro_boards ADD COLUMN timer_running BOOLEAN DEFAULT false;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE retro_boards ADD COLUMN time_left INTEGER DEFAULT 300;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+            END $$;
         `)
 
         console.log('Database schema initialized successfully')
@@ -264,7 +284,7 @@ export const createRetroBoard = async (boardId, name) => {
     const client = await pool.connect()
     try {
         await client.query(
-            'INSERT INTO retro_boards (id, name) VALUES ($1, $2)',
+            'INSERT INTO retro_boards (id, name, timer_running, time_left) VALUES ($1, $2, false, 300)',
             [boardId, name || boardId]
         )
     } catch (error) {
@@ -324,6 +344,51 @@ export const deleteRetroCard = async (cardId) => {
         await client.query('DELETE FROM retro_cards WHERE id = $1', [cardId])
     } catch (error) {
         console.error('Error deleting retro card:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const startRetroTimer = async (boardId) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'UPDATE retro_boards SET timer_running = true, time_left = 300 WHERE id = $1',
+            [boardId]
+        )
+    } catch (error) {
+        console.error('Error starting retro timer:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const stopRetroTimer = async (boardId) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'UPDATE retro_boards SET timer_running = false WHERE id = $1',
+            [boardId]
+        )
+    } catch (error) {
+        console.error('Error stopping retro timer:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const updateRetroTimer = async (boardId, timeLeft) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'UPDATE retro_boards SET time_left = $2 WHERE id = $1',
+            [boardId, timeLeft]
+        )
+    } catch (error) {
+        console.error('Error updating retro timer:', error)
         throw error
     } finally {
         client.release()
