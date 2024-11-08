@@ -8,7 +8,9 @@ import {
     Button,
     IconButton,
     Tooltip,
-    useColorMode
+    useColorMode,
+    Box,
+    Spacer
 } from '@chakra-ui/react'
 import { DeleteIcon, TriangleUpIcon } from '@chakra-ui/icons'
 
@@ -40,49 +42,71 @@ const RetroCard: FC<RetroCardProps> = ({
     const shouldHideContent = useMemo(() => hideCards && !isAuthor, [hideCards, isAuthor])
 
     return (
-        <Card variant="outline">
+        <Card variant="outline" size="sm">
             <CardBody>
-                <VStack align="stretch" spacing={2}>
-                    <HStack justify="space-between" align="start">
-                        <VStack align="start" spacing={1} flex={1}>
-                            <Text>
-                                {shouldHideContent ? '[ Hidden ]' : text}
-                            </Text>
-                            {!hideAuthorNames && (
-                                <Text fontSize="sm" color={colorMode === 'light' ? 'gray.500' : 'gray.400'}>
-                                    Added by: {authorName}
-                                </Text>
-                            )}
-                        </VStack>
-                        <HStack>
-                            <Tooltip
-                                label={votes.length > 0
-                                    ? `Votes: ${votes.join(', ')}`
-                                    : 'No votes yet'}
-                                placement="top"
+                <VStack align="stretch" spacing={3}>
+                    <Box>
+                        <Text
+                            whiteSpace="pre-wrap"
+                            wordBreak="break-word"
+                            fontSize="sm"
+                            maxH="200px"
+                            overflowY="auto"
+                            sx={{
+                                '&::-webkit-scrollbar': {
+                                    width: '4px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                    width: '6px',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    background: colorMode === 'light' ? 'gray.300' : 'gray.600',
+                                    borderRadius: '24px',
+                                },
+                            }}
+                        >
+                            {shouldHideContent ? '[ Hidden ]' : text}
+                        </Text>
+                        {!hideAuthorNames && (
+                            <Text
+                                fontSize="xs"
+                                color={colorMode === 'light' ? 'gray.500' : 'gray.400'}
+                                mt={1}
                             >
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    leftIcon={<TriangleUpIcon />}
-                                    onClick={() => onVote(id)}
-                                    colorScheme={votes.includes(currentUserName) ? "blue" : "gray"}
-                                    isDisabled={shouldHideContent}
-                                >
-                                    {votes.length}
-                                </Button>
-                            </Tooltip>
-                            {isAuthor && (
-                                <IconButton
-                                    aria-label="Delete card"
-                                    icon={<DeleteIcon />}
-                                    size="sm"
-                                    variant="ghost"
-                                    colorScheme="red"
-                                    onClick={() => onDelete(id)}
-                                />
-                            )}
-                        </HStack>
+                                Added by: {authorName}
+                            </Text>
+                        )}
+                    </Box>
+
+                    <HStack justify="space-between" align="center" mt="auto">
+                        <Tooltip
+                            label={votes.length > 0
+                                ? `Votes: ${votes.join(', ')}`
+                                : 'No votes yet'}
+                            placement="top"
+                        >
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                leftIcon={<TriangleUpIcon />}
+                                onClick={() => onVote(id)}
+                                colorScheme={votes.includes(currentUserName) ? "blue" : "gray"}
+                                isDisabled={shouldHideContent}
+                                minW="70px"
+                            >
+                                {votes.length}
+                            </Button>
+                        </Tooltip>
+                        {isAuthor && (
+                            <IconButton
+                                aria-label="Delete card"
+                                icon={<DeleteIcon />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="red"
+                                onClick={() => onDelete(id)}
+                            />
+                        )}
                     </HStack>
                 </VStack>
             </CardBody>

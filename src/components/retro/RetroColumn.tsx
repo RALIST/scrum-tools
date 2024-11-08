@@ -51,17 +51,34 @@ const RetroColumn: FC<RetroColumnProps> = ({
             spacing={4}
             align="stretch"
             minH="400px"
+            h="calc(100vh - 300px)"
         >
             <Heading
                 size="md"
                 color={color}
                 textAlign="center"
+                mb={2}
             >
                 {title}
             </Heading>
 
-            <Box flex="1" overflowY="auto">
-                <VStack spacing={4} align="stretch">
+            <Box
+                flex="1"
+                overflowY="auto"
+                sx={{
+                    '&::-webkit-scrollbar': {
+                        width: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        width: '6px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        background: colorMode === 'light' ? 'gray.300' : 'gray.600',
+                        borderRadius: '24px',
+                    },
+                }}
+            >
+                <VStack spacing={3} align="stretch" pb={2}>
                     {cards.map(card => (
                         <RetroCard
                             key={card.id}
@@ -79,14 +96,16 @@ const RetroColumn: FC<RetroColumnProps> = ({
                 </VStack>
             </Box>
 
-            <RetroCardInput
-                columnId={id}
-                isTimerRunning={isTimerRunning}
-                value={inputValue}
-                onChange={onInputChange}
-                onSubmit={onAddCard}
-                userName={userName}
-            />
+            <Box mt="auto" pt={2}>
+                <RetroCardInput
+                    columnId={id}
+                    isTimerRunning={isTimerRunning}
+                    value={inputValue}
+                    onChange={onInputChange}
+                    onSubmit={onAddCard}
+                    userName={userName}
+                />
+            </Box>
         </VStack>
     )
 }
