@@ -14,14 +14,19 @@ import {
 // Store active timers and user names
 const activeTimers = new Map()
 const userNames = new Map() // socketId -> name
+const boardVisibility = new Map() // boardId -> hideCards
+
+const debugLog = (message, data) => {
+    console.log(`[DEBUG] ${message}:`, data)
+}
 
 export const handleRetroBoardEvents = (io, socket) => {
     socket.on('joinRetroBoard', async ({ boardId, name, password }) => {
         try {
-            console.log('Joining retro board:', { boardId, name })
+            debugLog('Joining retro board', { boardId, name })
             const board = await getRetroBoard(boardId)
             if (!board) {
-                console.log('Board not found:', boardId)
+                debugLog('Board not found', boardId)
                 socket.emit('error', { message: 'Board not found' })
                 return
             }
@@ -38,7 +43,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const roomName = `retro:${boardId}`
             await socket.join(roomName)
             userNames.set(socket.id, name)
-            console.log(`Socket ${socket.id} joined room:`, roomName)
+            debugLog('Socket joined room', { socketId: socket.id, roomName })
+
+            // Send current visibility state
+            const hideCards = boardVisibility.get(boardId) || false
+            debugLog('Sending initial visibility state', { boardId, hideCards })
+            io.to(roomName).emit('cardsVisibilityChanged', { hideCards })
 
             // If timer is running, emit timerStarted event with current time
             if (board.timer_running) {
@@ -52,13 +62,32 @@ export const handleRetroBoardEvents = (io, socket) => {
         }
     })
 
+    socket.on('toggleCardsVisibility', async ({ boardId, hideCards }) => {
+        try {
+            debugLog('Toggling cards visibility', { boardId, hideCards })
+            const roomName = `retro:${boardId}`
+
+            // Update visibility state
+            boardVisibility.set(boardId, hideCards)
+            const currentState = boardVisibility.get(boardId)
+            debugLog('Updated visibility state', { boardId, currentState })
+
+            // Broadcast to all clients in the room
+            debugLog('Broadcasting visibility change', { roomName, hideCards })
+            io.to(roomName).emit('cardsVisibilityChanged', { hideCards })
+        } catch (error) {
+            console.error('Error toggling cards visibility:', error)
+            socket.emit('error', { message: 'Failed to toggle cards visibility' })
+        }
+    })
+
     socket.on('addRetroCard', async ({ boardId, cardId, columnId, text, authorName }) => {
         try {
-            console.log('Adding retro card:', { boardId, cardId, columnId, text, authorName })
+            debugLog('Adding retro card', { boardId, cardId, columnId, authorName })
             await addRetroCard(boardId, cardId, columnId, text, authorName)
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
-            console.log('Emitting board update to room:', roomName)
+            debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board)
         } catch (error) {
             console.error('Error adding retro card:', error)
@@ -68,11 +97,11 @@ export const handleRetroBoardEvents = (io, socket) => {
 
     socket.on('deleteRetroCard', async ({ boardId, cardId }) => {
         try {
-            console.log('Deleting retro card:', { boardId, cardId })
+            debugLog('Deleting retro card', { boardId, cardId })
             await deleteRetroCard(cardId)
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
-            console.log('Emitting board update to room:', roomName)
+            debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board)
         } catch (error) {
             console.error('Error deleting retro card:', error)
@@ -82,7 +111,7 @@ export const handleRetroBoardEvents = (io, socket) => {
 
     socket.on('toggleVote', async ({ boardId, cardId }) => {
         try {
-            console.log('Toggling vote:', { boardId, cardId })
+            debugLog('Toggling vote', { boardId, cardId })
             const userName = userNames.get(socket.id)
             if (!userName) {
                 socket.emit('error', { message: 'User not found' })
@@ -92,7 +121,7 @@ export const handleRetroBoardEvents = (io, socket) => {
             await toggleRetroCardVote(cardId, userName)
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
-            console.log('Emitting board update to room:', roomName)
+            debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board)
         } catch (error) {
             console.error('Error toggling vote:', error)
@@ -102,11 +131,11 @@ export const handleRetroBoardEvents = (io, socket) => {
 
     socket.on('updateSettings', async ({ boardId, settings }) => {
         try {
-            console.log('Updating retro board settings:', { boardId, settings })
+            debugLog('Updating retro board settings', { boardId, settings })
             await updateRetroBoardSettings(boardId, settings)
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
-            console.log('Emitting settings update to room:', roomName)
+            debugLog('Emitting settings update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board)
         } catch (error) {
             console.error('Error updating retro board settings:', error)
@@ -116,7 +145,7 @@ export const handleRetroBoardEvents = (io, socket) => {
 
     socket.on('changeRetroName', async ({ boardId, newName }) => {
         try {
-            console.log('Changing name:', { boardId, newName })
+            debugLog('Changing name', { boardId, newName })
             const board = await getRetroBoard(boardId)
             if (!board) {
                 socket.emit('error', { message: 'Board not found' })
@@ -136,6 +165,7 @@ export const handleRetroBoardEvents = (io, socket) => {
 
             const updatedBoard = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
+            debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', updatedBoard)
         } catch (error) {
             console.error('Error changing name:', error)
@@ -145,7 +175,7 @@ export const handleRetroBoardEvents = (io, socket) => {
 
     socket.on('startTimer', async ({ boardId }) => {
         try {
-            console.log('Starting timer for board:', boardId)
+            debugLog('Starting timer', { boardId })
             await startRetroTimer(boardId)
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
@@ -169,7 +199,7 @@ export const handleRetroBoardEvents = (io, socket) => {
                 }
             }, 1000))
 
-            console.log('Emitting timer start to room:', roomName)
+            debugLog('Emitting timer start', { roomName, timeLeft: board.default_timer })
             io.to(roomName).emit('timerStarted', { timeLeft: board.default_timer })
         } catch (error) {
             console.error('Error starting timer:', error)
@@ -179,7 +209,7 @@ export const handleRetroBoardEvents = (io, socket) => {
 
     socket.on('stopTimer', async ({ boardId }) => {
         try {
-            console.log('Stopping timer for board:', boardId)
+            debugLog('Stopping timer', { boardId })
             await stopRetroTimer(boardId)
             const roomName = `retro:${boardId}`
 
@@ -189,7 +219,7 @@ export const handleRetroBoardEvents = (io, socket) => {
                 activeTimers.delete(boardId)
             }
 
-            console.log('Emitting timer stop to room:', roomName)
+            debugLog('Emitting timer stop', { roomName })
             io.to(roomName).emit('timerStopped')
         } catch (error) {
             console.error('Error stopping timer:', error)
@@ -198,6 +228,7 @@ export const handleRetroBoardEvents = (io, socket) => {
     })
 
     socket.on('disconnect', () => {
+        debugLog('Socket disconnected', { socketId: socket.id })
         userNames.delete(socket.id)
     })
 }

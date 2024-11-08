@@ -30,7 +30,7 @@ const RetroLanding: FC = () => {
         "name": "Sprint Retrospective Board",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Any",
-        "description": "Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved.",
+        "description": "Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved. Features include real-time voting, timer control, and card management.",
         "offers": {
             "@type": "Offer",
             "price": "0",
@@ -40,8 +40,13 @@ const RetroLanding: FC = () => {
             "Real-time team collaboration",
             "Three-column retro format",
             "Action item tracking",
+            "Card voting system",
+            "Timer control",
+            "Card visibility toggle",
+            "Author name management",
             "No registration required",
-            "Instant board sharing"
+            "Instant board sharing",
+            "Password protection option"
         ]
     }
 
@@ -87,8 +92,8 @@ const RetroLanding: FC = () => {
         <PageContainer>
             <PageHelmet
                 title="Retro Board - Team Retrospective Tool"
-                description="Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved."
-                keywords="retro board, retrospective, agile retrospective, team collaboration, sprint retrospective, scrum ceremonies"
+                description="Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved. Features include real-time voting, timer control, and card management."
+                keywords="retro board, retrospective, agile retrospective, team collaboration, sprint retrospective, scrum ceremonies, voting, timer control, card management"
                 canonicalUrl={`${config.siteUrl}/retro`}
                 jsonLd={jsonLd}
             />
@@ -109,6 +114,14 @@ const RetroLanding: FC = () => {
                             px={{ base: 2, md: 0 }}
                         >
                             Collaborate with your team to improve your process
+                        </Text>
+                        <Text
+                            fontSize={{ base: "md", md: "lg" }}
+                            color={colorMode === 'light' ? 'gray.500' : 'gray.400'}
+                            mt={2}
+                            px={{ base: 2, md: 0 }}
+                        >
+                            Features: Real-time voting • Timer control • Card management
                         </Text>
                     </Box>
 

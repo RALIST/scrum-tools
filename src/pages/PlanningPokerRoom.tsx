@@ -1,6 +1,4 @@
-import { FC, useState, useEffect } from 'react'
-import { Manager } from 'socket.io-client'
-import type { Socket as ClientSocket } from 'socket.io-client'
+import { FC, useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
     Box,
@@ -31,6 +29,7 @@ import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import { SEQUENCES, SequenceType } from '../constants/poker'
 import { JoinRoomModal, ChangeNameModal, RoomSettingsModal } from '../components/modals'
+import { usePokerSocket } from '../hooks/usePokerSocket'
 import config from '../config'
 
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
@@ -42,17 +41,6 @@ interface RoomInfo {
     createdAt: string
     hasPassword: boolean
     sequence: string
-}
-
-interface RoomSettings {
-    sequence: SequenceType
-    hasPassword: boolean
-}
-
-interface Participant {
-    id: string
-    name: string
-    vote: string | null
 }
 
 interface CardProps {
@@ -86,51 +74,63 @@ const Card: FC<CardProps> = ({ value, isSelected, onClick, disabled }) => {
 }
 
 const PlanningPokerRoom: FC = () => {
-    const [socket, setSocket] = useState<ClientSocket | null>(null)
-    const [selectedCard, setSelectedCard] = useState<string | null>(null)
-    const [userName, setUserName] = useState<string>('')
-    const [isJoined, setIsJoined] = useState(false)
-    const [showJoinModal, setShowJoinModal] = useState(true)
-    const [participants, setParticipants] = useState<Participant[]>([])
-    const [isRevealed, setIsRevealed] = useState(false)
     const { colorMode } = useColorMode()
-    const toast = useToast()
-    const navigate = useNavigate()
     const { roomId } = useParams<{ roomId: string }>()
-    const shareableLink = `${config.siteUrl}/planning-poker/${roomId}`
+    const navigate = useNavigate()
+    const toast = useToast()
+    const [userName, setUserName] = useState(() => localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY) || '')
+    const [selectedCard, setSelectedCard] = useState<string | null>(null)
+    const [showJoinModal, setShowJoinModal] = useState(true)
+    const shareableLink = useMemo(() => `${config.siteUrl}/planning-poker/${roomId}`, [roomId])
     const { hasCopied, onCopy } = useClipboard(shareableLink)
     const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
     const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure()
     const [newUserName, setNewUserName] = useState<string>('')
     const [roomPassword, setRoomPassword] = useState<string>('')
     const [showPassword, setShowPassword] = useState(false)
-    const [settings, setSettings] = useState<RoomSettings>({
-        sequence: 'fibonacci',
-        hasPassword: false
-    })
     const [newSettings, setNewSettings] = useState<{
         sequence?: SequenceType
         password?: string
     }>({})
     const [isPasswordProtected, setIsPasswordProtected] = useState(false)
 
-    useEffect(() => {
-        const savedUsername = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY)
-        if (savedUsername) {
-            setUserName(savedUsername)
-        }
-    }, [])
+    const onRoomJoined = useCallback(() => {
+        toast({
+            title: 'Joined Room',
+            status: 'success',
+            duration: 2000,
+        })
+        setShowJoinModal(false)
+    }, [toast])
 
+    const {
+        participants,
+        settings,
+        isRevealed,
+        isJoined,
+        joinRoom,
+        changeName,
+        vote,
+        revealVotes,
+        resetVotes,
+        updateSettings: updateRoomSettings
+    } = usePokerSocket({
+        roomId: roomId || '',
+        onRoomJoined
+    })
+
+    // Check room password protection once
     useEffect(() => {
         if (!roomId) {
             navigate('/planning-poker')
             return
         }
 
-        // Check if room is password protected
+        let isActive = true
         fetch(`${config.apiUrl}/rooms`)
             .then(res => res.json())
             .then((rooms: RoomInfo[]) => {
+                if (!isActive) return
                 const room = rooms.find(r => r.id === roomId)
                 if (room) {
                     setIsPasswordProtected(room.hasPassword)
@@ -138,85 +138,12 @@ const PlanningPokerRoom: FC = () => {
             })
             .catch(console.error)
 
-        const manager = new Manager(config.socketUrl, {
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            transports: ['websocket', 'polling']
-        })
-
-        const newSocket = manager.socket('/')
-
-        newSocket.on('connect', () => {
-            console.log('Connected to server')
-        })
-
-        newSocket.on('connect_error', (error: Error) => {
-            console.error('Connection error:', error)
-            toast({
-                title: 'Connection error',
-                description: 'Failed to connect to server',
-                status: 'error',
-                duration: 2000,
-            })
-        })
-
-        setSocket(newSocket)
-
-        newSocket.on('roomJoined', (data: { participants: Participant[], settings: RoomSettings }) => {
-            setParticipants(data.participants)
-            setSettings(data.settings)
-            toast({
-                title: 'Joined Room',
-                status: 'success',
-                duration: 2000,
-            })
-            setIsJoined(true)
-            setShowJoinModal(false)
-        })
-
-        newSocket.on('participantUpdate', (data: { participants: Participant[] }) => {
-            setParticipants(data.participants)
-        })
-
-        newSocket.on('settingsUpdated', (data: { settings: RoomSettings }) => {
-            setSettings(data.settings)
-            toast({
-                title: 'Room Settings Updated',
-                status: 'success',
-                duration: 2000,
-            })
-        })
-
-        newSocket.on('votesRevealed', () => {
-            setIsRevealed(true)
-        })
-
-        newSocket.on('votesReset', () => {
-            setIsRevealed(false)
-            setSelectedCard(null)
-        })
-
-        newSocket.on('error', (data: { message: string }) => {
-            toast({
-                title: 'Error',
-                description: data.message,
-                status: 'error',
-                duration: 2000,
-            })
-            if (data.message === 'Invalid password') {
-                setRoomPassword('')
-            }
-        })
-
         return () => {
-            newSocket.disconnect()
+            isActive = false
         }
-    }, [roomId])
+    }, [roomId, navigate])
 
-    const handleJoinRoom = async () => {
+    const handleJoinRoom = useCallback(() => {
         if (!userName.trim()) {
             toast({
                 title: 'Error',
@@ -238,20 +165,10 @@ const PlanningPokerRoom: FC = () => {
         }
 
         localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, userName)
+        joinRoom(userName, roomPassword)
+    }, [userName, roomPassword, isPasswordProtected, joinRoom, toast])
 
-        if (socket?.connected && roomId) {
-            socket.emit('joinRoom', { roomId, userName, password: roomPassword })
-        } else {
-            toast({
-                title: 'Connection Error',
-                description: 'Not connected to server. Please try again.',
-                status: 'error',
-                duration: 2000,
-            })
-        }
-    }
-
-    const handleChangeName = () => {
+    const handleChangeName = useCallback(() => {
         if (!newUserName.trim()) {
             toast({
                 title: 'Error',
@@ -264,43 +181,33 @@ const PlanningPokerRoom: FC = () => {
 
         localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, newUserName)
         setUserName(newUserName)
-        socket?.emit('changeName', { roomId, newName: newUserName })
+        changeName(newUserName)
         onChangeNameClose()
         toast({
             title: 'Name Updated',
             status: 'success',
             duration: 2000,
         })
-    }
+    }, [newUserName, changeName, onChangeNameClose, toast])
 
-    const handleUpdateSettings = () => {
-        if (socket?.connected && roomId) {
-            socket.emit('updateSettings', { roomId, settings: newSettings })
-            onSettingsClose()
-            setNewSettings({})
-        }
-    }
+    const handleUpdateSettings = useCallback(() => {
+        updateRoomSettings(newSettings)
+        onSettingsClose()
+        setNewSettings({})
+    }, [newSettings, updateRoomSettings, onSettingsClose])
 
-    const handleCardSelect = (value: string) => {
+    const handleCardSelect = useCallback((value: string) => {
         setSelectedCard(value)
-        socket?.emit('vote', { roomId, vote: value })
+        vote(value)
         toast({
             title: 'Vote Recorded',
             description: `You selected ${value} points`,
             status: 'success',
             duration: 2000,
         })
-    }
+    }, [vote, toast])
 
-    const handleRevealVotes = () => {
-        socket?.emit('revealVotes', { roomId })
-    }
-
-    const handleResetVotes = () => {
-        socket?.emit('resetVotes', { roomId })
-    }
-
-    const calculateAverage = () => {
+    const calculateAverage = useCallback(() => {
         const numericVotes = participants
             .map(p => p.vote)
             .filter(vote => vote && vote !== '?' && !isNaN(Number(vote)))
@@ -309,9 +216,9 @@ const PlanningPokerRoom: FC = () => {
         if (numericVotes.length === 0) return 0
         const avg = numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length
         return avg
-    }
+    }, [participants])
 
-    const getVoteColor = (vote: string | null) => {
+    const getVoteColor = useCallback((vote: string | null) => {
         if (!vote || vote === '?' || !isRevealed) return undefined
 
         const voteNum = Number(vote)
@@ -333,7 +240,7 @@ const PlanningPokerRoom: FC = () => {
         if (percentage <= 0.6) return 'yellow.400'
         if (percentage <= 0.8) return 'orange.400'
         return 'red.500'
-    }
+    }, [isRevealed, settings.sequence, calculateAverage])
 
     return (
         <PageContainer>
@@ -417,7 +324,7 @@ const PlanningPokerRoom: FC = () => {
                                 >
                                     <Button
                                         colorScheme="blue"
-                                        onClick={handleRevealVotes}
+                                        onClick={revealVotes}
                                         disabled={isRevealed}
                                         w={{ base: "full", md: "auto" }}
                                     >
@@ -425,7 +332,7 @@ const PlanningPokerRoom: FC = () => {
                                     </Button>
                                     <Button
                                         colorScheme="orange"
-                                        onClick={handleResetVotes}
+                                        onClick={resetVotes}
                                         w={{ base: "full", md: "auto" }}
                                     >
                                         New Round
@@ -480,7 +387,7 @@ const PlanningPokerRoom: FC = () => {
                 </VStack>
 
                 <JoinRoomModal
-                    isOpen={showJoinModal}
+                    isOpen={showJoinModal && !isJoined}
                     userName={userName}
                     roomPassword={roomPassword}
                     showPassword={showPassword}

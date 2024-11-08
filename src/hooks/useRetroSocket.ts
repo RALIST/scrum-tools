@@ -10,7 +10,7 @@ interface RetroCard {
     column_id: string
     author_name: string
     created_at: string
-    votes: string[] // Add votes array
+    votes: string[]
 }
 
 interface RetroBoard {
@@ -24,11 +24,6 @@ interface RetroBoard {
     hide_cards_by_default: boolean
     hide_author_names: boolean
     hasPassword: boolean
-}
-
-interface JoinParams {
-    name: string
-    password?: string
 }
 
 interface UseRetroSocketProps {
@@ -48,14 +43,18 @@ interface UseRetroSocketResult {
     changeName: (newName: string) => void
     addCard: (cardId: string, columnId: string, text: string, authorName: string) => void
     deleteCard: (cardId: string) => void
+    toggleVote: (cardId: string) => void
     toggleTimer: () => void
-    toggleVote: (cardId: string) => void // Add vote toggle function
     updateSettings: (settings: {
         defaultTimer: number
         hideCardsByDefault: boolean
         hideAuthorNames: boolean
         password?: string
     }) => void
+}
+
+const debugLog = (message: string, data?: any) => {
+    console.log(`[useRetroSocket] ${message}`, data || '')
 }
 
 export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps): UseRetroSocketResult => {
@@ -65,143 +64,162 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
     const [timeLeft, setTimeLeft] = useState(300)
     const [hideCards, setHideCards] = useState(false)
     const [hasJoined, setHasJoined] = useState(false)
-    const joinParamsRef = useRef<JoinParams | null>(null)
     const socketRef = useRef<ClientSocket | null>(null)
-    const boardLoadedRef = useRef(false)
+    const joinParamsRef = useRef<{ name: string; password?: string } | null>(null)
+    const initRef = useRef(false)
     const toast = useToast()
 
-    const setupSocket = useCallback(() => {
-        if (socketRef.current) {
-            console.log('Socket already exists')
-            return
-        }
+    const handleSetHideCards = useCallback((hide: boolean) => {
+        if (!socketRef.current || !boardId) return
+        debugLog('Emitting toggleCardsVisibility', { hide })
+        socketRef.current.emit('toggleCardsVisibility', { boardId, hideCards: hide })
+    }, [boardId])
 
-        console.log('Setting up socket connection')
-        const manager = new Manager(config.socketUrl, {
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            transports: ['websocket', 'polling']
-        })
-
-        const newSocket = manager.socket('/')
-
-        newSocket.on('connect', () => {
-            console.log('Socket connected')
-            if (boardId && joinParamsRef.current) {
-                const { name, password } = joinParamsRef.current
-                console.log('Emitting joinRetroBoard:', { boardId, name })
-                newSocket.emit('joinRetroBoard', { boardId, name, password })
-            }
-        })
-
-        newSocket.on('retroBoardJoined', (data: RetroBoard) => {
-            console.log('Joined retro board:', data)
-            setBoard(data)
-            setIsTimerRunning(data.timer_running)
-            setTimeLeft(data.time_left)
-            setHideCards(data.hide_cards_by_default)
-            setHasJoined(true)
-            onBoardJoined()
-        })
-
-        newSocket.on('retroBoardUpdated', (data: RetroBoard) => {
-            console.log('Board updated:', data)
-            setBoard(data)
-            setHideCards(data.hide_cards_by_default)
-        })
-
-        newSocket.on('timerStarted', ({ timeLeft: serverTimeLeft }) => {
-            console.log('Timer started:', serverTimeLeft)
-            setIsTimerRunning(true)
-            setTimeLeft(serverTimeLeft)
-        })
-
-        newSocket.on('timerStopped', () => {
-            console.log('Timer stopped')
-            setIsTimerRunning(false)
-        })
-
-        newSocket.on('timerUpdate', ({ timeLeft: serverTimeLeft }) => {
-            console.log('Timer update:', serverTimeLeft)
-            setTimeLeft(serverTimeLeft)
-        })
-
-        newSocket.on('error', (data: { message: string }) => {
-            console.error('Socket error:', data)
-            toast({
-                title: 'Error',
-                description: data.message,
-                status: 'error',
-                duration: 2000,
-            })
-        })
-
-        socketRef.current = newSocket
-        setSocket(newSocket)
-
-        return () => {
-            console.log('Cleaning up socket')
-            newSocket.disconnect()
-            socketRef.current = null
-        }
-    }, [boardId, onBoardJoined])
-
-    // Load initial board data
     useEffect(() => {
-        if (!boardId || boardLoadedRef.current) return
+        if (!boardId || initRef.current) return
 
-        console.log('Fetching board data:', boardId)
-        boardLoadedRef.current = true
+        let isActive = true
+        initRef.current = true
 
-        fetch(`${config.apiUrl}/retro/${boardId}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Board not found')
-                return res.json()
-            })
-            .then(data => {
-                console.log('Board data loaded:', data)
+        const initializeBoard = async () => {
+            try {
+                debugLog('Fetching board data', { boardId })
+                const response = await fetch(`${config.apiUrl}/retro/${boardId}`)
+                if (!response.ok) throw new Error('Board not found')
+                const data = await response.json()
+
+                if (!isActive) return
+
+                debugLog('Board data loaded', data)
                 setBoard(data)
                 setIsTimerRunning(data.timer_running)
                 setTimeLeft(data.time_left)
                 setHideCards(data.hide_cards_by_default)
-            })
-            .catch((error) => {
-                console.error('Error fetching board:', error)
+
+                debugLog('Setting up socket connection')
+                const manager = new Manager(config.socketUrl, {
+                    reconnection: true,
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
+                    timeout: 20000,
+                    transports: ['websocket', 'polling']
+                })
+
+                const newSocket = manager.socket('/retro')
+
+                newSocket.on('connect', () => {
+                    if (!isActive) return
+                    debugLog('Socket connected')
+                    if (joinParamsRef.current) {
+                        const { name, password } = joinParamsRef.current
+                        debugLog('Auto-joining with params', { name })
+                        newSocket.emit('joinRetroBoard', { boardId, name, password })
+                    }
+                })
+
+                newSocket.on('retroBoardJoined', (data: RetroBoard) => {
+                    if (!isActive) return
+                    debugLog('Joined retro board', data)
+                    setBoard(data)
+                    setIsTimerRunning(data.timer_running)
+                    setTimeLeft(data.time_left)
+                    setHideCards(data.hide_cards_by_default)
+                    setHasJoined(true)
+                    onBoardJoined()
+                })
+
+                newSocket.on('retroBoardUpdated', (data: RetroBoard) => {
+                    if (!isActive) return
+                    debugLog('Board updated', data)
+                    setBoard(data)
+                })
+
+                newSocket.on('cardsVisibilityChanged', ({ hideCards: newHideCards }) => {
+                    if (!isActive) return
+                    debugLog('Cards visibility changed', { newHideCards })
+                    setHideCards(newHideCards)
+                })
+
+                newSocket.on('timerStarted', ({ timeLeft: serverTimeLeft }) => {
+                    if (!isActive) return
+                    debugLog('Timer started', { serverTimeLeft })
+                    setIsTimerRunning(true)
+                    setTimeLeft(serverTimeLeft)
+                })
+
+                newSocket.on('timerStopped', () => {
+                    if (!isActive) return
+                    debugLog('Timer stopped')
+                    setIsTimerRunning(false)
+                })
+
+                newSocket.on('timerUpdate', ({ timeLeft: serverTimeLeft }) => {
+                    if (!isActive) return
+                    debugLog('Timer update', { serverTimeLeft })
+                    setTimeLeft(serverTimeLeft)
+                })
+
+                newSocket.on('error', (data: { message: string }) => {
+                    if (!isActive) return
+                    debugLog('Socket error', data)
+                    toast({
+                        title: 'Error',
+                        description: data.message,
+                        status: 'error',
+                        duration: 2000,
+                    })
+                })
+
+                socketRef.current = newSocket
+                setSocket(newSocket)
+            } catch (error) {
+                if (!isActive) return
+                debugLog('Error initializing board', error)
                 toast({
                     title: 'Error',
-                    description: 'Board not found',
+                    description: 'Failed to load board',
                     status: 'error',
                     duration: 2000,
                 })
-            })
-    }, [boardId])
+            }
+        }
+
+        initializeBoard()
+
+        return () => {
+            isActive = false
+            if (socketRef.current) {
+                debugLog('Cleaning up socket')
+                socketRef.current.disconnect()
+                socketRef.current = null
+            }
+            initRef.current = false
+            joinParamsRef.current = null
+            setHasJoined(false)
+        }
+    }, [boardId, onBoardJoined, toast])
 
     const joinBoard = useCallback((name: string, password?: string) => {
-        if (!boardId) return
+        if (!boardId || hasJoined) return
 
-        console.log('Joining board:', { name })
+        debugLog('Joining board', { name })
         joinParamsRef.current = { name, password }
-
-        if (!socketRef.current) {
-            setupSocket()
-        } else {
-            console.log('Emitting joinRetroBoard:', { boardId, name })
+        if (socketRef.current?.connected) {
+            debugLog('Emitting joinRetroBoard', { boardId, name })
             socketRef.current.emit('joinRetroBoard', { boardId, name, password })
         }
-    }, [boardId, setupSocket])
+    }, [boardId, hasJoined])
 
     const changeName = useCallback((newName: string) => {
         if (!socketRef.current || !boardId) return
-        console.log('Changing name:', newName)
+        debugLog('Changing name', { newName })
         socketRef.current.emit('changeRetroName', { boardId, newName })
     }, [boardId])
 
     const addCard = useCallback((cardId: string, columnId: string, text: string, authorName: string) => {
         if (!socketRef.current || !boardId) return
-        console.log('Adding card:', { cardId, columnId, text, authorName })
+        debugLog('Adding card', { cardId, columnId, text, authorName })
         socketRef.current.emit('addRetroCard', {
             boardId,
             cardId,
@@ -213,19 +231,19 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
 
     const deleteCard = useCallback((cardId: string) => {
         if (!socketRef.current || !boardId) return
-        console.log('Deleting card:', cardId)
+        debugLog('Deleting card', { cardId })
         socketRef.current.emit('deleteRetroCard', { boardId, cardId })
     }, [boardId])
 
     const toggleVote = useCallback((cardId: string) => {
         if (!socketRef.current || !boardId) return
-        console.log('Toggling vote:', cardId)
+        debugLog('Toggling vote', { cardId })
         socketRef.current.emit('toggleVote', { boardId, cardId })
     }, [boardId])
 
     const toggleTimer = useCallback(() => {
         if (!socketRef.current || !boardId) return
-        console.log('Toggling timer:', { isTimerRunning })
+        debugLog('Toggling timer', { isTimerRunning })
         if (isTimerRunning) {
             socketRef.current.emit('stopTimer', { boardId })
         } else {
@@ -240,20 +258,9 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         password?: string
     }) => {
         if (!socketRef.current || !boardId) return
-        console.log('Updating settings:', settings)
+        debugLog('Updating settings', settings)
         socketRef.current.emit('updateSettings', { boardId, settings })
     }, [boardId])
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (socketRef.current) {
-                console.log('Disconnecting socket')
-                socketRef.current.disconnect()
-                socketRef.current = null
-            }
-        }
-    }, [])
 
     return {
         socket,
@@ -261,7 +268,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         isTimerRunning,
         timeLeft,
         hideCards,
-        setHideCards,
+        setHideCards: handleSetHideCards,
         hasJoined,
         joinBoard,
         changeName,

@@ -25,16 +25,18 @@ const io = new Server(server, {
     }
 });
 
-// Socket.IO events
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id)
+// Create namespaces for different features
+const pokerIo = io.of('/poker');
+const retroIo = io.of('/retro');
 
-    // Register event handlers
-    handlePlanningPokerEvents(io, socket);
-    handleRetroBoardEvents(io, socket);
+// Planning Poker events
+pokerIo.on('connection', (socket) => {
+    console.log('User connected to poker:', socket.id)
+
+    handlePlanningPokerEvents(pokerIo, socket);
 
     socket.on('disconnect', async () => {
-        console.log('User disconnected:', socket.id)
+        console.log('User disconnected from poker:', socket.id)
 
         try {
             // Find the room this participant was in
@@ -45,17 +47,28 @@ io.on('connection', (socket) => {
                     await removeParticipant(room.id, socket.id)
                     const updatedRoom = await getRoom(room.id)
 
-                    io.to(room.id).emit('participantUpdate', {
+                    pokerIo.to(room.id).emit('participantUpdate', {
                         participants: Array.from(updatedRoom.participants.values())
                     })
                     break
                 }
             }
         } catch (error) {
-            console.error('Error handling disconnect:', error)
+            console.error('Error handling poker disconnect:', error)
         }
     })
-})
+});
+
+// Retro Board events
+retroIo.on('connection', (socket) => {
+    console.log('User connected to retro:', socket.id)
+
+    handleRetroBoardEvents(retroIo, socket);
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected from retro:', socket.id)
+    })
+});
 
 const PORT = 3001
 server.listen(PORT, () => {
