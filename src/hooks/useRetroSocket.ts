@@ -42,6 +42,7 @@ interface UseRetroSocketResult {
     joinBoard: (name: string, password?: string) => void
     changeName: (newName: string) => void
     addCard: (cardId: string, columnId: string, text: string, authorName: string) => void
+    editCard: (cardId: string, text: string) => void
     deleteCard: (cardId: string) => void
     toggleVote: (cardId: string) => void
     toggleTimer: () => void
@@ -68,12 +69,6 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
     const joinParamsRef = useRef<{ name: string; password?: string } | null>(null)
     const initRef = useRef(false)
     const toast = useToast()
-
-    const handleSetHideCards = useCallback((hide: boolean) => {
-        if (!socketRef.current || !boardId) return
-        debugLog('Emitting toggleCardsVisibility', { hide })
-        socketRef.current.emit('toggleCardsVisibility', { boardId, hideCards: hide })
-    }, [boardId])
 
     useEffect(() => {
         if (!boardId || initRef.current) return
@@ -229,6 +224,12 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         })
     }, [boardId])
 
+    const editCard = useCallback((cardId: string, text: string) => {
+        if (!socketRef.current || !boardId) return
+        debugLog('Editing card', { cardId, text })
+        socketRef.current.emit('editRetroCard', { boardId, cardId, text })
+    }, [boardId])
+
     const deleteCard = useCallback((cardId: string) => {
         if (!socketRef.current || !boardId) return
         debugLog('Deleting card', { cardId })
@@ -262,6 +263,12 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         socketRef.current.emit('updateSettings', { boardId, settings })
     }, [boardId])
 
+    const handleSetHideCards = useCallback((hide: boolean) => {
+        if (!socketRef.current || !boardId) return
+        debugLog('Setting hide cards', { hide })
+        socketRef.current.emit('toggleCardsVisibility', { boardId, hideCards: hide })
+    }, [boardId])
+
     return {
         socket,
         board,
@@ -273,6 +280,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         joinBoard,
         changeName,
         addCard,
+        editCard,
         deleteCard,
         toggleVote,
         toggleTimer,

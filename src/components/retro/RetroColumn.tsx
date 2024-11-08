@@ -23,6 +23,7 @@ interface RetroColumnProps {
     onAddCard: () => void
     onDeleteCard: (cardId: string) => void
     onVoteCard: (cardId: string) => void
+    onEditCard: (cardId: string, text: string) => void
 }
 
 const RetroColumn: FC<RetroColumnProps> = ({
@@ -38,7 +39,8 @@ const RetroColumn: FC<RetroColumnProps> = ({
     onInputChange,
     onAddCard,
     onDeleteCard,
-    onVoteCard
+    onVoteCard,
+    onEditCard
 }) => {
     const { colorMode } = useColorMode()
 
@@ -91,6 +93,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
                             currentUserName={userName}
                             onDelete={onDeleteCard}
                             onVote={onVoteCard}
+                            onEdit={onEditCard}
                         />
                     ))}
                 </VStack>

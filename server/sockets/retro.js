@@ -8,7 +8,8 @@ import {
     verifyRetroBoardPassword,
     updateRetroBoardSettings,
     updateRetroCardAuthor,
-    toggleRetroCardVote
+    toggleRetroCardVote,
+    updateRetroCardText
 } from '../db/retro.js'
 
 // Store active timers and user names
@@ -92,6 +93,20 @@ export const handleRetroBoardEvents = (io, socket) => {
         } catch (error) {
             console.error('Error adding retro card:', error)
             socket.emit('error', { message: 'Failed to add card' })
+        }
+    })
+
+    socket.on('editRetroCard', async ({ boardId, cardId, text }) => {
+        try {
+            debugLog('Editing retro card', { boardId, cardId, text })
+            await updateRetroCardText(cardId, text)
+            const board = await getRetroBoard(boardId)
+            const roomName = `retro:${boardId}`
+            debugLog('Emitting board update', { roomName })
+            io.to(roomName).emit('retroBoardUpdated', board)
+        } catch (error) {
+            console.error('Error editing retro card:', error)
+            socket.emit('error', { message: 'Failed to edit card' })
         }
     })
 

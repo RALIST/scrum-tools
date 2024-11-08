@@ -51,6 +51,7 @@ const RetroBoard: FC = () => {
         joinBoard,
         changeName,
         addCard,
+        editCard,
         deleteCard,
         toggleVote,
         toggleTimer,
@@ -155,6 +156,7 @@ const RetroBoard: FC = () => {
                                 onAddCard={() => handleAddCard(column.id)}
                                 onDeleteCard={deleteCard}
                                 onVoteCard={toggleVote}
+                                onEditCard={editCard}
                             />
                         ))}
                     </SimpleGrid>

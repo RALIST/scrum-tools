@@ -82,6 +82,21 @@ export const addRetroCard = async (boardId, cardId, columnId, text, authorName) 
     }
 }
 
+export const updateRetroCardText = async (cardId, text) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'UPDATE retro_cards SET text = $2 WHERE id = $1',
+            [cardId, text]
+        )
+    } catch (error) {
+        console.error('Error updating retro card text:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
 export const updateRetroCardAuthor = async (cardId, authorName) => {
     const client = await pool.connect()
     try {
