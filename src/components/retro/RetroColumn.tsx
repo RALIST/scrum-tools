@@ -101,7 +101,6 @@ const RetroColumn: FC<RetroColumnProps> = ({
 
             <Box mt="auto" pt={2}>
                 <RetroCardInput
-                    columnId={id}
                     isTimerRunning={isTimerRunning}
                     value={inputValue}
                     onChange={onInputChange}

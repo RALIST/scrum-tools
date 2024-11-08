@@ -8,7 +8,6 @@ import {
 import { AddIcon } from '@chakra-ui/icons'
 
 interface RetroCardInputProps {
-    columnId: string
     isTimerRunning: boolean
     value: string
     onChange: (value: string) => void
@@ -17,7 +16,6 @@ interface RetroCardInputProps {
 }
 
 const RetroCardInput: FC<RetroCardInputProps> = ({
-    columnId,
     isTimerRunning,
     value,
     onChange,
