@@ -19,7 +19,7 @@ import {
 } from '@chakra-ui/react'
 import PageContainer from '../components/PageContainer'
 
-const SOCKET_URL = `http://${window.location.hostname}:3001`
+const SOCKET_URL = `https://${window.location.hostname}`
 
 interface Room {
     id: string

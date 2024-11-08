@@ -36,7 +36,7 @@ import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 
 const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
-const SOCKET_URL = `http://${window.location.hostname}:3001`
+const SOCKET_URL = `https://${window.location.hostname}`
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
 
 interface Participant {
@@ -114,7 +114,7 @@ const PlanningPokerRoom: FC = () => {
             transports: ['websocket', 'polling']
         })
 
-        const newSocket = manager.socket('/')
+        const newSocket = manager.socket('/ws')
 
         newSocket.on('connect', () => {
             console.log('Connected to server')
