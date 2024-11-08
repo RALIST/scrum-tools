@@ -18,6 +18,7 @@ import {
     HStack
 } from '@chakra-ui/react'
 import PageContainer from '../components/PageContainer'
+import PageHelmet from '../components/PageHelmet'
 
 const SOCKET_URL = `https://${window.location.hostname}`
 
@@ -74,6 +75,12 @@ const PlanningPoker: FC = () => {
 
     return (
         <PageContainer>
+            <PageHelmet
+                title="Planning Poker"
+                description="Free online Planning Poker tool for agile teams. Create or join rooms for real-time story point estimation with your team. Collaborate effectively in your sprint planning sessions."
+                keywords="planning poker, scrum poker, agile estimation, story points, team estimation, real-time voting, sprint planning, agile tools"
+                canonicalUrl="https://scrumtools.app/planning-poker"
+            />
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
                 <VStack spacing={{ base: 4, md: 8 }}>
                     <Box textAlign="center" w="full">

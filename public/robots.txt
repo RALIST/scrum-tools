@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /planning-poker/*
+
+Sitemap: https://scrumtools.app/sitemap.xml

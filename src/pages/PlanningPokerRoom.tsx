@@ -34,6 +34,7 @@ import {
 } from '@chakra-ui/react'
 import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
+import PageHelmet from '../components/PageHelmet'
 
 const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
 const SOCKET_URL = `https://${window.location.hostname}`
@@ -264,6 +265,12 @@ const PlanningPokerRoom: FC = () => {
 
     return (
         <PageContainer>
+            <PageHelmet
+                title={`Planning Poker Room ${roomId || ''}`}
+                description={`Join Planning Poker session ${roomId || ''} for real-time story point estimation with your team. Currently ${participants.length} participant${participants.length !== 1 ? 's' : ''} in the room.`}
+                keywords="planning poker room, agile estimation, story points, team voting, scrum poker session"
+                canonicalUrl={`https://scrumtools.app/planning-poker/${roomId}`}
+            />
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
                 <VStack spacing={{ base: 4, md: 8 }}>
                     <Box textAlign="center" w="full">
@@ -387,7 +394,7 @@ const PlanningPokerRoom: FC = () => {
                                     </TableContainer>
                                     {isRevealed && (
                                         <Text mt={4} fontWeight="bold" textAlign={{ base: "center", md: "left" }}>
-                                            Average: {calculateAverage().toFixed(1)}
+                                            Average (excluding '?'): {calculateAverage().toFixed(1)}
                                         </Text>
                                     )}
                                 </Box>
