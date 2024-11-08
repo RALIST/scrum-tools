@@ -7,7 +7,8 @@ import {
     updateRetroTimer,
     verifyRetroBoardPassword,
     updateRetroBoardSettings,
-    updateRetroCardAuthor
+    updateRetroCardAuthor,
+    toggleRetroCardVote
 } from '../db/retro.js'
 
 // Store active timers and user names
@@ -44,8 +45,6 @@ export const handleRetroBoardEvents = (io, socket) => {
                 socket.emit('timerStarted', { timeLeft: board.time_left })
             }
 
-            // Emit board data to the client
-            console.log('Emitting retroBoardJoined with data:', board)
             socket.emit('retroBoardJoined', board)
         } catch (error) {
             console.error('Error joining retro board:', error)
@@ -78,6 +77,26 @@ export const handleRetroBoardEvents = (io, socket) => {
         } catch (error) {
             console.error('Error deleting retro card:', error)
             socket.emit('error', { message: 'Failed to delete card' })
+        }
+    })
+
+    socket.on('toggleVote', async ({ boardId, cardId }) => {
+        try {
+            console.log('Toggling vote:', { boardId, cardId })
+            const userName = userNames.get(socket.id)
+            if (!userName) {
+                socket.emit('error', { message: 'User not found' })
+                return
+            }
+
+            await toggleRetroCardVote(cardId, userName)
+            const board = await getRetroBoard(boardId)
+            const roomName = `retro:${boardId}`
+            console.log('Emitting board update to room:', roomName)
+            io.to(roomName).emit('retroBoardUpdated', board)
+        } catch (error) {
+            console.error('Error toggling vote:', error)
+            socket.emit('error', { message: 'Failed to toggle vote' })
         }
     })
 

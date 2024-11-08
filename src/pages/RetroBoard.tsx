@@ -18,9 +18,10 @@ import {
     useDisclosure,
     Divider,
     Spinner,
-    Center
+    Center,
+    Tooltip
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon, EditIcon, TriangleUpIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import { RetroBoardSettingsModal, JoinRetroBoardModal, ChangeRetroBoardNameModal } from '../components/modals'
@@ -54,6 +55,7 @@ const RetroBoard: FC = () => {
         changeName,
         addCard,
         deleteCard,
+        toggleVote,
         toggleTimer,
         updateSettings
     } = useRetroSocket({
@@ -239,26 +241,46 @@ const RetroBoard: FC = () => {
                                 <VStack spacing={4} align="stretch">
                                     {board?.cards
                                         .filter(card => card.column_id === column.id)
+                                        .sort((a, b) => (b.votes || []).length - (a.votes || []).length) // Sort by votes with fallback
                                         .map(card => (
                                             <Card key={card.id} variant="outline">
                                                 <CardBody>
                                                     <VStack align="stretch" spacing={2}>
-                                                        <HStack justify="space-between">
-                                                            <Text>{hideCards ? '[ Hidden ]' : card.text}</Text>
-                                                            <IconButton
-                                                                aria-label="Delete card"
-                                                                icon={<DeleteIcon />}
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                colorScheme="red"
-                                                                onClick={() => deleteCard(card.id)}
-                                                            />
+                                                        <HStack justify="space-between" align="start">
+                                                            <VStack align="start" spacing={1} flex={1}>
+                                                                <Text>{hideCards ? '[ Hidden ]' : card.text}</Text>
+                                                                {!board.hide_author_names && (
+                                                                    <Text fontSize="sm" color="gray.500">
+                                                                        Added by: {card.author_name}
+                                                                    </Text>
+                                                                )}
+                                                            </VStack>
+                                                            <HStack>
+                                                                <Tooltip
+                                                                    label={(card.votes || []).length > 0
+                                                                        ? `Votes: ${(card.votes || []).join(', ')}`
+                                                                        : 'No votes yet'}
+                                                                >
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        leftIcon={<TriangleUpIcon />}
+                                                                        onClick={() => toggleVote(card.id)}
+                                                                        colorScheme={(card.votes || []).includes(userName) ? "blue" : "gray"}
+                                                                    >
+                                                                        {(card.votes || []).length}
+                                                                    </Button>
+                                                                </Tooltip>
+                                                                <IconButton
+                                                                    aria-label="Delete card"
+                                                                    icon={<DeleteIcon />}
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    colorScheme="red"
+                                                                    onClick={() => deleteCard(card.id)}
+                                                                />
+                                                            </HStack>
                                                         </HStack>
-                                                        {!board.hide_author_names && (
-                                                            <Text fontSize="sm" color="gray.500">
-                                                                Added by: {card.author_name}
-                                                            </Text>
-                                                        )}
                                                     </VStack>
                                                 </CardBody>
                                             </Card>

@@ -10,6 +10,7 @@ interface RetroCard {
     column_id: string
     author_name: string
     created_at: string
+    votes: string[] // Add votes array
 }
 
 interface RetroBoard {
@@ -48,6 +49,7 @@ interface UseRetroSocketResult {
     addCard: (cardId: string, columnId: string, text: string, authorName: string) => void
     deleteCard: (cardId: string) => void
     toggleTimer: () => void
+    toggleVote: (cardId: string) => void // Add vote toggle function
     updateSettings: (settings: {
         defaultTimer: number
         hideCardsByDefault: boolean
@@ -215,6 +217,12 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         socketRef.current.emit('deleteRetroCard', { boardId, cardId })
     }, [boardId])
 
+    const toggleVote = useCallback((cardId: string) => {
+        if (!socketRef.current || !boardId) return
+        console.log('Toggling vote:', cardId)
+        socketRef.current.emit('toggleVote', { boardId, cardId })
+    }, [boardId])
+
     const toggleTimer = useCallback(() => {
         if (!socketRef.current || !boardId) return
         console.log('Toggling timer:', { isTimerRunning })
@@ -259,6 +267,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         changeName,
         addCard,
         deleteCard,
+        toggleVote,
         toggleTimer,
         updateSettings
     }

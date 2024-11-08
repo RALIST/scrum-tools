@@ -1,45 +1,24 @@
 import pool from './pool.js'
 
-// Initialize database schema
-export const initSchema = async () => {
+const createTables = async () => {
     const client = await pool.connect()
     try {
-        // Planning Poker tables
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS rooms (
-                id VARCHAR(255) PRIMARY KEY,
-                name VARCHAR(255),
-                sequence VARCHAR(50) DEFAULT 'fibonacci',
-                password VARCHAR(255),
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `)
-
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS participants (
-                id VARCHAR(255),
-                room_id VARCHAR(255) REFERENCES rooms(id) ON DELETE CASCADE,
-                name VARCHAR(255),
-                vote VARCHAR(50),
-                PRIMARY KEY (id, room_id)
-            )
-        `)
-
-        // Retro Board tables
+        // Create retro_boards table
         await client.query(`
             CREATE TABLE IF NOT EXISTS retro_boards (
                 id VARCHAR(255) PRIMARY KEY,
                 name VARCHAR(255),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 timer_running BOOLEAN DEFAULT false,
                 time_left INTEGER DEFAULT 300,
                 default_timer INTEGER DEFAULT 300,
                 hide_cards_by_default BOOLEAN DEFAULT false,
                 hide_author_names BOOLEAN DEFAULT false,
-                password VARCHAR(255),
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                password VARCHAR(255)
             )
         `)
 
+        // Create retro_cards table
         await client.query(`
             CREATE TABLE IF NOT EXISTS retro_cards (
                 id VARCHAR(255) PRIMARY KEY,
@@ -51,62 +30,45 @@ export const initSchema = async () => {
             )
         `)
 
-        // Add new columns if they don't exist
+        // Create retro_card_votes table
         await client.query(`
-            DO $$ 
-            BEGIN
-                BEGIN
-                    ALTER TABLE retro_boards ADD COLUMN timer_running BOOLEAN DEFAULT false;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE retro_boards ADD COLUMN time_left INTEGER DEFAULT 300;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE retro_boards ADD COLUMN default_timer INTEGER DEFAULT 300;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE retro_boards ADD COLUMN hide_cards_by_default BOOLEAN DEFAULT false;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE retro_boards ADD COLUMN hide_author_names BOOLEAN DEFAULT false;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE retro_boards ADD COLUMN password VARCHAR(255);
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE retro_cards ADD COLUMN author_name VARCHAR(255);
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-            END $$;
+            CREATE TABLE IF NOT EXISTS retro_card_votes (
+                card_id VARCHAR(255) REFERENCES retro_cards(id) ON DELETE CASCADE,
+                user_name VARCHAR(255),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (card_id, user_name)
+            )
         `)
 
-        console.log('Database schema initialized successfully')
+        // Create rooms table (for planning poker)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS rooms (
+                id VARCHAR(255) PRIMARY KEY,
+                name VARCHAR(255),
+                sequence VARCHAR(50) DEFAULT 'fibonacci',
+                password VARCHAR(255),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `)
+
+        // Create participants table (for planning poker)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS participants (
+                id VARCHAR(255),
+                room_id VARCHAR(255) REFERENCES rooms(id) ON DELETE CASCADE,
+                name VARCHAR(255),
+                vote VARCHAR(50),
+                PRIMARY KEY (id, room_id)
+            )
+        `)
+
+        console.log('Tables created successfully')
     } catch (error) {
-        console.error('Error initializing database schema:', error)
+        console.error('Error creating tables:', error)
         throw error
     } finally {
         client.release()
     }
 }
 
-// Initialize schema when module is loaded
-initSchema().catch(console.error)
+createTables().catch(console.error)

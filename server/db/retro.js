@@ -40,7 +40,12 @@ export const getRetroBoard = async (boardId) => {
         }
 
         const cardsResult = await client.query(
-            'SELECT * FROM retro_cards WHERE board_id = $1 ORDER BY created_at ASC',
+            `SELECT c.*, COALESCE(json_agg(v.user_name) FILTER (WHERE v.user_name IS NOT NULL), '[]') as votes
+             FROM retro_cards c
+             LEFT JOIN retro_card_votes v ON c.id = v.card_id
+             WHERE c.board_id = $1
+             GROUP BY c.id
+             ORDER BY c.created_at ASC`,
             [boardId]
         )
 
@@ -49,10 +54,85 @@ export const getRetroBoard = async (boardId) => {
             ...board,
             hasPassword: !!board.password,
             password: undefined, // Don't send password hash to client
-            cards: cardsResult.rows
+            cards: cardsResult.rows.map(card => ({
+                ...card,
+                votes: card.votes || []
+            }))
         }
     } catch (error) {
         console.error('Error getting retro board:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const addRetroCard = async (boardId, cardId, columnId, text, authorName) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'INSERT INTO retro_cards (id, board_id, column_id, text, author_name) VALUES ($1, $2, $3, $4, $5)',
+            [cardId, boardId, columnId, text, authorName]
+        )
+    } catch (error) {
+        console.error('Error adding retro card:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const updateRetroCardAuthor = async (cardId, authorName) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'UPDATE retro_cards SET author_name = $2 WHERE id = $1',
+            [cardId, authorName]
+        )
+    } catch (error) {
+        console.error('Error updating retro card author:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const deleteRetroCard = async (cardId) => {
+    const client = await pool.connect()
+    try {
+        await client.query('DELETE FROM retro_cards WHERE id = $1', [cardId])
+    } catch (error) {
+        console.error('Error deleting retro card:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const toggleRetroCardVote = async (cardId, userName) => {
+    const client = await pool.connect()
+    try {
+        // Check if vote exists
+        const voteResult = await client.query(
+            'SELECT * FROM retro_card_votes WHERE card_id = $1 AND user_name = $2',
+            [cardId, userName]
+        )
+
+        if (voteResult.rows.length > 0) {
+            // Remove vote
+            await client.query(
+                'DELETE FROM retro_card_votes WHERE card_id = $1 AND user_name = $2',
+                [cardId, userName]
+            )
+        } else {
+            // Add vote
+            await client.query(
+                'INSERT INTO retro_card_votes (card_id, user_name) VALUES ($1, $2)',
+                [cardId, userName]
+            )
+        }
+    } catch (error) {
+        console.error('Error toggling retro card vote:', error)
         throw error
     } finally {
         client.release()
@@ -126,48 +206,6 @@ export const updateRetroBoardSettings = async (boardId, settings) => {
         }
     } catch (error) {
         console.error('Error updating retro board settings:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
-
-export const addRetroCard = async (boardId, cardId, columnId, text, authorName) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'INSERT INTO retro_cards (id, board_id, column_id, text, author_name) VALUES ($1, $2, $3, $4, $5)',
-            [cardId, boardId, columnId, text, authorName]
-        )
-    } catch (error) {
-        console.error('Error adding retro card:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
-
-export const updateRetroCardAuthor = async (cardId, authorName) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'UPDATE retro_cards SET author_name = $2 WHERE id = $1',
-            [cardId, authorName]
-        )
-    } catch (error) {
-        console.error('Error updating retro card author:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
-
-export const deleteRetroCard = async (cardId) => {
-    const client = await pool.connect()
-    try {
-        await client.query('DELETE FROM retro_cards WHERE id = $1', [cardId])
-    } catch (error) {
-        console.error('Error deleting retro card:', error)
         throw error
     } finally {
         client.release()
