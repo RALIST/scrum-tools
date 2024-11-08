@@ -47,7 +47,7 @@ app.get('/api/rooms', async (req, res) => {
     const roomList = Array.from(rooms.entries()).map(([id, room]) => ({
         id,
         name: room.name || id,
-        participantCount: room.participants ? room.participants.size : 0,
+        participantCount: room.participants.size,
         createdAt: room.createdAt,
         hasPassword: !!room.password,
         sequence: room.sequence || 'fibonacci'
@@ -59,14 +59,7 @@ app.post('/api/rooms', async (req, res) => {
     const { roomId, name, password, sequence } = req.body;
     if (!rooms.has(roomId)) {
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
-        const room = {
-            id: roomId,
-            name: name || roomId,
-            password: hashedPassword,
-            sequence: sequence || 'fibonacci',
-            participants: new Map(),
-            createdAt: new Date().toISOString()
-        };
+        const room = createRoom(roomId, name, sequence, hashedPassword);
         rooms.set(roomId, room);
         await saveRooms(rooms);
         res.json({
@@ -117,9 +110,6 @@ io.on('connection', (socket) => {
         }
 
         // Add participant to room
-        if (!room.participants) {
-            room.participants = new Map();
-        }
         room.participants.set(socket.id, {
             id: socket.id,
             name: userName,
@@ -222,7 +212,7 @@ io.on('connection', (socket) => {
 
         // Remove participant from their room
         for (const [roomId, room] of rooms.entries()) {
-            if (room.participants && room.participants.has(socket.id)) {
+            if (room.participants.has(socket.id)) {
                 room.participants.delete(socket.id);
                 io.to(roomId).emit('participantUpdate', {
                     participants: Array.from(room.participants.values())

@@ -45,6 +45,15 @@ import { SEQUENCES, SEQUENCE_LABELS, SequenceType } from '../constants/poker'
 const SOCKET_URL = `https://${window.location.hostname}`
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
 
+interface RoomInfo {
+    id: string
+    name: string
+    participantCount: number
+    createdAt: string
+    hasPassword: boolean
+    sequence: string
+}
+
 interface RoomSettings {
     sequence: SequenceType
     hasPassword: boolean
@@ -113,6 +122,7 @@ const PlanningPokerRoom: FC = () => {
         sequence?: SequenceType
         password?: string
     }>({})
+    const [isPasswordProtected, setIsPasswordProtected] = useState(false)
 
     useEffect(() => {
         const savedUsername = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY)
@@ -126,6 +136,17 @@ const PlanningPokerRoom: FC = () => {
             navigate('/planning-poker')
             return
         }
+
+        // Check if room is password protected
+        fetch(`${SOCKET_URL}/api/rooms`)
+            .then(res => res.json())
+            .then((rooms: RoomInfo[]) => {
+                const room = rooms.find(r => r.id === roomId)
+                if (room) {
+                    setIsPasswordProtected(room.hasPassword)
+                }
+            })
+            .catch(console.error)
 
         const manager = new Manager(SOCKET_URL, {
             reconnection: true,
@@ -195,6 +216,9 @@ const PlanningPokerRoom: FC = () => {
                 status: 'error',
                 duration: 2000,
             })
+            if (data.message === 'Invalid password') {
+                setRoomPassword('')
+            }
         })
 
         return () => {
@@ -207,6 +231,16 @@ const PlanningPokerRoom: FC = () => {
             toast({
                 title: 'Error',
                 description: 'Please enter your name',
+                status: 'error',
+                duration: 2000,
+            })
+            return
+        }
+
+        if (isPasswordProtected && !roomPassword.trim()) {
+            toast({
+                title: 'Error',
+                description: 'Please enter the room password',
                 status: 'error',
                 duration: 2000,
             })
@@ -468,7 +502,7 @@ const PlanningPokerRoom: FC = () => {
                                     value={userName}
                                     onChange={(e) => setUserName(e.target.value)}
                                 />
-                                {settings.hasPassword && (
+                                {isPasswordProtected && (
                                     <InputGroup>
                                         <Input
                                             type={showPassword ? 'text' : 'password'}

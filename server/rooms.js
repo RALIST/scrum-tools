@@ -14,18 +14,23 @@ export async function loadRooms() {
 
         // Convert the plain objects back to Maps
         Object.entries(roomsData).forEach(([roomId, roomData]) => {
-            const room = new Map();
-            room.createdAt = roomData.createdAt;
-            room.name = roomData.name;
+            const participants = new Map();
 
             // Add participants if they exist
             if (roomData.participants) {
                 roomData.participants.forEach(participant => {
-                    room.set(participant.id, participant);
+                    participants.set(participant.id, participant);
                 });
             }
 
-            rooms.set(roomId, room);
+            rooms.set(roomId, {
+                id: roomId,
+                name: roomData.name,
+                createdAt: roomData.createdAt,
+                sequence: roomData.sequence || 'fibonacci',
+                password: roomData.password,
+                participants
+            });
         });
 
         return rooms;
@@ -44,17 +49,23 @@ export async function saveRooms(rooms) {
     rooms.forEach((room, roomId) => {
         roomsObj[roomId] = {
             id: roomId,
-            name: room.name || roomId,
-            participants: Array.from(room.values()),
-            createdAt: room.createdAt || new Date().toISOString()
+            name: room.name,
+            sequence: room.sequence,
+            password: room.password,
+            participants: Array.from(room.participants.values()),
+            createdAt: room.createdAt
         };
     });
     await fs.writeFile(ROOMS_FILE, JSON.stringify(roomsObj, null, 2));
 }
 
-export function createRoom(roomId, name = '') {
-    const room = new Map();
-    room.createdAt = new Date().toISOString();
-    room.name = name || roomId;
-    return room;
+export function createRoom(roomId, name = '', sequence = 'fibonacci', password = null) {
+    return {
+        id: roomId,
+        name: name || roomId,
+        sequence,
+        password,
+        participants: new Map(),
+        createdAt: new Date().toISOString()
+    };
 }
