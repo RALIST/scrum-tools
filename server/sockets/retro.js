@@ -6,14 +6,16 @@ import {
     stopRetroTimer,
     updateRetroTimer,
     verifyRetroBoardPassword,
-    updateRetroBoardSettings
+    updateRetroBoardSettings,
+    updateRetroCardAuthor
 } from '../db/retro.js'
 
-// Store active timers
+// Store active timers and user names
 const activeTimers = new Map()
+const userNames = new Map() // socketId -> name
 
 export const handleRetroBoardEvents = (io, socket) => {
-    socket.on('joinRetroBoard', async ({ boardId, password }) => {
+    socket.on('joinRetroBoard', async ({ boardId, name, password }) => {
         try {
             console.log('Joining retro board:', boardId)
             const board = await getRetroBoard(boardId)
@@ -34,6 +36,7 @@ export const handleRetroBoardEvents = (io, socket) => {
 
             const roomName = `retro:${boardId}`
             await socket.join(roomName)
+            userNames.set(socket.id, name)
             console.log(`Socket ${socket.id} joined room:`, roomName)
 
             // If timer is running, emit timerStarted event with current time
@@ -90,6 +93,35 @@ export const handleRetroBoardEvents = (io, socket) => {
         }
     })
 
+    socket.on('changeRetroName', async ({ boardId, newName }) => {
+        try {
+            console.log('Changing name:', { boardId, newName })
+            const board = await getRetroBoard(boardId)
+            if (!board) {
+                socket.emit('error', { message: 'Board not found' })
+                return
+            }
+
+            const oldName = userNames.get(socket.id)
+            userNames.set(socket.id, newName)
+
+            // Update all cards by this author
+            if (oldName) {
+                const cards = board.cards.filter(card => card.author_name === oldName)
+                for (const card of cards) {
+                    await updateRetroCardAuthor(card.id, newName)
+                }
+            }
+
+            const updatedBoard = await getRetroBoard(boardId)
+            const roomName = `retro:${boardId}`
+            io.to(roomName).emit('retroBoardUpdated', updatedBoard)
+        } catch (error) {
+            console.error('Error changing name:', error)
+            socket.emit('error', { message: 'Failed to change name' })
+        }
+    })
+
     socket.on('startTimer', async ({ boardId }) => {
         try {
             console.log('Starting timer for board:', boardId)
@@ -142,5 +174,9 @@ export const handleRetroBoardEvents = (io, socket) => {
             console.error('Error stopping timer:', error)
             socket.emit('error', { message: 'Failed to stop timer' })
         }
+    })
+
+    socket.on('disconnect', () => {
+        userNames.delete(socket.id)
     })
 }

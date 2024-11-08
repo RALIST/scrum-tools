@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react'
+import { FC, useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Manager } from 'socket.io-client'
 import type { Socket as ClientSocket } from 'socket.io-client'
@@ -17,13 +17,22 @@ import {
     HStack,
     useToast,
     Badge,
-    useDisclosure
+    useDisclosure,
+    Divider
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import config from '../config'
-import { RetroBoardSettingsModal } from '../components/modals'
+import { RetroBoardSettingsModal, JoinRetroBoardModal, ChangeRetroBoardNameModal } from '../components/modals'
+
+const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }).format(date)
+}
 
 interface RetroCard {
     id: string
@@ -46,6 +55,11 @@ interface RetroBoard {
     hasPassword: boolean
 }
 
+interface JoinParams {
+    name: string
+    password?: string
+}
+
 const COLUMNS = [
     { id: 'good', title: 'What Went Well', color: 'green.500' },
     { id: 'improve', title: 'What Could Be Improved', color: 'orange.500' },
@@ -64,7 +78,11 @@ const RetroBoard: FC = () => {
     const [timeLeft, setTimeLeft] = useState(300)
     const [isTimerRunning, setIsTimerRunning] = useState(false)
     const [userName, setUserName] = useState<string>('')
+    const [hasJoined, setHasJoined] = useState(false)
+    const joinParamsRef = useRef<JoinParams | null>(null)
     const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure()
+    const { isOpen: isJoinOpen, onOpen: onJoinOpen, onClose: onJoinClose } = useDisclosure()
+    const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
 
     useEffect(() => {
         const savedUsername = localStorage.getItem('retroUserName')
@@ -90,6 +108,13 @@ const RetroBoard: FC = () => {
                 setIsTimerRunning(data.timer_running)
                 setTimeLeft(data.time_left)
                 setHideCards(data.hide_cards_by_default)
+
+                // Show join modal if no username is saved
+                if (!localStorage.getItem('retroUserName')) {
+                    onJoinOpen()
+                } else {
+                    handleJoinBoard(localStorage.getItem('retroUserName') || '', undefined)
+                }
             })
             .catch(() => {
                 toast({
@@ -100,8 +125,9 @@ const RetroBoard: FC = () => {
                 })
                 navigate('/retro')
             })
+    }, [boardId])
 
-        // Set up socket connection
+    const setupSocket = () => {
         const manager = new Manager(config.socketUrl, {
             reconnection: true,
             reconnectionAttempts: 5,
@@ -115,7 +141,10 @@ const RetroBoard: FC = () => {
 
         newSocket.on('connect', () => {
             console.log('Connected to server')
-            newSocket.emit('joinRetroBoard', { boardId })
+            if (boardId && joinParamsRef.current) {
+                const { name, password } = joinParamsRef.current
+                newSocket.emit('joinRetroBoard', { boardId, name, password })
+            }
         })
 
         newSocket.on('retroBoardJoined', (data: RetroBoard) => {
@@ -124,6 +153,7 @@ const RetroBoard: FC = () => {
             setIsTimerRunning(data.timer_running)
             setTimeLeft(data.time_left)
             setHideCards(data.hide_cards_by_default)
+            setHasJoined(true)
         })
 
         newSocket.on('retroBoardUpdated', (data: RetroBoard) => {
@@ -163,7 +193,31 @@ const RetroBoard: FC = () => {
         return () => {
             newSocket.disconnect()
         }
-    }, [boardId])
+    }
+
+    const handleJoinBoard = (name: string, password?: string) => {
+        if (!boardId) return
+
+        setUserName(name)
+        localStorage.setItem('retroUserName', name)
+        onJoinClose()
+
+        joinParamsRef.current = { name, password }
+
+        if (!socket) {
+            setupSocket()
+        } else {
+            socket.emit('joinRetroBoard', { boardId, name, password })
+        }
+    }
+
+    const handleChangeName = (newName: string) => {
+        if (!socket || !boardId) return
+        socket.emit('changeRetroName', { boardId, newName })
+        setUserName(newName)
+        localStorage.setItem('retroUserName', newName)
+        onChangeNameClose()
+    }
 
     const handleAddCard = (columnId: string) => {
         if (!newCardText[columnId]?.trim() || !socket || !boardId || !isTimerRunning || !userName) {
@@ -233,6 +287,17 @@ const RetroBoard: FC = () => {
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
     }
 
+    if (!hasJoined) {
+        return (
+            <JoinRetroBoardModal
+                isOpen={isJoinOpen}
+                onClose={() => navigate('/retro')}
+                onJoin={handleJoinBoard}
+                hasPassword={board?.hasPassword}
+            />
+        )
+    }
+
     return (
         <PageContainer>
             <Helmet>
@@ -242,59 +307,61 @@ const RetroBoard: FC = () => {
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)" p={4}>
                 <VStack spacing={8} align="stretch">
                     <Box textAlign="center">
-                        <HStack justify="center" spacing={4}>
+                        <VStack spacing={4}>
                             <Heading as="h1" size="xl">
-                                Retro Board
+                                {board?.name || `Retro ${formatDate(new Date())}`}
                             </Heading>
-                            <IconButton
-                                aria-label={hideCards ? "Show Cards" : "Hide Cards"}
-                                icon={hideCards ? <ViewIcon /> : <ViewOffIcon />}
-                                onClick={handleToggleCards}
-                                colorScheme="purple"
-                                size="sm"
-                            />
-                            <Button
-                                leftIcon={<TimeIcon />}
-                                onClick={handleToggleTimer}
-                                colorScheme={isTimerRunning ? "red" : "green"}
-                                size="sm"
-                            >
-                                {isTimerRunning ? "Stop Timer" : "Start Timer"}
-                            </Button>
-                            <Badge
-                                colorScheme={isTimerRunning ? "green" : "gray"}
-                                fontSize="xl"
-                                px={3}
-                                py={1}
-                                borderRadius="md"
-                            >
-                                {formatTime(timeLeft)}
-                            </Badge>
-                            <IconButton
-                                aria-label="Board Settings"
-                                icon={<SettingsIcon />}
-                                onClick={onSettingsOpen}
-                                size="sm"
-                            />
-                        </HStack>
-                        <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'} mt={2}>
-                            Share your thoughts about the sprint
-                        </Text>
-                        {!isTimerRunning && timeLeft < (board?.default_timer ?? 300) && (
-                            <Text color="red.500" mt={2}>
-                                Timer is paused. Cards cannot be added.
+                            <HStack justify="center" spacing={4}>
+                                <IconButton
+                                    aria-label={hideCards ? "Show Cards" : "Hide Cards"}
+                                    icon={hideCards ? <ViewIcon /> : <ViewOffIcon />}
+                                    onClick={handleToggleCards}
+                                    colorScheme="purple"
+                                    size="sm"
+                                />
+                                <Button
+                                    leftIcon={<TimeIcon />}
+                                    onClick={handleToggleTimer}
+                                    colorScheme={isTimerRunning ? "red" : "green"}
+                                    size="sm"
+                                >
+                                    {isTimerRunning ? "Stop Timer" : "Start Timer"}
+                                </Button>
+                                <Badge
+                                    colorScheme={isTimerRunning ? "green" : "gray"}
+                                    fontSize="xl"
+                                    px={3}
+                                    py={1}
+                                    borderRadius="md"
+                                >
+                                    {formatTime(timeLeft)}
+                                </Badge>
+                                <IconButton
+                                    aria-label="Board Settings"
+                                    icon={<SettingsIcon />}
+                                    onClick={onSettingsOpen}
+                                    size="sm"
+                                />
+                            </HStack>
+                            <Divider />
+                            <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                                Share your thoughts about the sprint
                             </Text>
-                        )}
-                        <Input
-                            placeholder="Enter your name"
-                            value={userName}
-                            onChange={(e) => {
-                                setUserName(e.target.value)
-                                localStorage.setItem('retroUserName', e.target.value)
-                            }}
-                            maxW="300px"
-                            mt={2}
-                        />
+                            {!isTimerRunning && timeLeft < (board?.default_timer ?? 300) && (
+                                <Text color="red.500" mt={2}>
+                                    Timer is paused. Cards cannot be added.
+                                </Text>
+                            )}
+                            <HStack justify="center">
+                                <Text>Your name: {userName}</Text>
+                                <IconButton
+                                    aria-label="Change name"
+                                    icon={<EditIcon />}
+                                    size="sm"
+                                    onClick={onChangeNameOpen}
+                                />
+                            </HStack>
+                        </VStack>
                     </Box>
 
                     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
@@ -387,6 +454,13 @@ const RetroBoard: FC = () => {
                         onSave={handleUpdateSettings}
                     />
                 )}
+
+                <ChangeRetroBoardNameModal
+                    isOpen={isChangeNameOpen}
+                    onClose={onChangeNameClose}
+                    currentName={userName}
+                    onChangeName={handleChangeName}
+                />
             </Box>
         </PageContainer>
     )
