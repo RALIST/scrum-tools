@@ -16,17 +16,24 @@ import {
     TableContainer,
     Center,
     HStack,
-    Container,
-    Text,
-    List,
-    ListItem,
-    ListIcon,
-    Divider,
-    Stack
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Input,
+    Select,
+    FormControl,
+    FormLabel,
+    useDisclosure,
+    Divider
 } from '@chakra-ui/react'
-import { CheckCircleIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
+import SeoText from '../components/SeoText'
+import { planningPokerSeoSections } from '../content/planningPokerSeo'
+import { SEQUENCE_LABELS, SequenceType } from '../constants/poker'
 
 const SOCKET_URL = `https://${window.location.hostname}`
 
@@ -35,6 +42,13 @@ interface Room {
     name: string
     participantCount: number
     createdAt: string
+    hasPassword: boolean
+    sequence: string
+}
+
+interface CreateRoomSettings {
+    password?: string
+    sequence: SequenceType
 }
 
 const PlanningPoker: FC = () => {
@@ -43,6 +57,10 @@ const PlanningPoker: FC = () => {
     const { colorMode } = useColorMode()
     const navigate = useNavigate()
     const toast = useToast()
+    const { isOpen: isCreateModalOpen, onOpen: onCreateModalOpen, onClose: onCreateModalClose } = useDisclosure()
+    const [createSettings, setCreateSettings] = useState<CreateRoomSettings>({
+        sequence: 'fibonacci'
+    })
 
     useEffect(() => {
         fetch(`${SOCKET_URL}/api/rooms`)
@@ -59,10 +77,14 @@ const PlanningPoker: FC = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ roomId: newRoomId }),
+                body: JSON.stringify({
+                    roomId: newRoomId,
+                    ...createSettings
+                }),
             })
 
             if (response.ok) {
+                onCreateModalClose()
                 navigate(`/planning-poker/${newRoomId}`)
             } else {
                 throw new Error('Failed to create room')
@@ -104,7 +126,7 @@ const PlanningPoker: FC = () => {
                                     colorScheme="blue"
                                     size="lg"
                                     w="full"
-                                    onClick={handleCreateRoom}
+                                    onClick={onCreateModalOpen}
                                 >
                                     Create New Room
                                 </Button>
@@ -140,6 +162,8 @@ const PlanningPoker: FC = () => {
                                                 <Tr>
                                                     <Th>Room ID</Th>
                                                     <Th>Participants</Th>
+                                                    <Th>Sequence</Th>
+                                                    <Th>Protected</Th>
                                                     <Th>Action</Th>
                                                 </Tr>
                                             </Thead>
@@ -148,6 +172,8 @@ const PlanningPoker: FC = () => {
                                                     <Tr key={room.id}>
                                                         <Td>{room.id}</Td>
                                                         <Td>{room.participantCount}</Td>
+                                                        <Td>{room.sequence}</Td>
+                                                        <Td>{room.hasPassword ? 'Yes' : 'No'}</Td>
                                                         <Td>
                                                             <Button
                                                                 size="sm"
@@ -167,115 +193,54 @@ const PlanningPoker: FC = () => {
                         </Box>
                     )}
 
+                    <Modal isOpen={isCreateModalOpen} onClose={onCreateModalClose}>
+                        <ModalOverlay />
+                        <ModalContent mx={4}>
+                            <ModalHeader>Create Planning Poker Room</ModalHeader>
+                            <ModalBody>
+                                <VStack spacing={4}>
+                                    <FormControl>
+                                        <FormLabel>Estimation Sequence</FormLabel>
+                                        <Select
+                                            value={createSettings.sequence}
+                                            onChange={(e) => setCreateSettings(prev => ({
+                                                ...prev,
+                                                sequence: e.target.value as SequenceType
+                                            }))}
+                                        >
+                                            {Object.entries(SEQUENCE_LABELS).map(([key, label]) => (
+                                                <option key={key} value={key}>{label}</option>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                    <FormControl>
+                                        <FormLabel>Room Password (Optional)</FormLabel>
+                                        <Input
+                                            type="password"
+                                            placeholder="Leave empty for no password"
+                                            value={createSettings.password || ''}
+                                            onChange={(e) => setCreateSettings(prev => ({
+                                                ...prev,
+                                                password: e.target.value || undefined
+                                            }))}
+                                        />
+                                    </FormControl>
+                                </VStack>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button variant="ghost" mr={3} onClick={onCreateModalClose}>
+                                    Cancel
+                                </Button>
+                                <Button colorScheme="blue" onClick={handleCreateRoom}>
+                                    Create Room
+                                </Button>
+                            </ModalFooter>
+                        </ModalContent>
+                    </Modal>
+
                     <Divider my={8} />
 
-                    <Container maxW="container.lg">
-                        <Stack spacing={12}>
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    What is Planning Poker?
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Planning Poker, also known as Scrum Poker, is a consensus-based estimation technique used by agile teams to estimate the effort of project backlog items. Team members make estimates by playing numbered cards face-down, revealing them simultaneously to avoid anchoring bias.
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Uses Fibonacci sequence for relative sizing
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Promotes team discussion and alignment
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Reduces influence bias in estimations
-                                    </ListItem>
-                                </List>
-                            </Box>
-
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    How to Use Our Planning Poker Tool
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Our free online Planning Poker tool makes it easy to conduct estimation sessions with your team, whether you're co-located or working remotely. Here's how it works:
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Create a room and share the link with your team
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Each team member selects their estimate privately
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Reveal votes simultaneously to discuss differences
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Use color-coded results to identify consensus and outliers
-                                    </ListItem>
-                                </List>
-                            </Box>
-
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    Benefits of Online Planning Poker
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Using our online Planning Poker tool offers several advantages over traditional physical cards or basic video conferencing:
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Real-time collaboration for distributed teams
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Automatic calculation of averages and statistics
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Visual indicators help identify estimation patterns
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        No registration or setup required
-                                    </ListItem>
-                                </List>
-                            </Box>
-
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    Best Practices for Story Point Estimation
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    To get the most out of your estimation sessions, consider these best practices:
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Focus on relative sizing rather than exact time estimates
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Discuss outliers to understand different perspectives
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Use the Fibonacci sequence to force meaningful differences between estimates
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Keep reference stories in mind for consistent estimation
-                                    </ListItem>
-                                </List>
-                            </Box>
-                        </Stack>
-                    </Container>
+                    <SeoText sections={planningPokerSeoSections} />
                 </VStack>
             </Box>
         </PageContainer>

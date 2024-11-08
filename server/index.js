@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs/promises';
 import { loadRooms, saveRooms, createRoom } from './rooms.js';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +18,7 @@ app.use(express.json());
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "https://scrumtools.app",
+        origin: "http://localhost:5173",
         methods: ["GET", "POST"]
     }
 });
@@ -46,36 +47,80 @@ app.get('/api/rooms', async (req, res) => {
     const roomList = Array.from(rooms.entries()).map(([id, room]) => ({
         id,
         name: room.name || id,
-        participantCount: room.size,
-        createdAt: room.createdAt
+        participantCount: room.participants ? room.participants.size : 0,
+        createdAt: room.createdAt,
+        hasPassword: !!room.password,
+        sequence: room.sequence || 'fibonacci'
     }));
     res.json(roomList);
 });
 
 app.post('/api/rooms', async (req, res) => {
-    const { roomId, name } = req.body;
+    const { roomId, name, password, sequence } = req.body;
     if (!rooms.has(roomId)) {
-        rooms.set(roomId, createRoom(roomId, name));
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+        const room = {
+            id: roomId,
+            name: name || roomId,
+            password: hashedPassword,
+            sequence: sequence || 'fibonacci',
+            participants: new Map(),
+            createdAt: new Date().toISOString()
+        };
+        rooms.set(roomId, room);
         await saveRooms(rooms);
-        res.json({ success: true, roomId });
+        res.json({
+            success: true,
+            roomId,
+            hasPassword: !!hashedPassword,
+            sequence: room.sequence
+        });
     } else {
         res.status(400).json({ error: 'Room already exists' });
     }
+});
+
+app.post('/api/rooms/:roomId/verify-password', async (req, res) => {
+    const { roomId } = req.params;
+    const { password } = req.body;
+    const room = rooms.get(roomId);
+
+    if (!room) {
+        return res.status(404).json({ error: 'Room not found' });
+    }
+
+    if (!room.password) {
+        return res.json({ valid: true });
+    }
+
+    const isValid = await bcrypt.compare(password, room.password);
+    res.json({ valid: isValid });
 });
 
 // Socket.IO events
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    socket.on('joinRoom', async ({ roomId, userName }) => {
-        // Create room if it doesn't exist
-        if (!rooms.has(roomId)) {
-            rooms.set(roomId, createRoom(roomId));
+    socket.on('joinRoom', async ({ roomId, userName, password }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        if (room.password) {
+            const isValid = await bcrypt.compare(password, room.password);
+            if (!isValid) {
+                socket.emit('error', { message: 'Invalid password' });
+                return;
+            }
         }
 
         // Add participant to room
-        const room = rooms.get(roomId);
-        room.set(socket.id, {
+        if (!room.participants) {
+            room.participants = new Map();
+        }
+        room.participants.set(socket.id, {
             id: socket.id,
             name: userName,
             vote: null
@@ -84,25 +129,49 @@ io.on('connection', (socket) => {
         // Join socket.io room
         socket.join(roomId);
 
-        // Send current participants to all room members
+        // Send current participants and room settings to all room members
         io.to(roomId).emit('roomJoined', {
-            participants: Array.from(room.values())
+            participants: Array.from(room.participants.values()),
+            settings: {
+                sequence: room.sequence,
+                hasPassword: !!room.password
+            }
         });
 
         await saveRooms(rooms);
         console.log(`${userName} joined room ${roomId}`);
     });
 
+    socket.on('updateSettings', async ({ roomId, settings }) => {
+        const room = rooms.get(roomId);
+        if (room) {
+            if (settings.password) {
+                room.password = await bcrypt.hash(settings.password, 10);
+            }
+            if (settings.sequence) {
+                room.sequence = settings.sequence;
+            }
+
+            io.to(roomId).emit('settingsUpdated', {
+                settings: {
+                    sequence: room.sequence,
+                    hasPassword: !!room.password
+                }
+            });
+
+            await saveRooms(rooms);
+        }
+    });
+
     socket.on('changeName', async ({ roomId, newName }) => {
         const room = rooms.get(roomId);
-        if (room && room.has(socket.id)) {
-            const participant = room.get(socket.id);
+        if (room && room.participants.has(socket.id)) {
+            const participant = room.participants.get(socket.id);
             participant.name = newName;
-            room.set(socket.id, participant);
+            room.participants.set(socket.id, participant);
 
-            // Update all participants
             io.to(roomId).emit('participantUpdate', {
-                participants: Array.from(room.values())
+                participants: Array.from(room.participants.values())
             });
 
             await saveRooms(rooms);
@@ -112,14 +181,13 @@ io.on('connection', (socket) => {
 
     socket.on('vote', async ({ roomId, vote }) => {
         const room = rooms.get(roomId);
-        if (room && room.has(socket.id)) {
-            const participant = room.get(socket.id);
+        if (room && room.participants.has(socket.id)) {
+            const participant = room.participants.get(socket.id);
             participant.vote = vote;
-            room.set(socket.id, participant);
+            room.participants.set(socket.id, participant);
 
-            // Update all participants
             io.to(roomId).emit('participantUpdate', {
-                participants: Array.from(room.values())
+                participants: Array.from(room.participants.values())
             });
 
             await saveRooms(rooms);
@@ -134,15 +202,15 @@ io.on('connection', (socket) => {
         const room = rooms.get(roomId);
         if (room) {
             // Reset all votes in the room
-            for (const [id, participant] of room.entries()) {
+            for (const [id, participant] of room.participants.entries()) {
                 participant.vote = null;
-                room.set(id, participant);
+                room.participants.set(id, participant);
             }
 
             // Notify all participants
             io.to(roomId).emit('votesReset');
             io.to(roomId).emit('participantUpdate', {
-                participants: Array.from(room.values())
+                participants: Array.from(room.participants.values())
             });
 
             await saveRooms(rooms);
@@ -154,10 +222,10 @@ io.on('connection', (socket) => {
 
         // Remove participant from their room
         for (const [roomId, room] of rooms.entries()) {
-            if (room.has(socket.id)) {
-                room.delete(socket.id);
+            if (room.participants && room.participants.has(socket.id)) {
+                room.participants.delete(socket.id);
                 io.to(roomId).emit('participantUpdate', {
-                    participants: Array.from(room.values())
+                    participants: Array.from(room.participants.values())
                 });
 
                 await saveRooms(rooms);

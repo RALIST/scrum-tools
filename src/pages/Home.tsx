@@ -1,9 +1,10 @@
 import { FC } from 'react'
-import { Box, Heading, SimpleGrid, Text, Button, VStack, useColorMode, Container, Stack, List, ListItem, ListIcon } from '@chakra-ui/react'
+import { Box, Heading, SimpleGrid, Text, Button, VStack, useColorMode } from '@chakra-ui/react'
 import { Link as RouterLink } from 'react-router-dom'
-import { CheckCircleIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
+import SeoText from '../components/SeoText'
+import { homeSeoSections } from '../content/homeSeo'
 
 interface FeatureCardProps {
     title: string
@@ -47,9 +48,10 @@ const Home: FC = () => {
     return (
         <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
             <PageHelmet
-                title="Free Online Scrum Tools for Agile Teams"
-                description="Enhance your agile workflow with our free scrum tools. Planning Poker for story estimation, Daily Standup Timer, and more tools for effective agile ceremonies."
-                keywords="scrum tools, agile tools, planning poker online, daily standup timer, sprint planning, agile ceremonies, scrum master tools, agile team tools"
+                title="Scrum Tools - Free Online Tools for Agile Teams"
+                description="Free online tools for agile teams including Planning Poker, Daily Standup Timer, and more. Boost your team's productivity with our simple, effective Scrum tools."
+                keywords="scrum tools, agile tools, planning poker, daily standup, sprint planning, team collaboration, scrum ceremonies, agile ceremonies"
+                canonicalUrl="https://scrumtools.app"
             />
             <PageContainer>
                 <VStack spacing={{ base: 6, md: 8 }} align="stretch">
@@ -107,105 +109,9 @@ const Home: FC = () => {
                         />
                     </SimpleGrid>
 
-                    <Container maxW="container.lg" mt={16}>
-                        <Stack spacing={12}>
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    Free Online Tools for Agile Teams
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Our suite of free online tools helps agile teams run more effective ceremonies and collaborate better, whether working remotely or in person. Built by Scrum practitioners for agile teams, our tools focus on simplicity and ease of use.
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        No registration required - start using tools immediately
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Real-time collaboration for distributed teams
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Works on all devices - desktop, tablet, and mobile
-                                    </ListItem>
-                                </List>
-                            </Box>
-
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    Planning Poker for Better Estimation
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Our Planning Poker tool helps teams estimate work items more accurately through consensus-based techniques. Using the Fibonacci sequence, team members can independently assess the complexity of user stories before discussing and reaching agreement.
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Real-time voting with instant results
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Visual indicators for consensus and outliers
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Customizable room settings for different team needs
-                                    </ListItem>
-                                </List>
-                            </Box>
-
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    Daily Standup Made Simple
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Keep your daily standups efficient and focused with our specialized timer. Designed to help teams stick to the 15-minute timebox while ensuring everyone gets their turn to speak about progress and impediments.
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Configurable time limits per team member
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Visual and audio notifications
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Track meeting duration and participation
-                                    </ListItem>
-                                </List>
-                            </Box>
-
-                            <Box>
-                                <Heading as="h2" size="lg" mb={6}>
-                                    Why Choose Our Tools?
-                                </Heading>
-                                <Text fontSize="lg" mb={4}>
-                                    Our tools are designed with simplicity and effectiveness in mind. We focus on providing essential features that teams actually need, without the complexity of enterprise tools. Perfect for teams that want to:
-                                </Text>
-                                <List spacing={3}>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Improve estimation accuracy and team alignment
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Run more efficient and engaging ceremonies
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Foster better team collaboration and communication
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                                        Start using agile practices without complex setup
-                                    </ListItem>
-                                </List>
-                            </Box>
-                        </Stack>
-                    </Container>
+                    <Box mt={16}>
+                        <SeoText sections={homeSeoSections} />
+                    </Box>
                 </VStack>
             </PageContainer>
         </Box>

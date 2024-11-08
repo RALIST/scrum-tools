@@ -30,15 +30,25 @@ import {
     Wrap,
     WrapItem,
     useClipboard,
-    useDisclosure
+    useDisclosure,
+    Select,
+    FormControl,
+    FormLabel,
+    InputGroup,
+    InputRightElement
 } from '@chakra-ui/react'
-import { CopyIcon, CheckIcon } from '@chakra-ui/icons'
+import { CopyIcon, CheckIcon, SettingsIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
+import { SEQUENCES, SEQUENCE_LABELS, SequenceType } from '../constants/poker'
 
-const FIBONACCI_SEQUENCE: string[] = ['1', '2', '3', '5', '8', '13', '21', '?']
 const SOCKET_URL = `https://${window.location.hostname}`
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
+
+interface RoomSettings {
+    sequence: SequenceType
+    hasPassword: boolean
+}
 
 interface Participant {
     id: string
@@ -91,7 +101,18 @@ const PlanningPokerRoom: FC = () => {
     const shareableLink = `${window.location.origin}/planning-poker/${roomId}`
     const { hasCopied, onCopy } = useClipboard(shareableLink)
     const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
+    const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure()
     const [newUserName, setNewUserName] = useState<string>('')
+    const [roomPassword, setRoomPassword] = useState<string>('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [settings, setSettings] = useState<RoomSettings>({
+        sequence: 'fibonacci',
+        hasPassword: false
+    })
+    const [newSettings, setNewSettings] = useState<{
+        sequence?: SequenceType
+        password?: string
+    }>({})
 
     useEffect(() => {
         const savedUsername = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY)
@@ -133,8 +154,9 @@ const PlanningPokerRoom: FC = () => {
 
         setSocket(newSocket)
 
-        newSocket.on('roomJoined', (data: { participants: Participant[] }) => {
+        newSocket.on('roomJoined', (data: { participants: Participant[], settings: RoomSettings }) => {
             setParticipants(data.participants)
+            setSettings(data.settings)
             toast({
                 title: 'Joined Room',
                 status: 'success',
@@ -148,6 +170,15 @@ const PlanningPokerRoom: FC = () => {
             setParticipants(data.participants)
         })
 
+        newSocket.on('settingsUpdated', (data: { settings: RoomSettings }) => {
+            setSettings(data.settings)
+            toast({
+                title: 'Room Settings Updated',
+                status: 'success',
+                duration: 2000,
+            })
+        })
+
         newSocket.on('votesRevealed', () => {
             setIsRevealed(true)
         })
@@ -157,12 +188,21 @@ const PlanningPokerRoom: FC = () => {
             setSelectedCard(null)
         })
 
+        newSocket.on('error', (data: { message: string }) => {
+            toast({
+                title: 'Error',
+                description: data.message,
+                status: 'error',
+                duration: 2000,
+            })
+        })
+
         return () => {
             newSocket.disconnect()
         }
     }, [roomId])
 
-    const handleJoinRoom = () => {
+    const handleJoinRoom = async () => {
         if (!userName.trim()) {
             toast({
                 title: 'Error',
@@ -176,7 +216,7 @@ const PlanningPokerRoom: FC = () => {
         localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, userName)
 
         if (socket?.connected && roomId) {
-            socket.emit('joinRoom', { roomId, userName })
+            socket.emit('joinRoom', { roomId, userName, password: roomPassword })
         } else {
             toast({
                 title: 'Connection Error',
@@ -207,6 +247,14 @@ const PlanningPokerRoom: FC = () => {
             status: 'success',
             duration: 2000,
         })
+    }
+
+    const handleUpdateSettings = () => {
+        if (socket?.connected && roomId) {
+            socket.emit('updateSettings', { roomId, settings: newSettings })
+            onSettingsClose()
+            setNewSettings({})
+        }
     }
 
     const handleCardSelect = (value: string) => {
@@ -248,8 +296,8 @@ const PlanningPokerRoom: FC = () => {
         if (isNaN(voteNum)) return undefined
 
         // Calculate the percentage difference from the average
-        const maxDiff = Math.max(...FIBONACCI_SEQUENCE
-            .filter(v => v !== '?')
+        const maxDiff = Math.max(...SEQUENCES[settings.sequence]
+            .filter(v => v !== '?' && !isNaN(Number(v)))
             .map(v => Math.abs(Number(v) - average)))
 
         const diff = Math.abs(voteNum - average)
@@ -289,6 +337,12 @@ const PlanningPokerRoom: FC = () => {
                                     }}>
                                         Change Name
                                     </Button>
+                                    <IconButton
+                                        aria-label="Room Settings"
+                                        icon={<SettingsIcon />}
+                                        size="sm"
+                                        onClick={onSettingsOpen}
+                                    />
                                 </Stack>
                                 <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
                                     Room: {roomId}
@@ -321,7 +375,7 @@ const PlanningPokerRoom: FC = () => {
                         >
                             <VStack spacing={{ base: 4, md: 8 }}>
                                 <Wrap spacing={4} justify="center">
-                                    {FIBONACCI_SEQUENCE.map((value) => (
+                                    {SEQUENCES[settings.sequence].map((value) => (
                                         <WrapItem key={value}>
                                             <Card
                                                 value={value}
@@ -414,6 +468,25 @@ const PlanningPokerRoom: FC = () => {
                                     value={userName}
                                     onChange={(e) => setUserName(e.target.value)}
                                 />
+                                {settings.hasPassword && (
+                                    <InputGroup>
+                                        <Input
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Enter room password"
+                                            value={roomPassword}
+                                            onChange={(e) => setRoomPassword(e.target.value)}
+                                        />
+                                        <InputRightElement>
+                                            <IconButton
+                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                                icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                size="sm"
+                                                variant="ghost"
+                                            />
+                                        </InputRightElement>
+                                    </InputGroup>
+                                )}
                             </VStack>
                         </ModalBody>
                         <ModalFooter>
@@ -441,6 +514,62 @@ const PlanningPokerRoom: FC = () => {
                             </Button>
                             <Button colorScheme="blue" onClick={handleChangeName}>
                                 Save
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+
+                <Modal isOpen={isSettingsOpen} onClose={onSettingsClose}>
+                    <ModalOverlay />
+                    <ModalContent mx={4}>
+                        <ModalHeader>Room Settings</ModalHeader>
+                        <ModalBody>
+                            <VStack spacing={4}>
+                                <FormControl>
+                                    <FormLabel>Estimation Sequence</FormLabel>
+                                    <Select
+                                        value={newSettings.sequence || settings.sequence}
+                                        onChange={(e) => setNewSettings(prev => ({
+                                            ...prev,
+                                            sequence: e.target.value as SequenceType
+                                        }))}
+                                    >
+                                        {Object.entries(SEQUENCE_LABELS).map(([key, label]) => (
+                                            <option key={key} value={key}>{label}</option>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel>Change Room Password</FormLabel>
+                                    <InputGroup>
+                                        <Input
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Enter new password (optional)"
+                                            value={newSettings.password || ''}
+                                            onChange={(e) => setNewSettings(prev => ({
+                                                ...prev,
+                                                password: e.target.value || undefined
+                                            }))}
+                                        />
+                                        <InputRightElement>
+                                            <IconButton
+                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                                icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                size="sm"
+                                                variant="ghost"
+                                            />
+                                        </InputRightElement>
+                                    </InputGroup>
+                                </FormControl>
+                            </VStack>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button variant="ghost" mr={3} onClick={onSettingsClose}>
+                                Cancel
+                            </Button>
+                            <Button colorScheme="blue" onClick={handleUpdateSettings}>
+                                Save Changes
                             </Button>
                         </ModalFooter>
                     </ModalContent>
