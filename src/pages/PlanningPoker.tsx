@@ -62,6 +62,27 @@ const PlanningPoker: FC = () => {
         sequence: 'fibonacci'
     })
 
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Planning Poker - Online Estimation Tool",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any",
+        "description": "Free online Planning Poker tool for agile teams. Real-time story point estimation with your team. No registration required.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "Real-time team collaboration",
+            "Multiple estimation sequences",
+            "Password-protected rooms",
+            "Instant voting results",
+            "No registration required"
+        ]
+    }
+
     useEffect(() => {
         fetch(`${SOCKET_URL}/api/rooms`)
             .then(res => res.json())
@@ -110,12 +131,17 @@ const PlanningPoker: FC = () => {
                 description="Free online Planning Poker tool for agile teams. Real-time story point estimation with your team. No registration required. Start estimating user stories instantly."
                 keywords="planning poker, scrum poker, agile estimation, story points, team estimation, real-time voting, sprint planning, agile tools, fibonacci sequence"
                 canonicalUrl="https://scrumtools.app/planning-poker"
+                jsonLd={jsonLd}
             />
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
                 <VStack spacing={{ base: 4, md: 8 }}>
                     <Box textAlign="center" w="full">
-                        <Heading size={{ base: "lg", md: "xl" }} mb={4}>
-                            Planning Poker
+                        <Heading
+                            as="h1"
+                            size={{ base: "lg", md: "xl" }}
+                            mb={4}
+                        >
+                            Online Planning Poker - Free Story Point Estimation Tool
                         </Heading>
                     </Box>
 

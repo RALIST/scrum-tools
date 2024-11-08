@@ -28,7 +28,7 @@ import {
 } from '@chakra-ui/react'
 import { CopyIcon, CheckIcon, SettingsIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
-import PageHelmet from '../components/PageHelmet'
+import { Helmet } from 'react-helmet-async'
 import { SEQUENCES, SequenceType } from '../constants/poker'
 import { JoinRoomModal, ChangeNameModal, RoomSettingsModal } from '../components/modals'
 
@@ -337,12 +337,10 @@ const PlanningPokerRoom: FC = () => {
 
     return (
         <PageContainer>
-            <PageHelmet
-                title={`Planning Poker Room ${roomId || ''}`}
-                description={`Join Planning Poker session ${roomId || ''} for real-time story point estimation with your team. Currently ${participants.length} participant${participants.length !== 1 ? 's' : ''} in the room.`}
-                keywords="planning poker room, agile estimation, story points, team voting, scrum poker session"
-                canonicalUrl={`https://scrumtools.app/planning-poker/${roomId}`}
-            />
+            <Helmet>
+                <title>Planning Poker Room {roomId}</title>
+                <meta name="robots" content="noindex, nofollow" />
+            </Helmet>
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
                 <VStack spacing={{ base: 4, md: 8 }}>
                     <Box textAlign="center" w="full">

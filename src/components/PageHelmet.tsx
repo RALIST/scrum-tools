@@ -4,25 +4,36 @@ import { Helmet } from 'react-helmet-async'
 interface PageHelmetProps {
     title: string
     description: string
-    keywords?: string
+    keywords: string
     canonicalUrl?: string
+    jsonLd?: Record<string, any>
 }
 
-const PageHelmet: FC<PageHelmetProps> = ({ title, description, keywords, canonicalUrl }) => {
-    const fullTitle = `${title} | Scrum Tools`
-    const defaultKeywords = 'scrum, agile, planning poker, daily standup, scrum tools'
-    const allKeywords = keywords ? `${defaultKeywords}, ${keywords}` : defaultKeywords
+const PageHelmet: FC<PageHelmetProps> = ({ title, description, keywords, canonicalUrl, jsonLd }) => {
+    const defaultJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Scrum Tools",
+        "applicationCategory": "ProjectManagementApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+
+    const finalJsonLd = jsonLd || defaultJsonLd
 
     return (
         <Helmet>
-            <title>{fullTitle}</title>
+            <title>{title}</title>
             <meta name="description" content={description} />
-            <meta name="keywords" content={allKeywords} />
+            <meta name="keywords" content={keywords} />
             {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-            <meta property="og:title" content={fullTitle} />
-            <meta property="og:description" content={description} />
-            <meta name="twitter:title" content={fullTitle} />
-            <meta name="twitter:description" content={description} />
+            <script type="application/ld+json">
+                {JSON.stringify(finalJsonLd)}
+            </script>
         </Helmet>
     )
 }

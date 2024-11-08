@@ -45,6 +45,28 @@ const FeatureCard: FC<FeatureCardProps> = ({ title, description, link }) => {
 const Home: FC = () => {
     const { colorMode } = useColorMode()
 
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Scrum Tools",
+        "description": "Free online tools for agile teams including Planning Poker, Daily Standup Timer, and more.",
+        "applicationCategory": "ProjectManagementApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "Planning Poker for story estimation",
+            "Daily Standup Timer",
+            "Sprint Planning Tools",
+            "Team Collaboration Features"
+        ],
+        "screenshot": `${window.location.origin}/og-image.svg`,
+        "url": "https://scrumtools.app"
+    }
+
     return (
         <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
             <PageHelmet
@@ -52,16 +74,18 @@ const Home: FC = () => {
                 description="Free online tools for agile teams including Planning Poker, Daily Standup Timer, and more. Boost your team's productivity with our simple, effective Scrum tools."
                 keywords="scrum tools, agile tools, planning poker, daily standup, sprint planning, team collaboration, scrum ceremonies, agile ceremonies"
                 canonicalUrl="https://scrumtools.app"
+                jsonLd={jsonLd}
             />
             <PageContainer>
                 <VStack spacing={{ base: 6, md: 8 }} align="stretch">
                     <Box textAlign="center" mb={{ base: 6, md: 8 }}>
                         <Heading
+                            as="h1"
                             size={{ base: "xl", md: "2xl" }}
                             mb={{ base: 3, md: 4 }}
                             px={{ base: 2, md: 0 }}
                         >
-                            Welcome to Scrum Tools
+                            Free Online Scrum Tools for Agile Teams
                         </Heading>
                         <Text
                             fontSize={{ base: "lg", md: "xl" }}
