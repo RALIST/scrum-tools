@@ -9,12 +9,6 @@ import {
     Text,
     VStack,
     Input,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
     Table,
     Thead,
     Tbody,
@@ -30,17 +24,13 @@ import {
     Wrap,
     WrapItem,
     useClipboard,
-    useDisclosure,
-    Select,
-    FormControl,
-    FormLabel,
-    InputGroup,
-    InputRightElement
+    useDisclosure
 } from '@chakra-ui/react'
-import { CopyIcon, CheckIcon, SettingsIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
+import { CopyIcon, CheckIcon, SettingsIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
-import { SEQUENCES, SEQUENCE_LABELS, SequenceType } from '../constants/poker'
+import { SEQUENCES, SequenceType } from '../constants/poker'
+import { JoinRoomModal, ChangeNameModal, RoomSettingsModal } from '../components/modals'
 
 const SOCKET_URL = `https://${window.location.hostname}`
 const LOCAL_STORAGE_USERNAME_KEY = 'planningPokerUsername'
@@ -491,123 +481,36 @@ const PlanningPokerRoom: FC = () => {
                     )}
                 </VStack>
 
-                <Modal isOpen={showJoinModal} onClose={() => { }} closeOnOverlayClick={false}>
-                    <ModalOverlay />
-                    <ModalContent mx={4}>
-                        <ModalHeader>Join Planning Poker</ModalHeader>
-                        <ModalBody>
-                            <VStack spacing={4}>
-                                <Input
-                                    placeholder="Enter your name"
-                                    value={userName}
-                                    onChange={(e) => setUserName(e.target.value)}
-                                />
-                                {isPasswordProtected && (
-                                    <InputGroup>
-                                        <Input
-                                            type={showPassword ? 'text' : 'password'}
-                                            placeholder="Enter room password"
-                                            value={roomPassword}
-                                            onChange={(e) => setRoomPassword(e.target.value)}
-                                        />
-                                        <InputRightElement>
-                                            <IconButton
-                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                                icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                size="sm"
-                                                variant="ghost"
-                                            />
-                                        </InputRightElement>
-                                    </InputGroup>
-                                )}
-                            </VStack>
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button colorScheme="blue" onClick={handleJoinRoom} w="full">
-                                Join Room
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+                <JoinRoomModal
+                    isOpen={showJoinModal}
+                    userName={userName}
+                    roomPassword={roomPassword}
+                    showPassword={showPassword}
+                    isPasswordProtected={isPasswordProtected}
+                    onUserNameChange={setUserName}
+                    onPasswordChange={setRoomPassword}
+                    onTogglePassword={() => setShowPassword(!showPassword)}
+                    onJoin={handleJoinRoom}
+                />
 
-                <Modal isOpen={isChangeNameOpen} onClose={onChangeNameClose}>
-                    <ModalOverlay />
-                    <ModalContent mx={4}>
-                        <ModalHeader>Change Name</ModalHeader>
-                        <ModalBody>
-                            <Input
-                                placeholder="Enter new name"
-                                value={newUserName}
-                                onChange={(e) => setNewUserName(e.target.value)}
-                            />
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button variant="ghost" mr={3} onClick={onChangeNameClose}>
-                                Cancel
-                            </Button>
-                            <Button colorScheme="blue" onClick={handleChangeName}>
-                                Save
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+                <ChangeNameModal
+                    isOpen={isChangeNameOpen}
+                    newUserName={newUserName}
+                    onClose={onChangeNameClose}
+                    onNameChange={setNewUserName}
+                    onSave={handleChangeName}
+                />
 
-                <Modal isOpen={isSettingsOpen} onClose={onSettingsClose}>
-                    <ModalOverlay />
-                    <ModalContent mx={4}>
-                        <ModalHeader>Room Settings</ModalHeader>
-                        <ModalBody>
-                            <VStack spacing={4}>
-                                <FormControl>
-                                    <FormLabel>Estimation Sequence</FormLabel>
-                                    <Select
-                                        value={newSettings.sequence || settings.sequence}
-                                        onChange={(e) => setNewSettings(prev => ({
-                                            ...prev,
-                                            sequence: e.target.value as SequenceType
-                                        }))}
-                                    >
-                                        {Object.entries(SEQUENCE_LABELS).map(([key, label]) => (
-                                            <option key={key} value={key}>{label}</option>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                <FormControl>
-                                    <FormLabel>Change Room Password</FormLabel>
-                                    <InputGroup>
-                                        <Input
-                                            type={showPassword ? 'text' : 'password'}
-                                            placeholder="Enter new password (optional)"
-                                            value={newSettings.password || ''}
-                                            onChange={(e) => setNewSettings(prev => ({
-                                                ...prev,
-                                                password: e.target.value || undefined
-                                            }))}
-                                        />
-                                        <InputRightElement>
-                                            <IconButton
-                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                                icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                size="sm"
-                                                variant="ghost"
-                                            />
-                                        </InputRightElement>
-                                    </InputGroup>
-                                </FormControl>
-                            </VStack>
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button variant="ghost" mr={3} onClick={onSettingsClose}>
-                                Cancel
-                            </Button>
-                            <Button colorScheme="blue" onClick={handleUpdateSettings}>
-                                Save Changes
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+                <RoomSettingsModal
+                    isOpen={isSettingsOpen}
+                    onClose={onSettingsClose}
+                    currentSequence={settings.sequence}
+                    newSettings={newSettings}
+                    showPassword={showPassword}
+                    onTogglePassword={() => setShowPassword(!showPassword)}
+                    onSettingsChange={setNewSettings}
+                    onSave={handleUpdateSettings}
+                />
             </Box>
         </PageContainer>
     )
