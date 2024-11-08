@@ -114,7 +114,7 @@ const PlanningPokerRoom: FC = () => {
             transports: ['websocket', 'polling']
         })
 
-        const newSocket = manager.socket('/ws')
+        const newSocket = manager.socket('/')
 
         newSocket.on('connect', () => {
             console.log('Connected to server')
