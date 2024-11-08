@@ -1,11 +1,24 @@
 import pool from './pool.js'
+import bcrypt from 'bcryptjs'
 
-export const createRetroBoard = async (boardId, name) => {
+export const createRetroBoard = async (boardId, name, settings = {}) => {
     const client = await pool.connect()
     try {
+        const {
+            defaultTimer = 300,
+            hideCardsByDefault = false,
+            hideAuthorNames = false,
+            password
+        } = settings
+
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : null
+
         await client.query(
-            'INSERT INTO retro_boards (id, name, timer_running, time_left) VALUES ($1, $2, false, 300)',
-            [boardId, name || boardId]
+            `INSERT INTO retro_boards (
+                id, name, timer_running, time_left, default_timer, 
+                hide_cards_by_default, hide_author_names, password
+            ) VALUES ($1, $2, false, $3, $4, $5, $6, $7)`,
+            [boardId, name || boardId, defaultTimer, defaultTimer, hideCardsByDefault, hideAuthorNames, hashedPassword]
         )
     } catch (error) {
         console.error('Error creating retro board:', error)
@@ -31,8 +44,11 @@ export const getRetroBoard = async (boardId) => {
             [boardId]
         )
 
+        const board = boardResult.rows[0]
         return {
-            ...boardResult.rows[0],
+            ...board,
+            hasPassword: !!board.password,
+            password: undefined, // Don't send password hash to client
             cards: cardsResult.rows
         }
     } catch (error) {
@@ -43,12 +59,85 @@ export const getRetroBoard = async (boardId) => {
     }
 }
 
-export const addRetroCard = async (boardId, cardId, columnId, text) => {
+export const verifyRetroBoardPassword = async (boardId, password) => {
+    const client = await pool.connect()
+    try {
+        const result = await client.query(
+            'SELECT password FROM retro_boards WHERE id = $1',
+            [boardId]
+        )
+
+        if (result.rows.length === 0) {
+            return false
+        }
+
+        const board = result.rows[0]
+        if (!board.password) {
+            return true
+        }
+
+        return await bcrypt.compare(password, board.password)
+    } catch (error) {
+        console.error('Error verifying retro board password:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const updateRetroBoardSettings = async (boardId, settings) => {
+    const client = await pool.connect()
+    try {
+        const updates = []
+        const values = []
+        let paramCount = 1
+
+        if (settings.defaultTimer !== undefined) {
+            updates.push(`default_timer = $${paramCount}`)
+            values.push(settings.defaultTimer)
+            paramCount++
+        }
+
+        if (settings.hideCardsByDefault !== undefined) {
+            updates.push(`hide_cards_by_default = $${paramCount}`)
+            values.push(settings.hideCardsByDefault)
+            paramCount++
+        }
+
+        if (settings.hideAuthorNames !== undefined) {
+            updates.push(`hide_author_names = $${paramCount}`)
+            values.push(settings.hideAuthorNames)
+            paramCount++
+        }
+
+        if (settings.password !== undefined) {
+            const hashedPassword = settings.password ? await bcrypt.hash(settings.password, 10) : null
+            updates.push(`password = $${paramCount}`)
+            values.push(hashedPassword)
+            paramCount++
+        }
+
+        if (updates.length > 0) {
+            values.push(boardId)
+            await client.query(
+                `UPDATE retro_boards SET ${updates.join(', ')} WHERE id = $${paramCount}`,
+                values
+            )
+        }
+    } catch (error) {
+        console.error('Error updating retro board settings:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const addRetroCard = async (boardId, cardId, columnId, text, authorName) => {
     const client = await pool.connect()
     try {
         await client.query(
-            'INSERT INTO retro_cards (id, board_id, column_id, text) VALUES ($1, $2, $3, $4)',
-            [cardId, boardId, columnId, text]
+            'INSERT INTO retro_cards (id, board_id, column_id, text, author_name) VALUES ($1, $2, $3, $4, $5)',
+            [cardId, boardId, columnId, text, authorName]
         )
     } catch (error) {
         console.error('Error adding retro card:', error)
@@ -73,9 +162,16 @@ export const deleteRetroCard = async (cardId) => {
 export const startRetroTimer = async (boardId) => {
     const client = await pool.connect()
     try {
-        await client.query(
-            'UPDATE retro_boards SET timer_running = true, time_left = 300 WHERE id = $1',
+        // Get default timer value
+        const result = await client.query(
+            'SELECT default_timer FROM retro_boards WHERE id = $1',
             [boardId]
+        )
+        const defaultTimer = result.rows[0]?.default_timer || 300
+
+        await client.query(
+            'UPDATE retro_boards SET timer_running = true, time_left = $2 WHERE id = $1',
+            [boardId, defaultTimer]
         )
     } catch (error) {
         console.error('Error starting retro timer:', error)

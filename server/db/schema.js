@@ -32,6 +32,10 @@ export const initSchema = async () => {
                 name VARCHAR(255),
                 timer_running BOOLEAN DEFAULT false,
                 time_left INTEGER DEFAULT 300,
+                default_timer INTEGER DEFAULT 300,
+                hide_cards_by_default BOOLEAN DEFAULT false,
+                hide_author_names BOOLEAN DEFAULT false,
+                password VARCHAR(255),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `)
@@ -42,11 +46,12 @@ export const initSchema = async () => {
                 board_id VARCHAR(255) REFERENCES retro_boards(id) ON DELETE CASCADE,
                 column_id VARCHAR(50),
                 text TEXT,
+                author_name VARCHAR(255),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `)
 
-        // Add timer_running and time_left columns if they don't exist
+        // Add new columns if they don't exist
         await client.query(`
             DO $$ 
             BEGIN
@@ -58,6 +63,36 @@ export const initSchema = async () => {
 
                 BEGIN
                     ALTER TABLE retro_boards ADD COLUMN time_left INTEGER DEFAULT 300;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE retro_boards ADD COLUMN default_timer INTEGER DEFAULT 300;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE retro_boards ADD COLUMN hide_cards_by_default BOOLEAN DEFAULT false;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE retro_boards ADD COLUMN hide_author_names BOOLEAN DEFAULT false;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE retro_boards ADD COLUMN password VARCHAR(255);
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE retro_cards ADD COLUMN author_name VARCHAR(255);
                 EXCEPTION
                     WHEN duplicate_column THEN NULL;
                 END;

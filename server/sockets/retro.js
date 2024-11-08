@@ -4,14 +4,16 @@ import {
     deleteRetroCard,
     startRetroTimer,
     stopRetroTimer,
-    updateRetroTimer
+    updateRetroTimer,
+    verifyRetroBoardPassword,
+    updateRetroBoardSettings
 } from '../db/retro.js'
 
 // Store active timers
 const activeTimers = new Map()
 
 export const handleRetroBoardEvents = (io, socket) => {
-    socket.on('joinRetroBoard', async ({ boardId }) => {
+    socket.on('joinRetroBoard', async ({ boardId, password }) => {
         try {
             console.log('Joining retro board:', boardId)
             const board = await getRetroBoard(boardId)
@@ -19,6 +21,15 @@ export const handleRetroBoardEvents = (io, socket) => {
                 console.log('Board not found:', boardId)
                 socket.emit('error', { message: 'Board not found' })
                 return
+            }
+
+            // Verify password if board is password protected
+            if (board.hasPassword) {
+                const isValid = await verifyRetroBoardPassword(boardId, password)
+                if (!isValid) {
+                    socket.emit('error', { message: 'Invalid password' })
+                    return
+                }
             }
 
             const roomName = `retro:${boardId}`
@@ -37,10 +48,10 @@ export const handleRetroBoardEvents = (io, socket) => {
         }
     })
 
-    socket.on('addRetroCard', async ({ boardId, cardId, columnId, text }) => {
+    socket.on('addRetroCard', async ({ boardId, cardId, columnId, text, authorName }) => {
         try {
-            console.log('Adding retro card:', { boardId, cardId, columnId, text })
-            await addRetroCard(boardId, cardId, columnId, text)
+            console.log('Adding retro card:', { boardId, cardId, columnId, text, authorName })
+            await addRetroCard(boardId, cardId, columnId, text, authorName)
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             console.log('Emitting board update to room:', roomName)
@@ -65,10 +76,25 @@ export const handleRetroBoardEvents = (io, socket) => {
         }
     })
 
+    socket.on('updateSettings', async ({ boardId, settings }) => {
+        try {
+            console.log('Updating retro board settings:', { boardId, settings })
+            await updateRetroBoardSettings(boardId, settings)
+            const board = await getRetroBoard(boardId)
+            const roomName = `retro:${boardId}`
+            console.log('Emitting settings update to room:', roomName)
+            io.to(roomName).emit('retroBoardUpdated', board)
+        } catch (error) {
+            console.error('Error updating retro board settings:', error)
+            socket.emit('error', { message: 'Failed to update settings' })
+        }
+    })
+
     socket.on('startTimer', async ({ boardId }) => {
         try {
             console.log('Starting timer for board:', boardId)
             await startRetroTimer(boardId)
+            const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
 
             // Start a new timer interval
@@ -76,7 +102,7 @@ export const handleRetroBoardEvents = (io, socket) => {
                 clearInterval(activeTimers.get(boardId))
             }
 
-            let timeLeft = 300 // 5 minutes in seconds
+            let timeLeft = board.default_timer
             activeTimers.set(boardId, setInterval(async () => {
                 timeLeft--
                 await updateRetroTimer(boardId, timeLeft)
@@ -91,7 +117,7 @@ export const handleRetroBoardEvents = (io, socket) => {
             }, 1000))
 
             console.log('Emitting timer start to room:', roomName)
-            io.to(roomName).emit('timerStarted', { timeLeft: 300 })
+            io.to(roomName).emit('timerStarted', { timeLeft: board.default_timer })
         } catch (error) {
             console.error('Error starting timer:', error)
             socket.emit('error', { message: 'Failed to start timer' })

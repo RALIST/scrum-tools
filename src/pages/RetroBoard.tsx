@@ -16,17 +16,20 @@ import {
     CardBody,
     HStack,
     useToast,
-    Badge
+    Badge,
+    useDisclosure
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import config from '../config'
+import { RetroBoardSettingsModal } from '../components/modals'
 
 interface RetroCard {
     id: string
     text: string
     column_id: string
+    author_name: string
     created_at: string
 }
 
@@ -37,6 +40,10 @@ interface RetroBoard {
     cards: RetroCard[]
     timer_running: boolean
     time_left: number
+    default_timer: number
+    hide_cards_by_default: boolean
+    hide_author_names: boolean
+    hasPassword: boolean
 }
 
 const COLUMNS = [
@@ -56,6 +63,15 @@ const RetroBoard: FC = () => {
     const [hideCards, setHideCards] = useState(false)
     const [timeLeft, setTimeLeft] = useState(300)
     const [isTimerRunning, setIsTimerRunning] = useState(false)
+    const [userName, setUserName] = useState<string>('')
+    const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure()
+
+    useEffect(() => {
+        const savedUsername = localStorage.getItem('retroUserName')
+        if (savedUsername) {
+            setUserName(savedUsername)
+        }
+    }, [])
 
     useEffect(() => {
         if (!boardId) {
@@ -73,6 +89,7 @@ const RetroBoard: FC = () => {
                 setBoard(data)
                 setIsTimerRunning(data.timer_running)
                 setTimeLeft(data.time_left)
+                setHideCards(data.hide_cards_by_default)
             })
             .catch(() => {
                 toast({
@@ -106,11 +123,13 @@ const RetroBoard: FC = () => {
             setBoard(data)
             setIsTimerRunning(data.timer_running)
             setTimeLeft(data.time_left)
+            setHideCards(data.hide_cards_by_default)
         })
 
         newSocket.on('retroBoardUpdated', (data: RetroBoard) => {
             console.log('Board updated:', data)
             setBoard(data)
+            setHideCards(data.hide_cards_by_default)
         })
 
         newSocket.on('timerStarted', ({ timeLeft: serverTimeLeft }) => {
@@ -147,15 +166,26 @@ const RetroBoard: FC = () => {
     }, [boardId])
 
     const handleAddCard = (columnId: string) => {
-        if (!newCardText[columnId]?.trim() || !socket || !boardId || !isTimerRunning) return
+        if (!newCardText[columnId]?.trim() || !socket || !boardId || !isTimerRunning || !userName) {
+            if (!userName) {
+                toast({
+                    title: 'Error',
+                    description: 'Please enter your name first',
+                    status: 'error',
+                    duration: 2000,
+                })
+            }
+            return
+        }
 
         const cardId = Math.random().toString(36).substring(7)
-        console.log('Adding card:', { boardId, cardId, columnId, text: newCardText[columnId] })
+        console.log('Adding card:', { boardId, cardId, columnId, text: newCardText[columnId], authorName: userName })
         socket.emit('addRetroCard', {
             boardId,
             cardId,
             columnId,
-            text: newCardText[columnId]
+            text: newCardText[columnId],
+            authorName: userName
         })
 
         setNewCardText({ ...newCardText, [columnId]: '' })
@@ -185,6 +215,16 @@ const RetroBoard: FC = () => {
         } else {
             socket.emit('startTimer', { boardId })
         }
+    }
+
+    const handleUpdateSettings = (settings: {
+        defaultTimer: number
+        hideCardsByDefault: boolean
+        hideAuthorNames: boolean
+        password?: string
+    }) => {
+        if (!socket || !boardId) return
+        socket.emit('updateSettings', { boardId, settings })
     }
 
     const formatTime = (seconds: number) => {
@@ -230,15 +270,31 @@ const RetroBoard: FC = () => {
                             >
                                 {formatTime(timeLeft)}
                             </Badge>
+                            <IconButton
+                                aria-label="Board Settings"
+                                icon={<SettingsIcon />}
+                                onClick={onSettingsOpen}
+                                size="sm"
+                            />
                         </HStack>
                         <Text fontSize="lg" color={colorMode === 'light' ? 'gray.600' : 'gray.300'} mt={2}>
                             Share your thoughts about the sprint
                         </Text>
-                        {!isTimerRunning && timeLeft < 300 && (
+                        {!isTimerRunning && timeLeft < (board?.default_timer ?? 300) && (
                             <Text color="red.500" mt={2}>
                                 Timer is paused. Cards cannot be added.
                             </Text>
                         )}
+                        <Input
+                            placeholder="Enter your name"
+                            value={userName}
+                            onChange={(e) => {
+                                setUserName(e.target.value)
+                                localStorage.setItem('retroUserName', e.target.value)
+                            }}
+                            maxW="300px"
+                            mt={2}
+                        />
                     </Box>
 
                     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
@@ -266,17 +322,24 @@ const RetroBoard: FC = () => {
                                         .map(card => (
                                             <Card key={card.id} variant="outline">
                                                 <CardBody>
-                                                    <HStack justify="space-between">
-                                                        <Text>{hideCards ? '[ Hidden ]' : card.text}</Text>
-                                                        <IconButton
-                                                            aria-label="Delete card"
-                                                            icon={<DeleteIcon />}
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            colorScheme="red"
-                                                            onClick={() => handleDeleteCard(card.id)}
-                                                        />
-                                                    </HStack>
+                                                    <VStack align="stretch" spacing={2}>
+                                                        <HStack justify="space-between">
+                                                            <Text>{hideCards ? '[ Hidden ]' : card.text}</Text>
+                                                            <IconButton
+                                                                aria-label="Delete card"
+                                                                icon={<DeleteIcon />}
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                colorScheme="red"
+                                                                onClick={() => handleDeleteCard(card.id)}
+                                                            />
+                                                        </HStack>
+                                                        {!board.hide_author_names && (
+                                                            <Text fontSize="sm" color="gray.500">
+                                                                Added by: {card.author_name}
+                                                            </Text>
+                                                        )}
+                                                    </VStack>
                                                 </CardBody>
                                             </Card>
                                         ))}
@@ -311,6 +374,19 @@ const RetroBoard: FC = () => {
                         ))}
                     </SimpleGrid>
                 </VStack>
+
+                {board && (
+                    <RetroBoardSettingsModal
+                        isOpen={isSettingsOpen}
+                        onClose={onSettingsClose}
+                        settings={{
+                            defaultTimer: board.default_timer,
+                            hideCardsByDefault: board.hide_cards_by_default,
+                            hideAuthorNames: board.hide_author_names
+                        }}
+                        onSave={handleUpdateSettings}
+                    />
+                )}
             </Box>
         </PageContainer>
     )
