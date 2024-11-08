@@ -12,7 +12,11 @@ import {
     updateParticipantVote,
     removeParticipant,
     resetVotes,
-    updateRoomSettings
+    updateRoomSettings,
+    createRetroBoard,
+    getRetroBoard,
+    addRetroCard,
+    deleteRetroCard
 } from './db.js';
 
 const app = express();
@@ -27,7 +31,7 @@ const io = new Server(server, {
     }
 });
 
-// REST endpoints for room management
+// Planning Poker REST endpoints
 app.get('/api/rooms', async (req, res) => {
     try {
         const rooms = await getRooms()
@@ -91,10 +95,40 @@ app.post('/api/rooms/:roomId/verify-password', async (req, res) => {
     }
 })
 
+// Retro Board REST endpoints
+app.post('/api/retro', async (req, res) => {
+    const boardId = Math.random().toString(36).substring(2, 8)
+    const { name } = req.body
+
+    try {
+        await createRetroBoard(boardId, name)
+        res.json({ success: true, boardId })
+    } catch (error) {
+        console.error('Error creating retro board:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+app.get('/api/retro/:boardId', async (req, res) => {
+    const { boardId } = req.params
+
+    try {
+        const board = await getRetroBoard(boardId)
+        if (!board) {
+            return res.status(404).json({ error: 'Board not found' })
+        }
+        res.json(board)
+    } catch (error) {
+        console.error('Error getting retro board:', error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
 // Socket.IO events
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id)
 
+    // Planning Poker events
     socket.on('joinRoom', async ({ roomId, userName, password }) => {
         try {
             const room = await getRoom(roomId)
@@ -199,6 +233,45 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error resetting votes:', error)
             socket.emit('error', { message: 'Failed to reset votes' })
+        }
+    })
+
+    // Retro Board events
+    socket.on('joinRetroBoard', async ({ boardId }) => {
+        try {
+            const board = await getRetroBoard(boardId)
+            if (!board) {
+                socket.emit('error', { message: 'Board not found' })
+                return
+            }
+
+            socket.join(`retro:${boardId}`)
+            socket.emit('retroBoardJoined', board)
+        } catch (error) {
+            console.error('Error joining retro board:', error)
+            socket.emit('error', { message: 'Failed to join retro board' })
+        }
+    })
+
+    socket.on('addRetroCard', async ({ boardId, cardId, columnId, text }) => {
+        try {
+            await addRetroCard(boardId, cardId, columnId, text)
+            const board = await getRetroBoard(boardId)
+            io.to(`retro:${boardId}`).emit('retroBoardUpdated', board)
+        } catch (error) {
+            console.error('Error adding retro card:', error)
+            socket.emit('error', { message: 'Failed to add card' })
+        }
+    })
+
+    socket.on('deleteRetroCard', async ({ boardId, cardId }) => {
+        try {
+            await deleteRetroCard(cardId)
+            const board = await getRetroBoard(boardId)
+            io.to(`retro:${boardId}`).emit('retroBoardUpdated', board)
+        } catch (error) {
+            console.error('Error deleting retro card:', error)
+            socket.emit('error', { message: 'Failed to delete card' })
         }
     })
 

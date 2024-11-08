@@ -1,64 +1,107 @@
 import { FC } from 'react'
-import { Box, Flex, Link, Button, useColorMode, IconButton, VStack, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
-import { HamburgerIcon } from '@chakra-ui/icons'
+import { Link as RouterLink, useLocation } from 'react-router-dom'
+import {
+    Box,
+    Flex,
+    HStack,
+    Link,
+    IconButton,
+    useDisclosure,
+    useColorModeValue,
+    Stack,
+    useColorMode,
+    Button
+} from '@chakra-ui/react'
+import { HamburgerIcon, CloseIcon, MoonIcon, SunIcon } from '@chakra-ui/icons'
+
+interface NavLinkProps {
+    to: string
+    children: React.ReactNode
+    isActive: boolean
+}
+
+const NavLink: FC<NavLinkProps> = ({ to, children, isActive }) => (
+    <Link
+        as={RouterLink}
+        px={2}
+        py={1}
+        rounded={'md'}
+        _hover={{
+            textDecoration: 'none',
+            bg: useColorModeValue('gray.200', 'gray.700'),
+        }}
+        bg={isActive ? useColorModeValue('gray.200', 'gray.700') : 'transparent'}
+        to={to}>
+        {children}
+    </Link>
+)
 
 const Navbar: FC = () => {
-    const { colorMode, toggleColorMode } = useColorMode()
     const { isOpen, onOpen, onClose } = useDisclosure()
+    const { colorMode, toggleColorMode } = useColorMode()
+    const location = useLocation()
 
-    const NavLinks = () => (
-        <>
-            <Link as={RouterLink} to="/planning-poker" _hover={{ textDecoration: 'none' }}>
-                Planning Poker
-            </Link>
-            <Link as={RouterLink} to="/daily-standup" _hover={{ textDecoration: 'none' }}>
-                Daily Standup
-            </Link>
-        </>
-    )
+    const Links = [
+        { name: 'Planning Poker', to: '/planning-poker' },
+        { name: 'Daily Standup', to: '/daily-standup' },
+        { name: 'Retro Board', to: '/retro' }
+    ]
 
     return (
-        <Box as="nav" bg={colorMode === 'light' ? 'white' : 'gray.800'} px={4} py={3} shadow="md">
-            <Flex maxW="1200px" mx="auto" align="center" justify="space-between">
-                <Flex align="center" gap={8}>
-                    <Link as={RouterLink} to="/" fontSize="xl" fontWeight="bold" _hover={{ textDecoration: 'none' }}>
+        <Box bg={useColorModeValue('white', 'gray.800')} px={4} shadow="sm">
+            <Flex h={16} alignItems={'center'} justifyContent={'space-between'}>
+                <IconButton
+                    size={'md'}
+                    icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
+                    aria-label={'Open Menu'}
+                    display={{ md: 'none' }}
+                    onClick={isOpen ? onClose : onOpen}
+                />
+                <HStack spacing={8} alignItems={'center'}>
+                    <Link
+                        as={RouterLink}
+                        to="/"
+                        fontWeight="bold"
+                        fontSize="lg"
+                        _hover={{ textDecoration: 'none' }}
+                    >
                         Scrum Tools
                     </Link>
-                    {/* Desktop Navigation */}
-                    <Flex gap={4} display={{ base: 'none', md: 'flex' }}>
-                        <NavLinks />
-                    </Flex>
-                </Flex>
-
-                <Flex align="center" gap={2}>
-                    <Button onClick={toggleColorMode} size={{ base: 'sm', md: 'md' }}>
-                        {colorMode === 'light' ? 'Dark' : 'Light'} Mode
-                    </Button>
-                    {/* Mobile Menu Button */}
-                    <IconButton
-                        aria-label="Open menu"
-                        icon={<HamburgerIcon />}
-                        display={{ base: 'flex', md: 'none' }}
-                        onClick={onOpen}
-                        size="md"
-                    />
-                </Flex>
+                    <HStack
+                        as={'nav'}
+                        spacing={4}
+                        display={{ base: 'none', md: 'flex' }}>
+                        {Links.map((link) => (
+                            <NavLink
+                                key={link.to}
+                                to={link.to}
+                                isActive={location.pathname.startsWith(link.to)}
+                            >
+                                {link.name}
+                            </NavLink>
+                        ))}
+                    </HStack>
+                </HStack>
+                <Button onClick={toggleColorMode}>
+                    {colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                </Button>
             </Flex>
 
-            {/* Mobile Navigation Drawer */}
-            <Drawer isOpen={isOpen} placement="right" onClose={onClose}>
-                <DrawerOverlay />
-                <DrawerContent>
-                    <DrawerCloseButton />
-                    <DrawerHeader>Menu</DrawerHeader>
-                    <DrawerBody>
-                        <VStack spacing={4} align="start" onClick={onClose}>
-                            <NavLinks />
-                        </VStack>
-                    </DrawerBody>
-                </DrawerContent>
-            </Drawer>
+            {isOpen ? (
+                <Box pb={4} display={{ md: 'none' }}>
+                    <Stack as={'nav'} spacing={4}>
+                        {Links.map((link) => (
+                            <NavLink
+                                key={link.to}
+                                to={link.to}
+                                isActive={location.pathname.startsWith(link.to)}
+                            >
+                                {link.name}
+                            </NavLink>
+                        ))}
+                    </Stack>
+                </Box>
+            ) : null}
         </Box>
     )
 }

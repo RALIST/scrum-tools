@@ -10,9 +10,10 @@ interface FeatureCardProps {
     title: string
     description: string
     link: string
+    isComingSoon?: boolean
 }
 
-const FeatureCard: FC<FeatureCardProps> = ({ title, description, link }) => {
+const FeatureCard: FC<FeatureCardProps> = ({ title, description, link, isComingSoon }) => {
     const { colorMode } = useColorMode()
 
     return (
@@ -25,7 +26,9 @@ const FeatureCard: FC<FeatureCardProps> = ({ title, description, link }) => {
             height="full"
         >
             <VStack spacing={4} align="start" height="full">
-                <Heading size={{ base: "sm", md: "md" }}>{title}</Heading>
+                <Heading size={{ base: "sm", md: "md" }}>
+                    {isComingSoon ? `Coming Soon: ${title}` : title}
+                </Heading>
                 <Text fontSize={{ base: "sm", md: "md" }}>{description}</Text>
                 <Button
                     as={RouterLink}
@@ -34,6 +37,7 @@ const FeatureCard: FC<FeatureCardProps> = ({ title, description, link }) => {
                     size={{ base: "sm", md: "md" }}
                     mt="auto"
                     w={{ base: "full", md: "auto" }}
+                    isDisabled={isComingSoon}
                 >
                     Try Now
                 </Button>
@@ -61,7 +65,8 @@ const Home: FC = () => {
             "Planning Poker for story estimation",
             "Daily Standup Timer",
             "Sprint Planning Tools",
-            "Team Collaboration Features"
+            "Team Collaboration Features",
+            "Retro Board"
         ],
         "screenshot": `${window.location.origin}/og-image.svg`,
         "url": "https://scrumtools.app"
@@ -112,24 +117,27 @@ const Home: FC = () => {
                             link="/daily-standup"
                         />
                         <FeatureCard
-                            title="Coming Soon: Sprint Timer"
+                            title="Retro Board"
+                            description="Conduct effective retrospectives with your team using our collaborative board."
+                            link="/retro"
+                        />
+                        <FeatureCard
+                            title="Sprint Timer"
                             description="Track your sprint progress with our customizable sprint timer."
                             link="/"
+                            isComingSoon
                         />
                         <FeatureCard
-                            title="Coming Soon: Retro Board"
-                            description="Conduct effective retrospectives with our digital retrospective board."
-                            link="/"
-                        />
-                        <FeatureCard
-                            title="Coming Soon: Team Velocity"
+                            title="Team Velocity"
                             description="Track and visualize your team's velocity over time."
                             link="/"
+                            isComingSoon
                         />
                         <FeatureCard
-                            title="Coming Soon: Health Check"
+                            title="Health Check"
                             description="Monitor your team's health and satisfaction with anonymous feedback."
                             link="/"
+                            isComingSoon
                         />
                     </SimpleGrid>
 

@@ -37,6 +37,7 @@ pool.connect((err, client, release) => {
 const initSchema = async () => {
     const client = await pool.connect()
     try {
+        // Planning Poker tables
         await client.query(`
             CREATE TABLE IF NOT EXISTS rooms (
                 id VARCHAR(255) PRIMARY KEY,
@@ -54,6 +55,25 @@ const initSchema = async () => {
                 name VARCHAR(255),
                 vote VARCHAR(50),
                 PRIMARY KEY (id, room_id)
+            )
+        `)
+
+        // Retro Board tables
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS retro_boards (
+                id VARCHAR(255) PRIMARY KEY,
+                name VARCHAR(255),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `)
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS retro_cards (
+                id VARCHAR(255) PRIMARY KEY,
+                board_id VARCHAR(255) REFERENCES retro_boards(id) ON DELETE CASCADE,
+                column_id VARCHAR(50),
+                text TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `)
 
@@ -233,6 +253,77 @@ export const updateRoomSettings = async (roomId, sequence, password) => {
         }
     } catch (error) {
         console.error('Error updating room settings:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+// Retro Board operations
+export const createRetroBoard = async (boardId, name) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'INSERT INTO retro_boards (id, name) VALUES ($1, $2)',
+            [boardId, name || boardId]
+        )
+    } catch (error) {
+        console.error('Error creating retro board:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const getRetroBoard = async (boardId) => {
+    const client = await pool.connect()
+    try {
+        const boardResult = await client.query(
+            'SELECT * FROM retro_boards WHERE id = $1',
+            [boardId]
+        )
+        if (boardResult.rows.length === 0) {
+            return null
+        }
+
+        const cardsResult = await client.query(
+            'SELECT * FROM retro_cards WHERE board_id = $1 ORDER BY created_at ASC',
+            [boardId]
+        )
+
+        return {
+            ...boardResult.rows[0],
+            cards: cardsResult.rows
+        }
+    } catch (error) {
+        console.error('Error getting retro board:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const addRetroCard = async (boardId, cardId, columnId, text) => {
+    const client = await pool.connect()
+    try {
+        await client.query(
+            'INSERT INTO retro_cards (id, board_id, column_id, text) VALUES ($1, $2, $3, $4)',
+            [cardId, boardId, columnId, text]
+        )
+    } catch (error) {
+        console.error('Error adding retro card:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const deleteRetroCard = async (cardId) => {
+    const client = await pool.connect()
+    try {
+        await client.query('DELETE FROM retro_cards WHERE id = $1', [cardId])
+    } catch (error) {
+        console.error('Error deleting retro card:', error)
         throw error
     } finally {
         client.release()
