@@ -39,6 +39,29 @@ CREATE TABLE IF NOT EXISTS participants (
     PRIMARY KEY (id, room_id)
 );
 
+-- Create retro boards table
+CREATE TABLE IF NOT EXISTS retro_boards (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create retro cards table
+CREATE TABLE IF NOT EXISTS retro_cards (
+    id VARCHAR(255) PRIMARY KEY,
+    board_id VARCHAR(255) REFERENCES retro_boards(id) ON DELETE CASCADE,
+    column_id VARCHAR(50),
+    text TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Grant table privileges
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO scrum_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO scrum_user;
+
+-- Add default privileges for future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON TABLES TO scrum_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT USAGE, SELECT ON SEQUENCES TO scrum_user;

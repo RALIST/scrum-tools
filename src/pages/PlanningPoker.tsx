@@ -34,8 +34,7 @@ import PageHelmet from '../components/PageHelmet'
 import SeoText from '../components/SeoText'
 import { planningPokerSeoSections } from '../content/planningPokerSeo'
 import { SEQUENCE_LABELS, SequenceType } from '../constants/poker'
-
-const SOCKET_URL = `https://${window.location.hostname}`
+import config from '../config'
 
 interface Room {
     id: string
@@ -84,7 +83,7 @@ const PlanningPoker: FC = () => {
     }
 
     useEffect(() => {
-        fetch(`${SOCKET_URL}/api/rooms`)
+        fetch(`${config.apiUrl}/rooms`)
             .then(res => res.json())
             .then(setActiveRooms)
             .catch(console.error)
@@ -93,7 +92,7 @@ const PlanningPoker: FC = () => {
     const handleCreateRoom = async () => {
         const newRoomId = Math.random().toString(36).substring(2, 8)
         try {
-            const response = await fetch(`${SOCKET_URL}/api/rooms`, {
+            const response = await fetch(`${config.apiUrl}/rooms`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -130,7 +129,7 @@ const PlanningPoker: FC = () => {
                 title="Planning Poker - Free Online Estimation Tool for Agile Teams"
                 description="Free online Planning Poker tool for agile teams. Real-time story point estimation with your team. No registration required. Start estimating user stories instantly."
                 keywords="planning poker, scrum poker, agile estimation, story points, team estimation, real-time voting, sprint planning, agile tools, fibonacci sequence"
-                canonicalUrl="https://scrumtools.app/planning-poker"
+                canonicalUrl={`${config.siteUrl}/planning-poker`}
                 jsonLd={jsonLd}
             />
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
