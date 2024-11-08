@@ -15,8 +15,16 @@ import {
     useToast,
     TableContainer,
     Center,
-    HStack
+    HStack,
+    Container,
+    Text,
+    List,
+    ListItem,
+    ListIcon,
+    Divider,
+    Stack
 } from '@chakra-ui/react'
+import { CheckCircleIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
 
@@ -76,9 +84,9 @@ const PlanningPoker: FC = () => {
     return (
         <PageContainer>
             <PageHelmet
-                title="Planning Poker"
-                description="Free online Planning Poker tool for agile teams. Create or join rooms for real-time story point estimation with your team. Collaborate effectively in your sprint planning sessions."
-                keywords="planning poker, scrum poker, agile estimation, story points, team estimation, real-time voting, sprint planning, agile tools"
+                title="Planning Poker - Free Online Estimation Tool for Agile Teams"
+                description="Free online Planning Poker tool for agile teams. Real-time story point estimation with your team. No registration required. Start estimating user stories instantly."
+                keywords="planning poker, scrum poker, agile estimation, story points, team estimation, real-time voting, sprint planning, agile tools, fibonacci sequence"
                 canonicalUrl="https://scrumtools.app/planning-poker"
             />
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
@@ -158,6 +166,116 @@ const PlanningPoker: FC = () => {
                             </VStack>
                         </Box>
                     )}
+
+                    <Divider my={8} />
+
+                    <Container maxW="container.lg">
+                        <Stack spacing={12}>
+                            <Box>
+                                <Heading as="h2" size="lg" mb={6}>
+                                    What is Planning Poker?
+                                </Heading>
+                                <Text fontSize="lg" mb={4}>
+                                    Planning Poker, also known as Scrum Poker, is a consensus-based estimation technique used by agile teams to estimate the effort of project backlog items. Team members make estimates by playing numbered cards face-down, revealing them simultaneously to avoid anchoring bias.
+                                </Text>
+                                <List spacing={3}>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Uses Fibonacci sequence for relative sizing
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Promotes team discussion and alignment
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Reduces influence bias in estimations
+                                    </ListItem>
+                                </List>
+                            </Box>
+
+                            <Box>
+                                <Heading as="h2" size="lg" mb={6}>
+                                    How to Use Our Planning Poker Tool
+                                </Heading>
+                                <Text fontSize="lg" mb={4}>
+                                    Our free online Planning Poker tool makes it easy to conduct estimation sessions with your team, whether you're co-located or working remotely. Here's how it works:
+                                </Text>
+                                <List spacing={3}>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Create a room and share the link with your team
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Each team member selects their estimate privately
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Reveal votes simultaneously to discuss differences
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Use color-coded results to identify consensus and outliers
+                                    </ListItem>
+                                </List>
+                            </Box>
+
+                            <Box>
+                                <Heading as="h2" size="lg" mb={6}>
+                                    Benefits of Online Planning Poker
+                                </Heading>
+                                <Text fontSize="lg" mb={4}>
+                                    Using our online Planning Poker tool offers several advantages over traditional physical cards or basic video conferencing:
+                                </Text>
+                                <List spacing={3}>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Real-time collaboration for distributed teams
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Automatic calculation of averages and statistics
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Visual indicators help identify estimation patterns
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        No registration or setup required
+                                    </ListItem>
+                                </List>
+                            </Box>
+
+                            <Box>
+                                <Heading as="h2" size="lg" mb={6}>
+                                    Best Practices for Story Point Estimation
+                                </Heading>
+                                <Text fontSize="lg" mb={4}>
+                                    To get the most out of your estimation sessions, consider these best practices:
+                                </Text>
+                                <List spacing={3}>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Focus on relative sizing rather than exact time estimates
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Discuss outliers to understand different perspectives
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Use the Fibonacci sequence to force meaningful differences between estimates
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListIcon as={CheckCircleIcon} color="green.500" />
+                                        Keep reference stories in mind for consistent estimation
+                                    </ListItem>
+                                </List>
+                            </Box>
+                        </Stack>
+                    </Container>
                 </VStack>
             </Box>
         </PageContainer>
