@@ -17,7 +17,7 @@ const userNames = new Map() // socketId -> name
 export const handleRetroBoardEvents = (io, socket) => {
     socket.on('joinRetroBoard', async ({ boardId, name, password }) => {
         try {
-            console.log('Joining retro board:', boardId)
+            console.log('Joining retro board:', { boardId, name })
             const board = await getRetroBoard(boardId)
             if (!board) {
                 console.log('Board not found:', boardId)
@@ -44,6 +44,8 @@ export const handleRetroBoardEvents = (io, socket) => {
                 socket.emit('timerStarted', { timeLeft: board.time_left })
             }
 
+            // Emit board data to the client
+            console.log('Emitting retroBoardJoined with data:', board)
             socket.emit('retroBoardJoined', board)
         } catch (error) {
             console.error('Error joining retro board:', error)

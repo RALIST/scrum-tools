@@ -1,7 +1,5 @@
-import { FC, useState, useEffect, useRef } from 'react'
+import { FC, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Manager } from 'socket.io-client'
-import type { Socket as ClientSocket } from 'socket.io-client'
 import {
     Box,
     Heading,
@@ -18,13 +16,15 @@ import {
     useToast,
     Badge,
     useDisclosure,
-    Divider
+    Divider,
+    Spinner,
+    Center
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
-import config from '../config'
 import { RetroBoardSettingsModal, JoinRetroBoardModal, ChangeRetroBoardNameModal } from '../components/modals'
+import { useRetroSocket, type RetroBoard as RetroType } from '../hooks/useRetroSocket'
 
 const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -32,32 +32,6 @@ const formatDate = (date: Date) => {
         month: 'long',
         day: 'numeric'
     }).format(date)
-}
-
-interface RetroCard {
-    id: string
-    text: string
-    column_id: string
-    author_name: string
-    created_at: string
-}
-
-interface RetroBoard {
-    id: string
-    name: string
-    created_at: string
-    cards: RetroCard[]
-    timer_running: boolean
-    time_left: number
-    default_timer: number
-    hide_cards_by_default: boolean
-    hide_author_names: boolean
-    hasPassword: boolean
-}
-
-interface JoinParams {
-    name: string
-    password?: string
 }
 
 const COLUMNS = [
@@ -71,156 +45,65 @@ const RetroBoard: FC = () => {
     const { boardId } = useParams<{ boardId: string }>()
     const navigate = useNavigate()
     const toast = useToast()
-    const [socket, setSocket] = useState<ClientSocket | null>(null)
-    const [board, setBoard] = useState<RetroBoard | null>(null)
-    const [newCardText, setNewCardText] = useState<{ [key: string]: string }>({})
-    const [hideCards, setHideCards] = useState(false)
-    const [timeLeft, setTimeLeft] = useState(300)
-    const [isTimerRunning, setIsTimerRunning] = useState(false)
     const [userName, setUserName] = useState<string>('')
-    const [hasJoined, setHasJoined] = useState(false)
-    const joinParamsRef = useRef<JoinParams | null>(null)
+    const [newCardText, setNewCardText] = useState<{ [key: string]: string }>({})
     const { isOpen: isSettingsOpen, onOpen: onSettingsOpen, onClose: onSettingsClose } = useDisclosure()
     const { isOpen: isJoinOpen, onOpen: onJoinOpen, onClose: onJoinClose } = useDisclosure()
     const { isOpen: isChangeNameOpen, onOpen: onChangeNameOpen, onClose: onChangeNameClose } = useDisclosure()
 
-    useEffect(() => {
-        const savedUsername = localStorage.getItem('retroUserName')
-        if (savedUsername) {
-            setUserName(savedUsername)
+    const {
+        board,
+        isTimerRunning,
+        timeLeft,
+        hideCards,
+        setHideCards,
+        hasJoined,
+        joinBoard,
+        changeName,
+        addCard,
+        deleteCard,
+        toggleTimer,
+        updateSettings
+    } = useRetroSocket({
+        boardId: boardId || '',
+        onBoardJoined: () => {
+            console.log('Board joined successfully')
         }
-    }, [])
+    })
 
+    // Show join modal when board is loaded but not joined
     useEffect(() => {
-        if (!boardId) {
-            navigate('/retro')
-            return
-        }
-
-        // First, try to get the board data
-        fetch(`${config.apiUrl}/retro/${boardId}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Board not found')
-                return res.json()
-            })
-            .then(data => {
-                setBoard(data)
-                setIsTimerRunning(data.timer_running)
-                setTimeLeft(data.time_left)
-                setHideCards(data.hide_cards_by_default)
-
-                // Show join modal if no username is saved
-                if (!localStorage.getItem('retroUserName')) {
-                    onJoinOpen()
-                } else {
-                    handleJoinBoard(localStorage.getItem('retroUserName') || '', undefined)
-                }
-            })
-            .catch(() => {
-                toast({
-                    title: 'Error',
-                    description: 'Board not found',
-                    status: 'error',
-                    duration: 2000,
-                })
-                navigate('/retro')
-            })
-    }, [boardId])
-
-    const setupSocket = () => {
-        const manager = new Manager(config.socketUrl, {
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            transports: ['websocket', 'polling']
-        })
-
-        const newSocket = manager.socket('/')
-
-        newSocket.on('connect', () => {
-            console.log('Connected to server')
-            if (boardId && joinParamsRef.current) {
-                const { name, password } = joinParamsRef.current
-                newSocket.emit('joinRetroBoard', { boardId, name, password })
+        if (board && !hasJoined) {
+            const savedUsername = localStorage.getItem('retroUserName')
+            if (savedUsername) {
+                setUserName(savedUsername)
+                joinBoard(savedUsername)
+            } else {
+                onJoinOpen()
             }
-        })
-
-        newSocket.on('retroBoardJoined', (data: RetroBoard) => {
-            console.log('Joined retro board:', data)
-            setBoard(data)
-            setIsTimerRunning(data.timer_running)
-            setTimeLeft(data.time_left)
-            setHideCards(data.hide_cards_by_default)
-            setHasJoined(true)
-        })
-
-        newSocket.on('retroBoardUpdated', (data: RetroBoard) => {
-            console.log('Board updated:', data)
-            setBoard(data)
-            setHideCards(data.hide_cards_by_default)
-        })
-
-        newSocket.on('timerStarted', ({ timeLeft: serverTimeLeft }) => {
-            console.log('Timer started:', serverTimeLeft)
-            setIsTimerRunning(true)
-            setTimeLeft(serverTimeLeft)
-        })
-
-        newSocket.on('timerStopped', () => {
-            console.log('Timer stopped')
-            setIsTimerRunning(false)
-        })
-
-        newSocket.on('timerUpdate', ({ timeLeft: serverTimeLeft }) => {
-            console.log('Timer update:', serverTimeLeft)
-            setTimeLeft(serverTimeLeft)
-        })
-
-        newSocket.on('error', (data: { message: string }) => {
-            console.error('Socket error:', data)
-            toast({
-                title: 'Error',
-                description: data.message,
-                status: 'error',
-                duration: 2000,
-            })
-        })
-
-        setSocket(newSocket)
-
-        return () => {
-            newSocket.disconnect()
         }
-    }
+    }, [board, hasJoined])
 
     const handleJoinBoard = (name: string, password?: string) => {
+        console.log('Handling join board:', { name })
         if (!boardId) return
-
         setUserName(name)
         localStorage.setItem('retroUserName', name)
         onJoinClose()
-
-        joinParamsRef.current = { name, password }
-
-        if (!socket) {
-            setupSocket()
-        } else {
-            socket.emit('joinRetroBoard', { boardId, name, password })
-        }
+        joinBoard(name, password)
     }
 
     const handleChangeName = (newName: string) => {
-        if (!socket || !boardId) return
-        socket.emit('changeRetroName', { boardId, newName })
+        console.log('Handling name change:', newName)
+        if (!boardId) return
+        changeName(newName)
         setUserName(newName)
         localStorage.setItem('retroUserName', newName)
         onChangeNameClose()
     }
 
     const handleAddCard = (columnId: string) => {
-        if (!newCardText[columnId]?.trim() || !socket || !boardId || !isTimerRunning || !userName) {
+        if (!newCardText[columnId]?.trim() || !isTimerRunning || !userName) {
             if (!userName) {
                 toast({
                     title: 'Error',
@@ -233,22 +116,8 @@ const RetroBoard: FC = () => {
         }
 
         const cardId = Math.random().toString(36).substring(7)
-        console.log('Adding card:', { boardId, cardId, columnId, text: newCardText[columnId], authorName: userName })
-        socket.emit('addRetroCard', {
-            boardId,
-            cardId,
-            columnId,
-            text: newCardText[columnId],
-            authorName: userName
-        })
-
+        addCard(cardId, columnId, newCardText[columnId], userName)
         setNewCardText({ ...newCardText, [columnId]: '' })
-    }
-
-    const handleDeleteCard = (cardId: string) => {
-        if (!socket || !boardId) return
-        console.log('Deleting card:', { boardId, cardId })
-        socket.emit('deleteRetroCard', { boardId, cardId })
     }
 
     const handleToggleCards = () => {
@@ -260,33 +129,25 @@ const RetroBoard: FC = () => {
         })
     }
 
-    const handleToggleTimer = () => {
-        if (!socket || !boardId) return
-
-        console.log('Toggling timer:', { boardId, currentState: isTimerRunning })
-        if (isTimerRunning) {
-            socket.emit('stopTimer', { boardId })
-        } else {
-            socket.emit('startTimer', { boardId })
-        }
-    }
-
-    const handleUpdateSettings = (settings: {
-        defaultTimer: number
-        hideCardsByDefault: boolean
-        hideAuthorNames: boolean
-        password?: string
-    }) => {
-        if (!socket || !boardId) return
-        socket.emit('updateSettings', { boardId, settings })
-    }
-
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60)
         const remainingSeconds = seconds % 60
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
     }
 
+    // Show loading state
+    if (!board) {
+        return (
+            <Center minH="100vh">
+                <VStack spacing={4}>
+                    <Spinner size="xl" />
+                    <Text>Loading board...</Text>
+                </VStack>
+            </Center>
+        )
+    }
+
+    // Show join modal
     if (!hasJoined) {
         return (
             <JoinRetroBoardModal
@@ -321,7 +182,7 @@ const RetroBoard: FC = () => {
                                 />
                                 <Button
                                     leftIcon={<TimeIcon />}
-                                    onClick={handleToggleTimer}
+                                    onClick={toggleTimer}
                                     colorScheme={isTimerRunning ? "red" : "green"}
                                     size="sm"
                                 >
@@ -398,7 +259,7 @@ const RetroBoard: FC = () => {
                                                                 size="sm"
                                                                 variant="ghost"
                                                                 colorScheme="red"
-                                                                onClick={() => handleDeleteCard(card.id)}
+                                                                onClick={() => deleteCard(card.id)}
                                                             />
                                                         </HStack>
                                                         {!board.hide_author_names && (
@@ -451,7 +312,7 @@ const RetroBoard: FC = () => {
                             hideCardsByDefault: board.hide_cards_by_default,
                             hideAuthorNames: board.hide_author_names
                         }}
-                        onSave={handleUpdateSettings}
+                        onSave={updateSettings}
                     />
                 )}
 
