@@ -10,15 +10,6 @@ import {
     Center,
     useToast,
     Input,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-    FormControl,
-    FormLabel,
-    useDisclosure,
     Divider
 } from '@chakra-ui/react'
 import PageContainer from '../components/PageContainer'
@@ -31,8 +22,6 @@ const RetroLanding: FC = () => {
     const { colorMode } = useColorMode()
     const navigate = useNavigate()
     const toast = useToast()
-    const { isOpen, onOpen, onClose } = useDisclosure()
-    const [boardName, setBoardName] = useState('')
     const [joinBoardId, setJoinBoardId] = useState('')
 
     const jsonLd = {
@@ -62,10 +51,7 @@ const RetroLanding: FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: boardName || 'Sprint Retrospective'
-                }),
+                }
             })
 
             if (!response.ok) {
@@ -73,7 +59,6 @@ const RetroLanding: FC = () => {
             }
 
             const data = await response.json()
-            onClose()
             navigate(`/retro/${data.boardId}`)
         } catch (error) {
             toast({
@@ -133,7 +118,7 @@ const RetroLanding: FC = () => {
                                 colorScheme="blue"
                                 size="lg"
                                 w="full"
-                                onClick={onOpen}
+                                onClick={handleCreateBoard}
                             >
                                 Create New Board
                             </Button>
@@ -165,31 +150,6 @@ const RetroLanding: FC = () => {
 
                     <SeoText sections={retroBoardSeoSections} />
                 </VStack>
-
-                <Modal isOpen={isOpen} onClose={onClose}>
-                    <ModalOverlay />
-                    <ModalContent mx={4}>
-                        <ModalHeader>Create Retro Board</ModalHeader>
-                        <ModalBody>
-                            <FormControl>
-                                <FormLabel>Board Name (Optional)</FormLabel>
-                                <Input
-                                    placeholder="Sprint Retrospective"
-                                    value={boardName}
-                                    onChange={(e) => setBoardName(e.target.value)}
-                                />
-                            </FormControl>
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button variant="ghost" mr={3} onClick={onClose}>
-                                Cancel
-                            </Button>
-                            <Button colorScheme="blue" onClick={handleCreateBoard}>
-                                Create Board
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
             </Box>
         </PageContainer>
     )

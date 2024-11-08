@@ -26,14 +26,6 @@ import { Helmet } from 'react-helmet-async'
 import { RetroBoardSettingsModal, JoinRetroBoardModal, ChangeRetroBoardNameModal } from '../components/modals'
 import { useRetroSocket, type RetroBoard as RetroType } from '../hooks/useRetroSocket'
 
-const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }).format(date)
-}
-
 const COLUMNS = [
     { id: 'good', title: 'What Went Well', color: 'green.500' },
     { id: 'improve', title: 'What Could Be Improved', color: 'orange.500' },
@@ -170,7 +162,7 @@ const RetroBoard: FC = () => {
                     <Box textAlign="center">
                         <VStack spacing={4}>
                             <Heading as="h1" size="xl">
-                                {board?.name || `Retro ${formatDate(new Date())}`}
+                                {board.name}
                             </Heading>
                             <HStack justify="center" spacing={4}>
                                 <IconButton

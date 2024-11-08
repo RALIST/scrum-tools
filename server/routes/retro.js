@@ -8,6 +8,14 @@ import {
 
 const router = express.Router()
 
+const formatDate = (date) => {
+    return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(date)
+}
+
 router.post('/retro', async (req, res) => {
     const boardId = Math.random().toString(36).substring(2, 8)
     const {
@@ -18,8 +26,10 @@ router.post('/retro', async (req, res) => {
         password
     } = req.body
 
+    const defaultName = `Retro ${formatDate(new Date())}`
+
     try {
-        await createRetroBoard(boardId, name, {
+        await createRetroBoard(boardId, name || defaultName, {
             defaultTimer,
             hideCardsByDefault,
             hideAuthorNames,
