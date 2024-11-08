@@ -140,7 +140,6 @@ const RetroBoard: FC = () => {
                         {COLUMNS.map(column => (
                             <RetroColumn
                                 key={column.id}
-                                id={column.id}
                                 title={column.title}
                                 color={column.color}
                                 cards={columnCards[column.id] || []}

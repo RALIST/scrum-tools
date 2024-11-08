@@ -10,7 +10,6 @@ import RetroCardInput from './RetroCardInput'
 import { RetroCard as RetroCardType } from '../../hooks/useRetroSocket'
 
 interface RetroColumnProps {
-    id: string
     title: string
     color: string
     cards: RetroCardType[]
@@ -27,7 +26,6 @@ interface RetroColumnProps {
 }
 
 const RetroColumn: FC<RetroColumnProps> = ({
-    id,
     title,
     color,
     cards,
