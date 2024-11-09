@@ -53,7 +53,7 @@ const Home: FC = () => {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Scrum Tools",
-        "description": "Free online tools for agile teams including Planning Poker, Daily Standup Timer, and more.",
+        "description": "Free online tools for agile teams including Planning Poker, Daily Standup Timer, Retrospective Board, and Team Velocity Tracker. Boost your team's productivity with our simple, effective Scrum tools.",
         "applicationCategory": "ProjectManagementApplication",
         "operatingSystem": "Any",
         "offers": {
@@ -62,11 +62,13 @@ const Home: FC = () => {
             "priceCurrency": "USD"
         },
         "featureList": [
-            "Planning Poker for story estimation",
-            "Daily Standup Timer",
-            "Sprint Planning Tools",
-            "Team Collaboration Features",
-            "Retro Board"
+            "Real-time Planning Poker with customizable voting sequences",
+            "Daily Standup Timer with configurable time slots",
+            "Retrospective Board with real-time collaboration",
+            "Team Velocity Tracker with analytics",
+            "Password-protected team data",
+            "Dark/Light theme support",
+            "Mobile-responsive design"
         ],
         "screenshot": `${window.location.origin}/og-image.svg`,
         "url": "https://scrumtools.app"
@@ -76,8 +78,8 @@ const Home: FC = () => {
         <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
             <PageHelmet
                 title="Scrum Tools - Free Online Tools for Agile Teams"
-                description="Free online tools for agile teams including Planning Poker, Daily Standup Timer, and more. Boost your team's productivity with our simple, effective Scrum tools."
-                keywords="scrum tools, agile tools, planning poker, daily standup, sprint planning, team collaboration, scrum ceremonies, agile ceremonies"
+                description="Free online tools for agile teams including Planning Poker, Daily Standup Timer, Retrospective Board, and Team Velocity Tracker. Real-time collaboration, password protection, and mobile support included."
+                keywords="scrum tools, agile tools, planning poker, daily standup, retrospective board, team velocity, sprint tracking, agile ceremonies, scrum ceremonies, team collaboration, real-time collaboration, password protection"
                 canonicalUrl="https://scrumtools.app"
                 jsonLd={jsonLd}
             />
@@ -97,7 +99,7 @@ const Home: FC = () => {
                             color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
                             px={{ base: 2, md: 0 }}
                         >
-                            Boost your team's agile workflow with our free scrum tools
+                            Boost your team's agile workflow with our secure, real-time collaboration tools
                         </Text>
                     </Box>
 
@@ -108,22 +110,22 @@ const Home: FC = () => {
                     >
                         <FeatureCard
                             title="Planning Poker"
-                            description="Estimate user stories efficiently with your team using our real-time planning poker tool."
+                            description="Estimate user stories efficiently with real-time voting and customizable sequences."
                             link="/planning-poker"
                         />
                         <FeatureCard
                             title="Daily Standup Timer"
-                            description="Keep your daily standups focused and time-boxed with our specialized timer."
+                            description="Keep your daily standups focused with configurable timers and notifications."
                             link="/daily-standup"
                         />
                         <FeatureCard
                             title="Retro Board"
-                            description="Conduct effective retrospectives with your team using our collaborative board."
+                            description="Conduct effective retrospectives with real-time collaboration and voting."
                             link="/retro"
                         />
                         <FeatureCard
                             title="Team Velocity"
-                            description="Track and visualize your team's velocity over time."
+                            description="Track and analyze your team's velocity with interactive charts and statistics."
                             link="/velocity"
                         />
                         <FeatureCard

@@ -6,6 +6,7 @@ export const homeSeoSections = [
             "No registration required - start using tools immediately",
             "Real-time collaboration for distributed teams",
             "Works on all devices - desktop, tablet, and mobile",
+            "Password protection for team data security",
             "Free and open-source tools for the agile community"
         ]
     },
@@ -13,12 +14,24 @@ export const homeSeoSections = [
         title: "Tools for Every Scrum Ceremony",
         description: "Our comprehensive suite of tools covers all major Scrum ceremonies, helping teams maintain agile best practices and improve collaboration:",
         items: [
-            "Planning Poker for accurate story point estimation",
-            "Daily Standup Timer for focused team updates",
-            "Sprint Timer for tracking sprint progress",
-            "Retrospective Board for team improvement discussions",
-            "Team Velocity tracker for performance insights",
-            "Team Health Check for continuous improvement"
+            "Planning Poker with real-time voting and result visualization",
+            "Daily Standup Timer with configurable time slots and notifications",
+            "Retrospective Board with real-time card management and voting",
+            "Team Velocity Tracker with charts and performance analytics",
+            "Sprint statistics and completion rate tracking",
+            "Team-based data management with secure access"
+        ]
+    },
+    {
+        title: "Key Features",
+        description: "Each tool is designed with specific features to enhance your Scrum ceremonies:",
+        items: [
+            "Planning Poker: Customizable voting sequences, instant result sharing",
+            "Daily Standup: Individual timers, meeting duration tracking",
+            "Retro Board: Three-column format, card voting, timer control",
+            "Team Velocity: Sprint tracking, trend analysis, completion rates",
+            "Dark/Light theme support for all tools",
+            "Mobile-responsive design for on-the-go access"
         ]
     },
     {
@@ -26,7 +39,8 @@ export const homeSeoSections = [
         description: "In today's distributed work environment, having the right tools for remote collaboration is crucial. Our platform helps teams stay connected and maintain agile practices regardless of location:",
         items: [
             "Real-time synchronization for instant collaboration",
-            "Shareable links for quick team access",
+            "Secure data sharing with password protection",
+            "Team-specific workspaces and data isolation",
             "Cross-platform compatibility for all team members",
             "Simple, intuitive interfaces for reduced learning curve"
         ]
@@ -37,6 +51,8 @@ export const homeSeoSections = [
         items: [
             "Zero setup time - start using immediately",
             "No account creation or registration required",
+            "Password-protected team data",
+            "Real-time collaboration features",
             "Regular updates based on community feedback",
             "Optimized for both beginners and experienced teams"
         ]

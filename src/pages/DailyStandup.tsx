@@ -1,222 +1,246 @@
-import { FC, useState, useEffect } from 'react'
+import { FC, useState } from 'react'
 import {
     Box,
+    Container,
     Heading,
-    Text,
     VStack,
     Button,
-    Input,
+    Text,
+    useColorMode,
+    HStack,
+    IconButton,
     List,
     ListItem,
-    IconButton,
-    useColorMode,
+    Divider,
     useToast,
-    Stack
+    useDisclosure,
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon, TimeIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, RepeatIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
+import PageHelmet from '../components/PageHelmet'
+import SeoText from '../components/SeoText'
+import { AddTeamMemberModal } from '../components/modals'
+import { dailyStandupSeo, dailyStandupSeoSections } from '../content/dailyStandupSeo'
+import config from '../config'
 
-const DEFAULT_TIME: number = 120 // 2 minutes in seconds
-const WARNING_TIME: number = 30 // Time in seconds when to show warning color
-
-const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+interface TeamMember {
+    id: string
+    name: string
+    timeLeft: number
 }
 
+const MEMBER_TIME = 120 // 2 minutes in seconds
+
 const DailyStandup: FC = () => {
-    const [teamMembers, setTeamMembers] = useState<string[]>([])
-    const [newMember, setNewMember] = useState<string>('')
-    const [timeLeft, setTimeLeft] = useState<number>(DEFAULT_TIME)
-    const [isRunning, setIsRunning] = useState<boolean>(false)
-    const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null)
     const { colorMode } = useColorMode()
     const toast = useToast()
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+    const [currentMember, setCurrentMember] = useState<number>(-1)
+    const [isRunning, setIsRunning] = useState(false)
+    const [intervalId, setIntervalId] = useState<number | null>(null)
+    const { isOpen: isAddMemberOpen, onOpen: onAddMemberOpen, onClose: onAddMemberClose } = useDisclosure()
 
-    useEffect(() => {
-        let timer: NodeJS.Timeout | undefined
-        if (isRunning && timeLeft > 0) {
-            timer = setInterval(() => {
-                setTimeLeft((prev) => prev - 1)
-            }, 1000)
-        } else if (timeLeft === 0 && isRunning) {
-            setIsRunning(false)
+    const addMember = (name: string) => {
+        setTeamMembers([
+            ...teamMembers,
+            { id: Math.random().toString(), name, timeLeft: MEMBER_TIME }
+        ])
+    }
+
+    const removeMember = (id: string) => {
+        setTeamMembers(teamMembers.filter(member => member.id !== id))
+        if (currentMember >= teamMembers.length - 1) {
+            setCurrentMember(-1)
+        }
+    }
+
+    const resetTimer = () => {
+        setTeamMembers(teamMembers.map(member => ({ ...member, timeLeft: MEMBER_TIME })))
+        setCurrentMember(-1)
+        setIsRunning(false)
+        if (intervalId) {
+            clearInterval(intervalId)
+            setIntervalId(null)
+        }
+    }
+
+    const startTimer = () => {
+        if (teamMembers.length === 0) {
             toast({
-                title: 'Time\'s up!',
-                description: 'Move on to the next team member',
+                title: 'No team members',
+                description: 'Please add team members first',
                 status: 'warning',
                 duration: 3000,
-                isClosable: true,
             })
+            return
         }
 
-        return () => {
-            if (timer) clearInterval(timer)
-        }
-    }, [isRunning, timeLeft, toast])
-
-    const handleAddMember = (): void => {
-        if (newMember.trim()) {
-            setTeamMembers([...teamMembers, newMember.trim()])
-            setNewMember('')
-        }
-    }
-
-    const handleRemoveMember = (index: number): void => {
-        setTeamMembers(teamMembers.filter((_, i) => i !== index))
-    }
-
-    const startTimer = (member: string): void => {
-        setCurrentSpeaker(member)
-        setTimeLeft(DEFAULT_TIME)
         setIsRunning(true)
+        setCurrentMember(prev => (prev === -1 ? 0 : prev))
+
+        const id = window.setInterval(() => {
+            setTeamMembers(prevMembers => {
+                const newMembers = [...prevMembers]
+                const currentMemberIndex = currentMember === -1 ? 0 : currentMember
+
+                if (newMembers[currentMemberIndex].timeLeft > 0) {
+                    newMembers[currentMemberIndex] = {
+                        ...newMembers[currentMemberIndex],
+                        timeLeft: newMembers[currentMemberIndex].timeLeft - 1
+                    }
+                } else {
+                    // Play sound when time is up
+                    const audio = new Audio('/timer-end.mp3')
+                    audio.play()
+
+                    // Move to next member
+                    if (currentMemberIndex < teamMembers.length - 1) {
+                        setCurrentMember(currentMemberIndex + 1)
+                    } else {
+                        clearInterval(id)
+                        setIsRunning(false)
+                        setIntervalId(null)
+                        setCurrentMember(-1)
+                    }
+                }
+                return newMembers
+            })
+        }, 1000)
+
+        setIntervalId(id)
     }
 
-    const stopTimer = (): void => {
-        setIsRunning(false)
-        setCurrentSpeaker(null)
-    }
-
-    const getTimeColor = (): string => {
-        if (timeLeft <= WARNING_TIME) {
-            return 'red.500'
+    const pauseTimer = () => {
+        if (intervalId) {
+            clearInterval(intervalId)
+            setIntervalId(null)
         }
-        return colorMode === 'light' ? 'blue.500' : 'blue.300'
+        setIsRunning(false)
+    }
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
+    const getTotalTime = () => {
+        const totalSeconds = teamMembers.reduce((acc, member) => acc + member.timeLeft, 0)
+        return formatTime(totalSeconds)
+    }
+
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Daily Standup Timer",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any",
+        "description": dailyStandupSeo.description,
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": dailyStandupSeo.content.features
     }
 
     return (
-        <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
-            <PageContainer>
-                <VStack spacing={{ base: 6, md: 8 }}>
-                    <Box textAlign="center">
-                        <Heading size={{ base: "lg", md: "xl" }} mb={{ base: 3, md: 4 }}>
-                            Daily Standup Timer
+        <PageContainer>
+            <PageHelmet
+                title={dailyStandupSeo.title}
+                description={dailyStandupSeo.description}
+                keywords={dailyStandupSeo.keywords}
+                canonicalUrl={`${config.siteUrl}/daily-standup`}
+                jsonLd={jsonLd}
+            />
+            <Container maxW="container.xl" py={8}>
+                <VStack spacing={8} align="stretch">
+                    <VStack spacing={4} align="center" textAlign="center">
+                        <Heading as="h1" size="xl">
+                            {dailyStandupSeo.content.heading}
                         </Heading>
-                        <Text
-                            fontSize={{ base: "md", md: "lg" }}
-                            color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
-                            px={{ base: 2, md: 0 }}
-                        >
-                            Keep your daily standups focused and time-boxed
+                        <Text fontSize="lg" color="gray.600">
+                            {dailyStandupSeo.content.subheading}
                         </Text>
-                    </Box>
+                    </VStack>
 
                     <Box
-                        w="full"
-                        p={{ base: 4, md: 8 }}
+                        p={6}
                         borderRadius="lg"
                         bg={colorMode === 'light' ? 'white' : 'gray.700'}
                         shadow="md"
                     >
-                        <VStack spacing={{ base: 4, md: 6 }}>
-                            <Stack
-                                w="full"
-                                direction={{ base: "column", md: "row" }}
-                                spacing={{ base: 2, md: 4 }}
-                            >
-                                <Input
-                                    placeholder="Add team member"
-                                    value={newMember}
-                                    onChange={(e) => setNewMember(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleAddMember()}
-                                    size={{ base: "md", md: "md" }}
-                                />
-                                <IconButton
-                                    icon={<AddIcon />}
-                                    onClick={handleAddMember}
+                        <VStack spacing={6}>
+                            <HStack spacing={4}>
+                                <Button
+                                    leftIcon={<AddIcon />}
                                     colorScheme="blue"
-                                    aria-label="Add team member"
-                                    size={{ base: "md", md: "md" }}
-                                    w={{ base: "full", md: "auto" }}
-                                />
-                            </Stack>
+                                    onClick={onAddMemberOpen}
+                                >
+                                    Add Member
+                                </Button>
+                                <Button
+                                    leftIcon={<RepeatIcon />}
+                                    colorScheme="gray"
+                                    onClick={resetTimer}
+                                >
+                                    Reset
+                                </Button>
+                            </HStack>
 
-                            <List spacing={{ base: 2, md: 3 }} w="full">
+                            <List spacing={3} width="100%">
                                 {teamMembers.map((member, index) => (
                                     <ListItem
-                                        key={index}
-                                        p={{ base: 2, md: 3 }}
+                                        key={member.id}
+                                        p={3}
                                         borderRadius="md"
-                                        bg={currentSpeaker === member ? 'blue.100' : 'transparent'}
-                                        color={currentSpeaker === member ? 'blue.800' : 'inherit'}
+                                        bg={index === currentMember ? 'blue.500' : undefined}
+                                        color={index === currentMember ? 'white' : undefined}
                                     >
-                                        <Stack
-                                            direction={{ base: "column", md: "row" }}
-                                            justify="space-between"
-                                            align={{ base: "stretch", md: "center" }}
-                                            spacing={{ base: 2, md: 0 }}
-                                        >
-                                            <Text
-                                                fontSize={{ base: "md", md: "md" }}
-                                                textAlign={{ base: "center", md: "left" }}
-                                            >
-                                                {member}
-                                            </Text>
-                                            <Stack
-                                                direction="row"
-                                                justify={{ base: "center", md: "flex-end" }}
-                                                spacing={2}
-                                            >
+                                        <HStack justify="space-between">
+                                            <Text>{member.name}</Text>
+                                            <HStack>
+                                                <Text>{formatTime(member.timeLeft)}</Text>
                                                 <IconButton
-                                                    icon={<TimeIcon />}
-                                                    onClick={() => startTimer(member)}
-                                                    colorScheme="green"
-                                                    size={{ base: "md", md: "sm" }}
-                                                    aria-label="Start timer"
-                                                    isDisabled={isRunning}
-                                                />
-                                                <IconButton
-                                                    icon={<DeleteIcon />}
-                                                    onClick={() => handleRemoveMember(index)}
-                                                    colorScheme="red"
-                                                    size={{ base: "md", md: "sm" }}
                                                     aria-label="Remove member"
+                                                    icon={<DeleteIcon />}
+                                                    size="sm"
+                                                    colorScheme="red"
+                                                    variant="ghost"
+                                                    onClick={() => removeMember(member.id)}
                                                 />
-                                            </Stack>
-                                        </Stack>
+                                            </HStack>
+                                        </HStack>
                                     </ListItem>
                                 ))}
                             </List>
 
-                            {currentSpeaker && (
-                                <VStack spacing={{ base: 3, md: 4 }}>
-                                    <Text
-                                        fontSize={{ base: "xl", md: "2xl" }}
-                                        fontWeight="bold"
-                                        color={getTimeColor()}
-                                    >
-                                        {formatTime(timeLeft)}
-                                    </Text>
-                                    <Text fontSize={{ base: "md", md: "lg" }}>
-                                        Current Speaker: <strong>{currentSpeaker}</strong>
-                                    </Text>
+                            {teamMembers.length > 0 && (
+                                <HStack justify="space-between" width="100%">
+                                    <Text>Total Time: {getTotalTime()}</Text>
                                     <Button
-                                        colorScheme="red"
-                                        onClick={stopTimer}
-                                        isDisabled={!isRunning}
-                                        size={{ base: "md", md: "md" }}
-                                        w={{ base: "full", md: "auto" }}
+                                        colorScheme={isRunning ? 'orange' : 'green'}
+                                        onClick={isRunning ? pauseTimer : startTimer}
                                     >
-                                        Stop Timer
+                                        {isRunning ? 'Pause' : 'Start'}
                                     </Button>
-                                </VStack>
-                            )}
-
-                            {teamMembers.length === 0 && (
-                                <Text
-                                    color={colorMode === 'light' ? 'gray.500' : 'gray.400'}
-                                    fontSize={{ base: "sm", md: "md" }}
-                                    textAlign="center"
-                                >
-                                    Add team members to get started
-                                </Text>
+                                </HStack>
                             )}
                         </VStack>
                     </Box>
+
+                    <Divider my={8} />
+
+                    <SeoText sections={dailyStandupSeoSections} />
                 </VStack>
-            </PageContainer>
-        </Box>
+            </Container>
+
+            <AddTeamMemberModal
+                isOpen={isAddMemberOpen}
+                onClose={onAddMemberClose}
+                onSubmit={addMember}
+            />
+        </PageContainer>
     )
 }
 
