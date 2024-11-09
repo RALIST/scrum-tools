@@ -122,14 +122,13 @@ const Home: FC = () => {
                             link="/retro"
                         />
                         <FeatureCard
-                            title="Sprint Timer"
-                            description="Track your sprint progress with our customizable sprint timer."
-                            link="/"
-                            isComingSoon
-                        />
-                        <FeatureCard
                             title="Team Velocity"
                             description="Track and visualize your team's velocity over time."
+                            link="/velocity"
+                        />
+                        <FeatureCard
+                            title="Sprint Timer"
+                            description="Track your sprint progress with our customizable sprint timer."
                             link="/"
                             isComingSoon
                         />
