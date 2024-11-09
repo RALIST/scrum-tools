@@ -9,9 +9,9 @@ import {
     useDisclosure,
     Spinner,
     Center,
-    Text
+    Text,
+    Flex
 } from '@chakra-ui/react'
-import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import { RetroBoardSettingsModal, JoinRetroBoardModal, ChangeRetroBoardNameModal } from '../components/modals'
 import { useRetroSocket } from '../hooks/useRetroSocket'
@@ -95,7 +95,7 @@ const RetroBoard: FC = () => {
     // Show loading state
     if (!board) {
         return (
-            <Center minH="100vh">
+            <Center minH="calc(100vh - 120px)">
                 <VStack spacing={4}>
                     <Spinner size="xl" />
                     <Text>Loading board...</Text>
@@ -117,13 +117,19 @@ const RetroBoard: FC = () => {
     }
 
     return (
-        <PageContainer>
+        <>
             <Helmet>
                 <title>Retro Board</title>
                 <meta name="robots" content="noindex, nofollow" />
             </Helmet>
-            <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)" p={4}>
-                <VStack spacing={8} align="stretch">
+            <Box
+                bg={colorMode === 'light' ? 'gray.50' : 'gray.900'}
+                borderRadius="lg"
+                display="flex"
+                flexDirection="column"
+                flex="1"
+            >
+                <VStack spacing={8} align="stretch" flex={1}>
                     <RetroHeader
                         boardName={board.name}
                         userName={userName}
@@ -136,29 +142,36 @@ const RetroBoard: FC = () => {
                         onChangeName={onChangeNameOpen}
                     />
 
-                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
-                        {COLUMNS.map(column => (
-                            <RetroColumn
-                                key={column.id}
-                                title={column.title}
-                                color={column.color}
-                                cards={columnCards[column.id] || []}
-                                hideCards={hideCards}
-                                hideAuthorNames={board.hide_author_names}
-                                userName={userName}
-                                isTimerRunning={isTimerRunning}
-                                inputValue={newCardText[column.id] || ''}
-                                onInputChange={(value) => setNewCardText(prev => ({
-                                    ...prev,
-                                    [column.id]: value
-                                }))}
-                                onAddCard={() => handleAddCard(column.id)}
-                                onDeleteCard={deleteCard}
-                                onVoteCard={toggleVote}
-                                onEditCard={editCard}
-                            />
-                        ))}
-                    </SimpleGrid>
+                    <Flex flex={1} minH={0}>
+                        <SimpleGrid
+                            columns={{ base: 1, md: 3 }}
+                            spacing={8}
+                            w="full"
+                            alignItems="stretch"
+                        >
+                            {COLUMNS.map(column => (
+                                <RetroColumn
+                                    key={column.id}
+                                    title={column.title}
+                                    color={column.color}
+                                    cards={columnCards[column.id] || []}
+                                    hideCards={hideCards}
+                                    hideAuthorNames={board.hide_author_names}
+                                    userName={userName}
+                                    isTimerRunning={isTimerRunning}
+                                    inputValue={newCardText[column.id] || ''}
+                                    onInputChange={(value) => setNewCardText(prev => ({
+                                        ...prev,
+                                        [column.id]: value
+                                    }))}
+                                    onAddCard={() => handleAddCard(column.id)}
+                                    onDeleteCard={deleteCard}
+                                    onVoteCard={toggleVote}
+                                    onEditCard={editCard}
+                                />
+                            ))}
+                        </SimpleGrid>
+                    </Flex>
                 </VStack>
 
                 {board && (
@@ -181,7 +194,7 @@ const RetroBoard: FC = () => {
                     onChangeName={handleChangeName}
                 />
             </Box>
-        </PageContainer>
+        </>
     )
 }
 

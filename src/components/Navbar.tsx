@@ -1,112 +1,80 @@
 import { FC } from 'react'
-import { Link as RouterLink, useLocation } from 'react-router-dom'
 import {
     Box,
-    Flex,
+    Container,
     HStack,
     Link,
-    IconButton,
-    useDisclosure,
-    useColorModeValue,
-    Stack,
     useColorMode,
-    Button
+    IconButton,
+    Tooltip
 } from '@chakra-ui/react'
-import { HamburgerIcon, CloseIcon, MoonIcon, SunIcon } from '@chakra-ui/icons'
-import PageContainer from './PageContainer'
-
-interface NavLinkProps {
-    to: string
-    children: React.ReactNode
-    isActive: boolean
-}
-
-const NavLink: FC<NavLinkProps> = ({ to, children, isActive }) => (
-    <Link
-        as={RouterLink}
-        px={2}
-        py={1}
-        rounded={'md'}
-        _hover={{
-            textDecoration: 'none',
-            bg: useColorModeValue('gray.200', 'gray.700'),
-        }}
-        bg={isActive ? useColorModeValue('gray.200', 'gray.700') : 'transparent'}
-        to={to}>
-        {children}
-    </Link>
-)
+import { Link as RouterLink } from 'react-router-dom'
+import { MoonIcon, SunIcon } from '@chakra-ui/icons'
 
 const Navbar: FC = () => {
-    const { isOpen, onOpen, onClose } = useDisclosure()
     const { colorMode, toggleColorMode } = useColorMode()
-    const location = useLocation()
-
-    const Links = [
-        { name: 'Planning Poker', to: '/planning-poker' },
-        { name: 'Daily Standup', to: '/daily-standup' },
-        { name: 'Retro Board', to: '/retro' }
-    ]
 
     return (
-        <PageContainer>
-            <Box bg={useColorModeValue('white', 'gray.800')} px={4} shadow="sm">
-                <Flex h={16} alignItems={'center'} justifyContent={'space-between'}>
-                    <IconButton
-                        size={'md'}
-                        icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
-                        aria-label={'Open Menu'}
-                        display={{ md: 'none' }}
-                        onClick={isOpen ? onClose : onOpen}
-                    />
-                    <HStack spacing={8} alignItems={'center'}>
-                        <Link
-                            as={RouterLink}
-                            to="/"
-                            fontWeight="bold"
-                            fontSize="lg"
-                            _hover={{ textDecoration: 'none' }}
-                        >
-                            Scrum Tools
-                        </Link>
-                        <HStack
-                            as={'nav'}
-                            spacing={4}
-                            display={{ base: 'none', md: 'flex' }}>
-                            {Links.map((link) => (
-                                <NavLink
-                                    key={link.to}
-                                    to={link.to}
-                                    isActive={location.pathname.startsWith(link.to)}
-                                >
-                                    {link.name}
-                                </NavLink>
-                            ))}
-                        </HStack>
-                    </HStack>
-                    <Button onClick={toggleColorMode}>
-                        {colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
-                    </Button>
-                </Flex>
-
-                {isOpen ? (
-                    <Box pb={4} display={{ md: 'none' }}>
-                        <Stack as={'nav'} spacing={4}>
-                            {Links.map((link) => (
-                                <NavLink
-                                    key={link.to}
-                                    to={link.to}
-                                    isActive={location.pathname.startsWith(link.to)}
-                                >
-                                    {link.name}
-                                </NavLink>
-                            ))}
-                        </Stack>
-                    </Box>
-                ) : null}
-            </Box>
-        </PageContainer>
-
+        <Box
+            as="nav"
+            py={4}
+            borderBottom="1px"
+            borderColor={colorMode === 'light' ? 'gray.200' : 'gray.700'}
+            bg={colorMode === 'light' ? 'white' : 'gray.800'}
+            position="sticky"
+            top={0}
+            zIndex="sticky"
+        >
+            <Container maxW="container.xl">
+                <HStack spacing={8} justify="center">
+                    <Link
+                        as={RouterLink}
+                        to="/"
+                        fontSize="lg"
+                        fontWeight="bold"
+                        _hover={{ textDecoration: 'none', color: 'blue.500' }}
+                    >
+                        Home
+                    </Link>
+                    <Link
+                        as={RouterLink}
+                        to="/retro"
+                        fontSize="lg"
+                        fontWeight="bold"
+                        _hover={{ textDecoration: 'none', color: 'blue.500' }}
+                    >
+                        Retro Board
+                    </Link>
+                    <Link
+                        as={RouterLink}
+                        to="/planning-poker"
+                        fontSize="lg"
+                        fontWeight="bold"
+                        _hover={{ textDecoration: 'none', color: 'blue.500' }}
+                    >
+                        Planning Poker
+                    </Link>
+                    <Link
+                        as={RouterLink}
+                        to="/daily-standup"
+                        fontSize="lg"
+                        fontWeight="bold"
+                        _hover={{ textDecoration: 'none', color: 'blue.500' }}
+                    >
+                        Daily Standup
+                    </Link>
+                    <Tooltip label={`Switch to ${colorMode === 'light' ? 'dark' : 'light'} mode`}>
+                        <IconButton
+                            aria-label={`Switch to ${colorMode === 'light' ? 'dark' : 'light'} mode`}
+                            icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                            onClick={toggleColorMode}
+                            variant="ghost"
+                            colorScheme="blue"
+                        />
+                    </Tooltip>
+                </HStack>
+            </Container>
+        </Box>
     )
 }
 

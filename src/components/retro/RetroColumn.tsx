@@ -43,28 +43,31 @@ const RetroColumn: FC<RetroColumnProps> = ({
     const { colorMode } = useColorMode()
 
     return (
-        <VStack
+        <Box
             bg={colorMode === 'light' ? 'white' : 'gray.700'}
-            p={4}
             borderRadius="lg"
             shadow="md"
-            spacing={4}
-            align="stretch"
-            minH="400px"
-            h="calc(100vh - 300px)"
+            h="full"
+            display="flex"
+            flexDirection="column"
         >
-            <Heading
-                size="md"
-                color={color}
-                textAlign="center"
-                mb={2}
-            >
-                {title}
-            </Heading>
+            <Box p={4} borderBottom="1px" borderColor={colorMode === 'light' ? 'gray.100' : 'gray.600'}>
+                <Heading
+                    size="md"
+                    color={color}
+                    textAlign="center"
+                >
+                    {title}
+                </Heading>
+            </Box>
 
-            <Box
-                flex="1"
+            <VStack
+                flex={1}
+                spacing={3}
+                align="stretch"
                 overflowY="auto"
+                p={4}
+                minH={0}
                 sx={{
                     '&::-webkit-scrollbar': {
                         width: '4px',
@@ -78,26 +81,24 @@ const RetroColumn: FC<RetroColumnProps> = ({
                     },
                 }}
             >
-                <VStack spacing={3} align="stretch" pb={2}>
-                    {cards.map(card => (
-                        <RetroCard
-                            key={card.id}
-                            id={card.id}
-                            text={card.text}
-                            authorName={card.author_name}
-                            votes={card.votes || []}
-                            hideCards={hideCards}
-                            hideAuthorNames={hideAuthorNames}
-                            currentUserName={userName}
-                            onDelete={onDeleteCard}
-                            onVote={onVoteCard}
-                            onEdit={onEditCard}
-                        />
-                    ))}
-                </VStack>
-            </Box>
+                {cards.map(card => (
+                    <RetroCard
+                        key={card.id}
+                        id={card.id}
+                        text={card.text}
+                        authorName={card.author_name}
+                        votes={card.votes || []}
+                        hideCards={hideCards}
+                        hideAuthorNames={hideAuthorNames}
+                        currentUserName={userName}
+                        onDelete={onDeleteCard}
+                        onVote={onVoteCard}
+                        onEdit={onEditCard}
+                    />
+                ))}
+            </VStack>
 
-            <Box mt="auto" pt={2}>
+            <Box p={4} borderTop="1px" borderColor={colorMode === 'light' ? 'gray.100' : 'gray.600'}>
                 <RetroCardInput
                     isTimerRunning={isTimerRunning}
                     value={inputValue}
@@ -106,7 +107,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
                     userName={userName}
                 />
             </Box>
-        </VStack>
+        </Box>
     )
 }
 

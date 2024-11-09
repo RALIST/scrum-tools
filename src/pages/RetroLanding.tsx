@@ -12,7 +12,6 @@ import {
     Input,
     Divider
 } from '@chakra-ui/react'
-import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
 import SeoText from '../components/SeoText'
 import { retroBoardSeoSections } from '../content/retroBoardSeo'
@@ -89,7 +88,7 @@ const RetroLanding: FC = () => {
     }
 
     return (
-        <PageContainer>
+        <>
             <PageHelmet
                 title="Retro Board - Team Retrospective Tool"
                 description="Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved. Features include real-time voting, timer control, and card management."
@@ -97,7 +96,7 @@ const RetroLanding: FC = () => {
                 canonicalUrl={`${config.siteUrl}/retro`}
                 jsonLd={jsonLd}
             />
-            <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
+            <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} borderRadius="lg">
                 <VStack spacing={{ base: 6, md: 8 }} align="stretch">
                     <Box textAlign="center" mb={{ base: 6, md: 8 }}>
                         <Heading
@@ -164,7 +163,7 @@ const RetroLanding: FC = () => {
                     <SeoText sections={retroBoardSeoSections} />
                 </VStack>
             </Box>
-        </PageContainer>
+        </>
     )
 }
 

@@ -1,36 +1,43 @@
 import { FC } from 'react'
+import { Box } from '@chakra-ui/react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ChakraProvider } from '@chakra-ui/react'
 import { HelmetProvider } from 'react-helmet-async'
-import theme from './theme'
-import Navbar from './components/Navbar'
 import Home from './pages/Home'
+import RetroBoard from './pages/RetroBoard'
+import RetroLanding from './pages/RetroLanding'
 import PlanningPoker from './pages/PlanningPoker'
 import PlanningPokerRoom from './pages/PlanningPokerRoom'
 import DailyStandup from './pages/DailyStandup'
-import RetroLanding from './pages/RetroLanding'
-import RetroBoard from './pages/RetroBoard'
-import './App.css'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import PageContainer from './components/PageContainer'
 
 const App: FC = () => {
     return (
         <HelmetProvider>
-            <ChakraProvider theme={theme}>
-                <div className='app'>
-                    <Router>
-                        <Navbar />
+            <Router>
+                <Box
+                    width="100%"
+                    maxW="100vw"
+                    overflowX="hidden"
+                    minH="100vh"
+                    display="flex"
+                    flexDirection="column"
+                >
+                    <Navbar />
+                    <PageContainer>
                         <Routes>
                             <Route path="/" element={<Home />} />
+                            <Route path="/retro" element={<RetroLanding />} />
+                            <Route path="/retro/:boardId" element={<RetroBoard />} />
                             <Route path="/planning-poker" element={<PlanningPoker />} />
                             <Route path="/planning-poker/:roomId" element={<PlanningPokerRoom />} />
                             <Route path="/daily-standup" element={<DailyStandup />} />
-                            <Route path="/retro" element={<RetroLanding />} />
-                            <Route path="/retro/:boardId" element={<RetroBoard />} />
                         </Routes>
-                    </Router>
-                </div>
-
-            </ChakraProvider>
+                    </PageContainer>
+                    <Footer />
+                </Box>
+            </Router>
         </HelmetProvider>
     )
 }
