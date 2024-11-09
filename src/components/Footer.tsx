@@ -27,7 +27,7 @@ const Footer: FC = () => {
                         © {new Date().getFullYear()} Scrum Tools. All rights reserved.
                     </Text>
                     <Link
-                        href="https://github.com/yourusername/scrum-tools"
+                        href="https://github.com/ralist/scrum-tools"
                         isExternal
                         display="flex"
                         alignItems="center"
