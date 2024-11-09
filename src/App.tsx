@@ -41,5 +41,3 @@ const App: FC = () => {
         </HelmetProvider>
     )
 }
-
-export default App
