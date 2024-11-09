@@ -1,4 +1,4 @@
-import { FC, useState } from 'react'
+import { FC, useState, useEffect, useCallback } from 'react'
 import {
     Box,
     Container,
@@ -37,31 +37,82 @@ const DailyStandup: FC = () => {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
     const [currentMember, setCurrentMember] = useState<number>(-1)
     const [isRunning, setIsRunning] = useState(false)
-    const [intervalId, setIntervalId] = useState<number | null>(null)
     const { isOpen: isAddMemberOpen, onOpen: onAddMemberOpen, onClose: onAddMemberClose } = useDisclosure()
 
+    const moveToNextMember = useCallback(() => {
+        let nextMember = currentMember + 1
+        while (nextMember < teamMembers.length && teamMembers[nextMember].timeLeft === 0) {
+            nextMember++
+        }
+        if (nextMember < teamMembers.length) {
+            setCurrentMember(nextMember)
+            return true
+        }
+        setCurrentMember(-1)
+        setIsRunning(false)
+        return false
+    }, [teamMembers, currentMember])
+
+    useEffect(() => {
+        let timerId: number | undefined
+
+        if (isRunning && currentMember >= 0) {
+            timerId = window.setInterval(() => {
+                setTeamMembers(prev => {
+                    const newMembers = [...prev]
+                    if (newMembers[currentMember].timeLeft > 0) {
+                        newMembers[currentMember] = {
+                            ...newMembers[currentMember],
+                            timeLeft: newMembers[currentMember].timeLeft - 1
+                        }
+                        return newMembers
+                    }
+                    // Time's up for current member
+                    const audio = new Audio('/timer-end.mp3')
+                    audio.play()
+                    return newMembers
+                })
+            }, 1000)
+        }
+
+        return () => {
+            if (timerId) {
+                clearInterval(timerId)
+            }
+        }
+    }, [isRunning, currentMember])
+
+    // Check for member time completion
+    useEffect(() => {
+        if (isRunning && currentMember >= 0 && teamMembers[currentMember]?.timeLeft === 0) {
+            moveToNextMember()
+        }
+    }, [teamMembers, currentMember, isRunning, moveToNextMember])
+
     const addMember = (name: string) => {
-        setTeamMembers([
-            ...teamMembers,
+        setTeamMembers(prev => [
+            ...prev,
             { id: Math.random().toString(), name, timeLeft: MEMBER_TIME }
         ])
     }
 
     const removeMember = (id: string) => {
-        setTeamMembers(teamMembers.filter(member => member.id !== id))
-        if (currentMember >= teamMembers.length - 1) {
-            setCurrentMember(-1)
-        }
+        setTeamMembers(prev => {
+            const index = prev.findIndex(member => member.id === id)
+            if (index === currentMember) {
+                setCurrentMember(-1)
+                setIsRunning(false)
+            } else if (index < currentMember) {
+                setCurrentMember(curr => curr - 1)
+            }
+            return prev.filter(member => member.id !== id)
+        })
     }
 
     const resetTimer = () => {
-        setTeamMembers(teamMembers.map(member => ({ ...member, timeLeft: MEMBER_TIME })))
+        setTeamMembers(prev => prev.map(member => ({ ...member, timeLeft: MEMBER_TIME })))
         setCurrentMember(-1)
         setIsRunning(false)
-        if (intervalId) {
-            clearInterval(intervalId)
-            setIntervalId(null)
-        }
     }
 
     const startTimer = () => {
@@ -75,46 +126,25 @@ const DailyStandup: FC = () => {
             return
         }
 
+        if (currentMember === -1) {
+            // Find first member with time left
+            const firstAvailable = teamMembers.findIndex(member => member.timeLeft > 0)
+            if (firstAvailable === -1) {
+                toast({
+                    title: 'Time Complete',
+                    description: 'All members have completed their time',
+                    status: 'info',
+                    duration: 3000,
+                })
+                return
+            }
+            setCurrentMember(firstAvailable)
+        }
+
         setIsRunning(true)
-        setCurrentMember(prev => (prev === -1 ? 0 : prev))
-
-        const id = window.setInterval(() => {
-            setTeamMembers(prevMembers => {
-                const newMembers = [...prevMembers]
-                const currentMemberIndex = currentMember === -1 ? 0 : currentMember
-
-                if (newMembers[currentMemberIndex].timeLeft > 0) {
-                    newMembers[currentMemberIndex] = {
-                        ...newMembers[currentMemberIndex],
-                        timeLeft: newMembers[currentMemberIndex].timeLeft - 1
-                    }
-                } else {
-                    // Play sound when time is up
-                    const audio = new Audio('/timer-end.mp3')
-                    audio.play()
-
-                    // Move to next member
-                    if (currentMemberIndex < teamMembers.length - 1) {
-                        setCurrentMember(currentMemberIndex + 1)
-                    } else {
-                        clearInterval(id)
-                        setIsRunning(false)
-                        setIntervalId(null)
-                        setCurrentMember(-1)
-                    }
-                }
-                return newMembers
-            })
-        }, 1000)
-
-        setIntervalId(id)
     }
 
     const pauseTimer = () => {
-        if (intervalId) {
-            clearInterval(intervalId)
-            setIntervalId(null)
-        }
         setIsRunning(false)
     }
 
