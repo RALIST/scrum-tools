@@ -62,6 +62,39 @@ const createTables = async () => {
             )
         `)
 
+        // Create teams table (for velocity tracking)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS teams (
+                id VARCHAR(255) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                password VARCHAR(255)
+            )
+        `)
+
+        // Create sprints table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS sprints (
+                id VARCHAR(255) PRIMARY KEY,
+                team_id VARCHAR(255) REFERENCES teams(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `)
+
+        // Create sprint_velocity table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS sprint_velocity (
+                sprint_id VARCHAR(255) REFERENCES sprints(id) ON DELETE CASCADE,
+                committed_points INTEGER NOT NULL,
+                completed_points INTEGER NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (sprint_id)
+            )
+        `)
+
         console.log('Tables created successfully')
     } catch (error) {
         console.error('Error creating tables:', error)

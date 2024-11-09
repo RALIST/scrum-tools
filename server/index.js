@@ -5,6 +5,7 @@ import cors from 'cors';
 import './db/schema.js';
 import pokerRoutes from './routes/poker.js';
 import retroRoutes from './routes/retro.js';
+import velocityRoutes from './routes/velocity.js';
 import { handlePlanningPokerEvents } from './sockets/poker.js';
 import { handleRetroBoardEvents } from './sockets/retro.js';
 import { getRooms, getRoom, removeParticipant } from './db/poker.js';
@@ -16,6 +17,7 @@ app.use(express.json());
 // Mount routes
 app.use('/api', pokerRoutes);
 app.use('/api', retroRoutes);
+app.use('/api', velocityRoutes);
 
 const server = createServer(app);
 const io = new Server(server, {

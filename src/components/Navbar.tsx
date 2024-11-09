@@ -59,6 +59,15 @@ const Navbar: FC = () => {
             >
                 Daily Standup
             </Link>
+            <Link
+                as={RouterLink}
+                to="/velocity"
+                fontSize="lg"
+                fontWeight="bold"
+                _hover={{ textDecoration: 'none', color: 'blue.500' }}
+            >
+                Team Velocity
+            </Link>
         </>
     )
 
@@ -114,6 +123,9 @@ const Navbar: FC = () => {
                                     </MenuItem>
                                     <MenuItem as={RouterLink} to="/daily-standup">
                                         Daily Standup
+                                    </MenuItem>
+                                    <MenuItem as={RouterLink} to="/velocity">
+                                        Team Velocity
                                     </MenuItem>
                                 </MenuList>
                             </Menu>

@@ -8,6 +8,7 @@ import RetroLanding from './pages/RetroLanding'
 import PlanningPoker from './pages/PlanningPoker'
 import PlanningPokerRoom from './pages/PlanningPokerRoom'
 import DailyStandup from './pages/DailyStandup'
+import TeamVelocity from './pages/TeamVelocity'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import PageContainer from './components/PageContainer'
@@ -33,6 +34,7 @@ const App: FC = () => {
                             <Route path="/planning-poker" element={<PlanningPoker />} />
                             <Route path="/planning-poker/:roomId" element={<PlanningPokerRoom />} />
                             <Route path="/daily-standup" element={<DailyStandup />} />
+                            <Route path="/velocity" element={<TeamVelocity />} />
                         </Routes>
                     </PageContainer>
                     <Footer />
@@ -41,3 +43,5 @@ const App: FC = () => {
         </HelmetProvider>
     )
 }
+
+export default App;
