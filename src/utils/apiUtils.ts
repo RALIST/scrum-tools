@@ -1,5 +1,4 @@
 import config from '../config';
-import { useAuth } from '../contexts/AuthContext';
 
 export interface ApiOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';

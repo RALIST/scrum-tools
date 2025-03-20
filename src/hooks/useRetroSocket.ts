@@ -3,7 +3,6 @@ import { Manager } from 'socket.io-client'
 import type { Socket as ClientSocket } from 'socket.io-client'
 import { useToast } from '@chakra-ui/react'
 import config from '../config'
-import { getAuthToken } from '../utils/apiUtils'
 
 interface RetroCard {
     id: string
@@ -93,8 +92,6 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
                 setHideCards(data.hide_cards_by_default)
 
                 debugLog('Setting up socket connection')
-                // Get auth token if available
-                const token = getAuthToken();
                 
                 const manager = new Manager(config.socketUrl, {
                     reconnection: true,
@@ -102,8 +99,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
                     reconnectionDelay: 1000,
                     reconnectionDelayMax: 5000,
                     timeout: 20000,
-                    transports: ['websocket', 'polling'],
-                    auth: token ? { token } : undefined
+                    transports: ['websocket', 'polling']
                 })
 
                 const newSocket = manager.socket('/retro')

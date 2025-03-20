@@ -55,7 +55,7 @@ const DailyStandup: FC = () => {
     const [currentMember, setCurrentMember] = useState<number>(-1)
     const [isRunning, setIsRunning] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
-    const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([])
+    const [_workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([])
     const { isOpen: isAddMemberOpen, onOpen: onAddMemberOpen, onClose: onAddMemberClose } = useDisclosure()
     const { isAuthenticated } = useAuth()
     const { currentWorkspace, workspaces, setCurrentWorkspace } = useWorkspace()
