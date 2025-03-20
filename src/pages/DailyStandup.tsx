@@ -14,14 +14,26 @@ import {
     Divider,
     useToast,
     useDisclosure,
+    Menu,
+    MenuButton,
+    MenuList,
+    MenuItem,
+    Select,
+    Flex,
+    Spacer,
+    Badge,
+    Spinner,
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon, RepeatIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, RepeatIcon, ChevronDownIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
 import SeoText from '../components/SeoText'
 import { AddTeamMemberModal } from '../components/modals'
 import { dailyStandupSeo, dailyStandupSeoSections } from '../content/dailyStandupSeo'
 import config from '../config'
+import { useAuth } from '../contexts/AuthContext'
+import { useWorkspace } from '../contexts/WorkspaceContext'
+import { apiRequest } from '../utils/apiUtils'
 
 interface TeamMember {
     id: string
@@ -31,13 +43,25 @@ interface TeamMember {
 
 const MEMBER_TIME = 120 // 2 minutes in seconds
 
+interface WorkspaceMember {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    joined_at: string;
+}
+
 const DailyStandup: FC = () => {
     const { colorMode } = useColorMode()
     const toast = useToast()
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
     const [currentMember, setCurrentMember] = useState<number>(-1)
     const [isRunning, setIsRunning] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([])
     const { isOpen: isAddMemberOpen, onOpen: onAddMemberOpen, onClose: onAddMemberClose } = useDisclosure()
+    const { isAuthenticated } = useAuth()
+    const { currentWorkspace, workspaces, setCurrentWorkspace } = useWorkspace()
 
     const moveToNextMember = useCallback(() => {
         let nextMember = currentMember + 1
@@ -88,6 +112,112 @@ const DailyStandup: FC = () => {
             moveToNextMember()
         }
     }, [teamMembers, currentMember, isRunning, moveToNextMember])
+
+    // Save team members to localStorage whenever they change
+    useEffect(() => {
+        if (teamMembers.length > 0) {
+            if (isAuthenticated && currentWorkspace) {
+                // If we have a workspace, save with workspace ID
+                const key = `dailyStandupTeamMembers_${currentWorkspace.id}`;
+                localStorage.setItem(key, JSON.stringify(teamMembers));
+                console.log(`Saved ${teamMembers.length} team members to workspace storage`);
+            } else {
+                // Otherwise save to general storage
+                localStorage.setItem('dailyStandupTeamMembers', JSON.stringify(teamMembers));
+                console.log(`Saved ${teamMembers.length} team members to general storage`);
+            }
+        }
+    }, [teamMembers, isAuthenticated, currentWorkspace]);
+
+    // Attempt to load team members from localStorage on initial render
+    useEffect(() => {
+        const loadSavedTeamMembers = () => {
+            let savedMembers = null;
+            
+            // Try to load workspace-specific team first if authenticated
+            if (isAuthenticated && currentWorkspace) {
+                const key = `dailyStandupTeamMembers_${currentWorkspace.id}`;
+                const savedWorkspaceTeam = localStorage.getItem(key);
+                
+                if (savedWorkspaceTeam) {
+                    try {
+                        savedMembers = JSON.parse(savedWorkspaceTeam);
+                        console.log(`Restored ${savedMembers.length} team members from workspace storage`);
+                    } catch (e) {
+                        console.error('Error parsing saved workspace team members:', e);
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+            
+            // If no workspace-specific team, try general storage
+            if (!savedMembers) {
+                const savedGeneralTeam = localStorage.getItem('dailyStandupTeamMembers');
+                if (savedGeneralTeam) {
+                    try {
+                        savedMembers = JSON.parse(savedGeneralTeam);
+                        console.log(`Restored ${savedMembers.length} team members from general storage`);
+                    } catch (e) {
+                        console.error('Error parsing saved general team members:', e);
+                        localStorage.removeItem('dailyStandupTeamMembers');
+                    }
+                }
+            }
+            
+            // If we found saved members, use them
+            if (savedMembers && Array.isArray(savedMembers) && savedMembers.length > 0) {
+                setTeamMembers(savedMembers);
+                return true;
+            }
+            
+            return false;
+        };
+        
+        // Only load on mount or when workspace changes
+        loadSavedTeamMembers();
+        
+    }, [isAuthenticated, currentWorkspace]);
+    
+    // Load workspace members when authenticated and have a workspace
+    useEffect(() => {
+        const loadWorkspaceMembers = async () => {
+            if (!isAuthenticated || !currentWorkspace) return;
+            
+            setIsLoading(true);
+            try {
+                const members = await apiRequest<WorkspaceMember[]>(`/workspaces/${currentWorkspace.id}/members`);
+                setWorkspaceMembers(members);
+                
+                // Check if we already have team members
+                const hasExistingTeam = teamMembers.length > 0;
+                
+                // If we don't have team members yet, try to load from localStorage
+                if (!hasExistingTeam && members.length > 0) {
+                    const newTeamMembers = members.map(member => ({
+                        id: member.id,
+                        name: member.name,
+                        timeLeft: MEMBER_TIME
+                    }));
+                    
+                    setTeamMembers(newTeamMembers);
+                    
+                    toast({
+                        title: 'Team loaded',
+                        description: `${members.length} team members added from your workspace`,
+                        status: 'success',
+                        duration: 3000,
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading workspace members:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadWorkspaceMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated, currentWorkspace])
 
     const addMember = (name: string) => {
         setTeamMembers(prev => [
@@ -201,6 +331,50 @@ const DailyStandup: FC = () => {
                         shadow="md"
                     >
                         <VStack spacing={6}>
+                            {isAuthenticated && workspaces && workspaces.length > 0 && (
+                                <HStack width="100%" justify="space-between">
+                                    <HStack>
+                                        <Text fontWeight="medium">Workspace:</Text>
+                                        <Menu>
+                                            <MenuButton 
+                                                as={Button} 
+                                                rightIcon={<ChevronDownIcon />}
+                                                size="sm"
+                                                variant="outline"
+                                            >
+                                                {currentWorkspace?.name || "Select Workspace"}
+                                            </MenuButton>
+                                            <MenuList>
+                                                {workspaces.map(workspace => (
+                                                    <MenuItem 
+                                                        key={workspace.id}
+                                                        onClick={() => {
+                                                            if (workspace.id !== currentWorkspace?.id) {
+                                                                // Only change if different
+                                                                if (teamMembers.length === 0 || window.confirm("Change workspace? This will clear your current team members.")) {
+                                                                    // Clear existing members
+                                                                    setTeamMembers([]);
+                                                                    setCurrentMember(-1);
+                                                                    setIsRunning(false);
+                                                                    // Set new workspace
+                                                                    setCurrentWorkspace(workspace);
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        {workspace.name}
+                                                        {workspace.id === currentWorkspace?.id && (
+                                                            <Badge ml={2} colorScheme="green">Active</Badge>
+                                                        )}
+                                                    </MenuItem>
+                                                ))}
+                                            </MenuList>
+                                        </Menu>
+                                    </HStack>
+                                    {isLoading && <Spinner size="sm" />}
+                                </HStack>
+                            )}
+                            
                             <HStack spacing={4}>
                                 <Button
                                     leftIcon={<AddIcon />}
@@ -216,6 +390,33 @@ const DailyStandup: FC = () => {
                                 >
                                     Reset
                                 </Button>
+                                
+                                {isAuthenticated && currentWorkspace && workspaceMembers.length > 0 && (
+                                    <Button
+                                        colorScheme="teal"
+                                        onClick={() => {
+                                            // Replace team with workspace members
+                                            const newTeamMembers = workspaceMembers.map(member => ({
+                                                id: member.id,
+                                                name: member.name,
+                                                timeLeft: MEMBER_TIME
+                                            }));
+                                            
+                                            setTeamMembers(newTeamMembers);
+                                            setCurrentMember(-1);
+                                            setIsRunning(false);
+                                            
+                                            toast({
+                                                title: 'Team loaded',
+                                                description: `${workspaceMembers.length} team members added from your workspace`,
+                                                status: 'success',
+                                                duration: 3000,
+                                            });
+                                        }}
+                                    >
+                                        Load Workspace Team
+                                    </Button>
+                                )}
                             </HStack>
 
                             <List spacing={3} width="100%">

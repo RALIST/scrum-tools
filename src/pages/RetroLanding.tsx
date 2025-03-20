@@ -1,4 +1,4 @@
-import { FC, useState } from 'react'
+import { FC, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     Box,
@@ -10,18 +10,63 @@ import {
     Center,
     useToast,
     Input,
-    Divider
+    Divider,
+    FormControl,
+    FormLabel,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    useDisclosure,
+    Select,
+    HStack,
+    Flex,
+    Spacer,
+    Spinner
 } from '@chakra-ui/react'
 import PageHelmet from '../components/PageHelmet'
 import SeoText from '../components/SeoText'
 import { retroBoardSeoSections } from '../content/retroBoardSeo'
 import config from '../config'
+import { useAuth } from '../contexts/AuthContext'
+import { useWorkspace } from '../contexts/WorkspaceContext'
+import { apiRequest } from '../utils/apiUtils'
+
+interface RetroBoard {
+    id: string;
+    name: string;
+    createdAt: string;
+    workspace_id?: string;
+    created_by?: string;
+}
+
+interface CreateBoardSettings {
+    boardName: string;
+    workspaceId?: string;
+    password?: string;
+    hideCardsByDefault?: boolean;
+    hideAuthorNames?: boolean;
+}
 
 const RetroLanding: FC = () => {
     const { colorMode } = useColorMode()
     const navigate = useNavigate()
     const toast = useToast()
     const [joinBoardId, setJoinBoardId] = useState('')
+    const [workspaceBoards, setWorkspaceBoards] = useState<RetroBoard[]>([])
+    const [isLoading, setIsLoading] = useState(false)
+    const { isAuthenticated } = useAuth()
+    const { currentWorkspace, workspaces } = useWorkspace()
+    const { isOpen: isCreateModalOpen, onOpen: onCreateModalOpen, onClose: onCreateModalClose } = useDisclosure()
+    
+    const [createSettings, setCreateSettings] = useState<CreateBoardSettings>({
+        boardName: '',
+        workspaceId: currentWorkspace?.id,
+        hideCardsByDefault: false,
+        hideAuthorNames: false
+    })
 
     const jsonLd = {
         "@context": "https://schema.org",
@@ -49,28 +94,76 @@ const RetroLanding: FC = () => {
         ]
     }
 
-    const handleCreateBoard = async () => {
-        try {
-            const response = await fetch(`${config.apiUrl}/retro`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
+    // Update workspaceId when currentWorkspace changes
+    useEffect(() => {
+        if (currentWorkspace) {
+            setCreateSettings(prev => ({
+                ...prev,
+                workspaceId: currentWorkspace.id
+            }));
+        }
+    }, [currentWorkspace]);
 
-            if (!response.ok) {
-                throw new Error('Failed to create board')
+    // Load workspace boards
+    useEffect(() => {
+        const loadWorkspaceBoards = async () => {
+            if (!isAuthenticated || !currentWorkspace) return;
+            
+            setIsLoading(true);
+            try {
+                const boards = await apiRequest<RetroBoard[]>(`/workspace/${currentWorkspace.id}/retros`);
+                setWorkspaceBoards(boards);
+            } catch (error) {
+                console.error("Error loading workspace boards:", error);
+            } finally {
+                setIsLoading(false);
             }
+        };
+        
+        loadWorkspaceBoards();
+    }, [isAuthenticated, currentWorkspace]);
 
-            const data = await response.json()
-            navigate(`/retro/${data.boardId}`)
+    const handleCreateBoard = async () => {
+        // Validate board name if authenticated and in a workspace
+        if (isAuthenticated && currentWorkspace && !createSettings.boardName.trim()) {
+            toast({
+                title: 'Board Name Required',
+                description: 'Please enter a name for your board',
+                status: 'warning',
+                duration: 3000,
+            });
+            return;
+        }
+        
+        try {
+            setIsLoading(true);
+            
+            // Use authentication if we're creating in a workspace
+            const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
+            
+            const data = await apiRequest<{ boardId: string }>('/retro', {
+                method: 'POST',
+                body: {
+                    name: createSettings.boardName || 'Retro Board',
+                    workspace_id: createSettings.workspaceId,
+                    password: createSettings.password,
+                    hide_cards_by_default: createSettings.hideCardsByDefault,
+                    hide_author_names: createSettings.hideAuthorNames
+                },
+                includeAuth
+            });
+            
+            onCreateModalClose();
+            navigate(`/retro/${data.boardId}`);
         } catch (error) {
             toast({
                 title: 'Error',
-                description: 'Failed to create retro board',
+                description: error instanceof Error ? error.message : 'Failed to create retro board',
                 status: 'error',
-                duration: 2000,
-            })
+                duration: 3000,
+            });
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -86,6 +179,14 @@ const RetroLanding: FC = () => {
         }
         navigate(`/retro/${joinBoardId.trim()}`)
     }
+
+    if (isAuthenticated && !workspaces) {
+            return (
+                  <Center h="200px">
+                    <Spinner size="xl" color="blue.500" />
+                  </Center>
+                );
+        }
 
     return (
         <>
@@ -125,12 +226,13 @@ const RetroLanding: FC = () => {
                     </Box>
 
                     <Center p={8}>
-                        <VStack spacing={4} w={{ base: "full", md: "400px" }}>
+                        <VStack spacing={6} w={{ base: "full", md: "500px" }}>
                             <Button
                                 colorScheme="blue"
                                 size="lg"
                                 w="full"
-                                onClick={handleCreateBoard}
+                                onClick={onCreateModalOpen}
+                                isLoading={isLoading}
                             >
                                 Create New Board
                             </Button>
@@ -151,12 +253,155 @@ const RetroLanding: FC = () => {
                                     size="lg"
                                     w="full"
                                     onClick={handleJoinBoard}
+                                    isLoading={isLoading}
                                 >
                                     Join Existing Board
                                 </Button>
                             </VStack>
+                            
+                            {isAuthenticated && currentWorkspace && workspaceBoards.length > 0 && (
+                                <Box w="full" mt={4}>
+                                    <Text fontWeight="bold" mb={2}>Your Workspace Boards:</Text>
+                                    <VStack 
+                                        spacing={2} 
+                                        align="stretch" 
+                                        bg={colorMode === 'light' ? 'white' : 'gray.700'} 
+                                        p={4} 
+                                        borderRadius="md"
+                                        shadow="sm"
+                                    >
+                                        {workspaceBoards.slice(0, 5).map(board => (
+                                            <HStack key={board.id} justify="space-between">
+                                                <Text fontWeight="medium">{board.name}</Text>
+                                                <Button 
+                                                    size="sm" 
+                                                    colorScheme="blue" 
+                                                    onClick={() => navigate(`/retro/${board.id}`)}
+                                                >
+                                                    Open
+                                                </Button>
+                                            </HStack>
+                                        ))}
+                                        {workspaceBoards.length > 5 && (
+                                            <Button 
+                                                size="sm" 
+                                                variant="link" 
+                                                colorScheme="blue"
+                                                alignSelf="flex-end"
+                                            >
+                                                View more workspace boards
+                                            </Button>
+                                        )}
+                                    </VStack>
+                                </Box>
+                            )}
                         </VStack>
                     </Center>
+                    
+                    {/* Create Board Modal */}
+                    <Modal isOpen={isCreateModalOpen} onClose={onCreateModalClose}>
+                        <ModalOverlay />
+                        <ModalContent mx={4}>
+                            <ModalHeader>Create Retrospective Board</ModalHeader>
+                            <ModalBody>
+                                <VStack spacing={4}>
+                                    {isAuthenticated && (
+                                        <>
+                                            <FormControl isRequired={isAuthenticated && !!currentWorkspace}>
+                                                <FormLabel>Board Name</FormLabel>
+                                                <Input
+                                                    placeholder="Enter board name"
+                                                    value={createSettings.boardName}
+                                                    onChange={(e) => setCreateSettings(prev => ({
+                                                        ...prev,
+                                                        boardName: e.target.value
+                                                    }))}
+                                                />
+                                            </FormControl>
+                                            
+                                            {workspaces && workspaces.length > 0 && (
+                                                <FormControl>
+                                                    <FormLabel>Workspace (Optional)</FormLabel>
+                                                    <Select
+                                                        value={createSettings.workspaceId || ''}
+                                                        onChange={(e) => setCreateSettings(prev => ({
+                                                            ...prev,
+                                                            workspaceId: e.target.value || undefined
+                                                        }))}
+                                                    >
+                                                        <option value="">No Workspace (Public)</option>
+                                                        {workspaces.map(workspace => (
+                                                            <option key={workspace.id} value={workspace.id}>
+                                                                {workspace.name}
+                                                            </option>
+                                                        ))}
+                                                    </Select>
+                                                    <Text fontSize="sm" color="gray.500" mt={1}>
+                                                        Workspace boards are only visible to workspace members
+                                                    </Text>
+                                                </FormControl>
+                                            )}
+                                        </>
+                                    )}
+                                    
+                                    <FormControl>
+                                        <FormLabel>Board Password (Optional)</FormLabel>
+                                        <Input
+                                            type="password"
+                                            placeholder="Leave empty for no password"
+                                            value={createSettings.password || ''}
+                                            onChange={(e) => setCreateSettings(prev => ({
+                                                ...prev,
+                                                password: e.target.value || undefined
+                                            }))}
+                                        />
+                                    </FormControl>
+                                    
+                                    <FormControl>
+                                        <FormLabel>Board Settings</FormLabel>
+                                        <VStack align="start" spacing={2}>
+                                            <Flex w="full">
+                                                <Text>Hide cards by default</Text>
+                                                <Spacer />
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={createSettings.hideCardsByDefault}
+                                                    onChange={(e) => setCreateSettings(prev => ({
+                                                        ...prev,
+                                                        hideCardsByDefault: e.target.checked
+                                                    }))}
+                                                />
+                                            </Flex>
+                                            <Flex w="full">
+                                                <Text>Hide author names</Text>
+                                                <Spacer />
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={createSettings.hideAuthorNames}
+                                                    onChange={(e) => setCreateSettings(prev => ({
+                                                        ...prev,
+                                                        hideAuthorNames: e.target.checked
+                                                    }))}
+                                                />
+                                            </Flex>
+                                        </VStack>
+                                    </FormControl>
+                                </VStack>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button variant="ghost" mr={3} onClick={onCreateModalClose}>
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    colorScheme="blue" 
+                                    onClick={handleCreateBoard}
+                                    isLoading={isLoading}
+                                >
+                                    Create Board
+                                </Button>
+                            </ModalFooter>
+                        </ModalContent>
+                    </Modal>
 
                     <Divider my={8} />
 

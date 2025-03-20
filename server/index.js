@@ -6,18 +6,25 @@ import './db/schema.js';
 import pokerRoutes from './routes/poker.js';
 import retroRoutes from './routes/retro.js';
 import velocityRoutes from './routes/velocity.js';
+import authRoutes from './routes/auth.js';
+import workspaceRoutes from './routes/workspaces.js';
+import historyRoutes from './routes/history.js';
 import { handlePlanningPokerEvents } from './sockets/poker.js';
 import { handleRetroBoardEvents } from './sockets/retro.js';
 import { getRooms, getRoom, removeParticipant } from './db/poker.js';
+import { optionalAuthenticateToken } from './middleware/auth.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Mount routes
-app.use('/api', pokerRoutes);
-app.use('/api', retroRoutes);
-app.use('/api', velocityRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api', optionalAuthenticateToken, pokerRoutes);
+app.use('/api', optionalAuthenticateToken, retroRoutes);
+app.use('/api', optionalAuthenticateToken, velocityRoutes);
 
 const server = createServer(app);
 const io = new Server(server, {

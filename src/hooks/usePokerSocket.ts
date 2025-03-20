@@ -4,6 +4,7 @@ import type { Socket as ClientSocket } from 'socket.io-client'
 import { useToast } from '@chakra-ui/react'
 import config from '../config'
 import { SequenceType } from '../constants/poker'
+import { getAuthToken } from '../utils/apiUtils'
 
 interface Participant {
     id: string
@@ -56,13 +57,17 @@ export const usePokerSocket = ({ roomId, onRoomJoined }: UsePokerSocketProps): U
         if (!roomId) return
 
         console.log('Setting up socket connection')
+        // Get auth token if available
+        const token = getAuthToken();
+        
         const manager = new Manager(config.socketUrl, {
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             timeout: 20000,
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            auth: token ? { token } : undefined
         })
 
         const newSocket = manager.socket('/poker')
