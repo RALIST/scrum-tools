@@ -6,7 +6,6 @@ import {
     Button,
     Text,
     VStack,
-    Input,
     Table,
     Thead,
     Tbody,
@@ -22,9 +21,11 @@ import {
     Wrap,
     WrapItem,
     useClipboard,
-    useDisclosure
+    useDisclosure,
+    Tooltip,
+    Divider
 } from '@chakra-ui/react'
-import { CopyIcon, CheckIcon, SettingsIcon } from '@chakra-ui/icons'
+import { CopyIcon, CheckIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import { Helmet } from 'react-helmet-async'
 import { SEQUENCES, SequenceType } from '../constants/poker'
@@ -251,43 +252,53 @@ const PlanningPokerRoom: FC = () => {
             <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
                 <VStack spacing={{ base: 4, md: 8 }}>
                     <Box textAlign="center" w="full">
-                        <Heading size={{ base: "lg", md: "xl" }} mb={4}>
-                            Planning Poker
+                        <Heading size={{ base: "lg", md: "xl" }} mb={4} textAlign={"center"}>
+                            <Stack direction={{base: "column", md: "row"}} spacing={2} align="center">
+                                <Text>Room {roomId}</Text>
+                                <Stack direction={"row"} spacing={2}>
+                                    <Tooltip label={"Copy link to room"}>
+                                        <IconButton
+                                            title='Copy link'
+                                            aria-label="Copy link"
+                                            icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
+                                            onClick={() => {
+                                                onCopy
+                                                toast({
+                                                    title: 'Link to room copied',
+                                                    status: 'success',
+                                                    duration: 2000,
+                                                })
+                                            }}
+                                            size="sm"
+                                        />
+                                    </Tooltip>
+                                    <Tooltip label={"Change room settings"}>
+                                        <IconButton
+                                            aria-label="Room Settings"
+                                            icon={<SettingsIcon />}
+                                            size="sm"
+                                            onClick={onSettingsOpen}
+                                        />
+                                    </Tooltip>
+                                
+                                </Stack>
+                            </Stack>
                         </Heading>
+                        <Divider my={2} />
                         {isJoined && (
                             <VStack spacing={2}>
-                                <Stack direction="row" spacing={2} align="center">
+                                <Stack direction="row" spacing={2}>
                                     <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
                                         Playing as: {userName}
                                     </Text>
-                                    <Button size="sm" onClick={() => {
-                                        setNewUserName(userName)
-                                        onChangeNameOpen()
-                                    }}>
-                                        Change Name
-                                    </Button>
-                                    <IconButton
-                                        aria-label="Room Settings"
-                                        icon={<SettingsIcon />}
-                                        size="sm"
-                                        onClick={onSettingsOpen}
-                                    />
-                                </Stack>
-                                <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
-                                    Room: {roomId}
-                                </Text>
-                                <Stack direction={{ base: "column", md: "row" }} spacing={2} w="full" align="center">
-                                    <Input
-                                        value={shareableLink}
-                                        isReadOnly
-                                        size="sm"
-                                        width={{ base: "full", md: "auto" }}
-                                    />
-                                    <IconButton
-                                        aria-label="Copy link"
-                                        icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
-                                        onClick={onCopy}
-                                        size="sm"
+                                     <IconButton
+                                        aria-label="Change name"
+                                        icon={<EditIcon />}
+                                        size="xs"
+                                        onClick={() => {
+                                            setNewUserName(userName)
+                                            onChangeNameOpen()
+                                        }}
                                     />
                                 </Stack>
                             </VStack>

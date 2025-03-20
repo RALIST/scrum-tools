@@ -49,8 +49,8 @@ const createTables = async () => {
                 hide_cards_by_default BOOLEAN DEFAULT false,
                 hide_author_names BOOLEAN DEFAULT false,
                 password VARCHAR(255),
-                workspace_id VARCHAR(255) REFERENCES workspaces(id),
-                created_by VARCHAR(255) REFERENCES users(id)
+                workspace_id VARCHAR(255) REFERENCES workspaces(id) NULL,
+                created_by VARCHAR(255) REFERENCES users(id) NULL
             )
         `)
 
@@ -62,7 +62,7 @@ const createTables = async () => {
                 column_id VARCHAR(50),
                 text TEXT,
                 author_name VARCHAR(255),
-                author_id VARCHAR(255) REFERENCES users(id),
+                author_id VARCHAR(255) REFERENCES users(id) NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `)
@@ -96,8 +96,8 @@ const createTables = async () => {
                 sequence VARCHAR(50) DEFAULT 'fibonacci',
                 password VARCHAR(255),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                workspace_id VARCHAR(255) REFERENCES workspaces(id),
-                created_by VARCHAR(255) REFERENCES users(id)
+                workspace_id VARCHAR(255) REFERENCES workspaces(id) NULL,
+                created_by VARCHAR(255) REFERENCES users(id) NULL
             )
         `)
 
@@ -108,7 +108,7 @@ const createTables = async () => {
                 room_id VARCHAR(255) REFERENCES rooms(id) ON DELETE CASCADE,
                 name VARCHAR(255),
                 vote VARCHAR(50),
-                user_id VARCHAR(255) REFERENCES users(id),
+                user_id VARCHAR(255) REFERENCES users(id) NULL,
                 PRIMARY KEY (id, room_id)
             )
         `)
@@ -120,8 +120,8 @@ const createTables = async () => {
                 name VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 password VARCHAR(255),
-                workspace_id VARCHAR(255) REFERENCES workspaces(id),
-                created_by VARCHAR(255) REFERENCES users(id)
+                workspace_id VARCHAR(255) REFERENCES workspaces(id) NULL,
+                created_by VARCHAR(255) REFERENCES users(id) NULL
             )
         `)
 

@@ -1,7 +1,7 @@
 import pool from './pool.js'
 import bcrypt from 'bcryptjs'
 
-export const createRetroBoard = async (boardId, name, settings = {}) => {
+export const createRetroBoard = async (boardId, name, workspaceId, settings = {}) => {
     const client = await pool.connect()
     try {
         const {
@@ -16,9 +16,9 @@ export const createRetroBoard = async (boardId, name, settings = {}) => {
         await client.query(
             `INSERT INTO retro_boards (
                 id, name, timer_running, time_left, default_timer, 
-                hide_cards_by_default, hide_author_names, password
-            ) VALUES ($1, $2, false, $3, $4, $5, $6, $7)`,
-            [boardId, name || boardId, defaultTimer, defaultTimer, hideCardsByDefault, hideAuthorNames, hashedPassword]
+                hide_cards_by_default, hide_author_names, password, workspace_id
+            ) VALUES ($1, $2, false, $3, $4, $5, $6, $7, $8)`,
+            [boardId, name || boardId, defaultTimer, defaultTimer, hideCardsByDefault, hideAuthorNames, hashedPassword, workspaceId || null]
         )
     } catch (error) {
         console.error('Error creating retro board:', error)
@@ -61,6 +61,45 @@ export const getRetroBoard = async (boardId) => {
         }
     } catch (error) {
         console.error('Error getting retro board:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const getWorkspaceRetroBoards = async (workspaceId) => {
+    const client = await pool.connect()
+    try {
+        // First check if workspace_id column exists
+        const checkColumn = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'retro_boards' AND column_name = 'workspace_id'
+        `)
+        
+        if (checkColumn.rows.length === 0) {
+            // Workspace column doesn't exist yet, return empty array
+            console.log('workspace_id column does not exist in retro_boards table')
+            return []
+        }
+        
+        const boardsResult = await client.query(`
+            SELECT rb.*, 
+                COUNT(rc.id) as card_count 
+            FROM retro_boards rb
+            LEFT JOIN retro_cards rc ON rb.id = rc.board_id
+            WHERE rb.workspace_id = $1
+            GROUP BY rb.id
+            ORDER BY rb.created_at DESC
+        `, [workspaceId])
+        
+        return boardsResult.rows.map(board => ({
+            ...board,
+            hasPassword: !!board.password,
+            password: undefined // Don't send password hash to client
+        }))
+    } catch (error) {
+        console.error('Error getting workspace retro boards:', error)
         throw error
     } finally {
         client.release()

@@ -23,7 +23,7 @@ router.get('/rooms', async (req, res) => {
 })
 
 router.post('/rooms', async (req, res) => {
-    const { roomId, name, password, sequence } = req.body
+    const { roomId, name, password, sequence, workspaceId } = req.body
     try {
         const room = await getRoom(roomId)
         if (room) {
@@ -31,7 +31,7 @@ router.post('/rooms', async (req, res) => {
         }
 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null
-        await createRoom(roomId, name, sequence, hashedPassword)
+        await createRoom(roomId, name, sequence, hashedPassword, workspaceId)
 
         res.json({
             success: true,

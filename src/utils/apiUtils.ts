@@ -1,4 +1,5 @@
 import config from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
 export interface ApiOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -25,7 +26,7 @@ export const apiRequest = async <T>(endpoint: string, options: ApiOptions = {}):
 
   // Add auth token if available and requested
   if (includeAuth) {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (token) {
       requestHeaders['Authorization'] = `Bearer ${token}`;
     }

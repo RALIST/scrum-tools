@@ -10,40 +10,15 @@ import {
     getTeamVelocity,
     getTeamAverageVelocity,
     getTeamByWorkspace,
-    getTeamVelocityByWorkspace,
-    getTeamAverageVelocityByWorkspace
 } from '../db/velocity.js'
-import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
 // Create a new team - supports both authenticated and anonymous modes
 router.post('/teams', async (req, res) => {
     try {
-        const { name, password, workspace_id } = req.body
-        let workspaceId = workspace_id || null
+        const { name, password, workspaceId } = req.body
         let userId = null
-
-        // If request has authorization header, verify workspace ownership
-        if (req.headers.authorization) {
-            try {
-                // Extract token
-                const token = req.headers.authorization.split(' ')[1]
-                const decoded = jwt.verify(token, process.env.JWT_SECRET)
-                userId = decoded.userId
-
-                // If workspaceId is provided, verify user has access to it
-                if (workspaceId) {
-                    const workspaceAccess = await checkWorkspaceAccess(workspaceId, userId)
-                    if (!workspaceAccess) {
-                        return res.status(403).json({ error: 'User does not have access to this workspace' })
-                    }
-                }
-            } catch (err) {
-                console.error('Token validation error:', err)
-                // Continue without authentication - fall back to anonymous mode
-            }
-        }
 
         // Check if team already exists
         let existingTeam = null
@@ -76,61 +51,16 @@ router.get('/teams/:name/velocity', async (req, res) => {
     try {
         const { name } = req.params
         const { password } = req.query
-        let workspaceId = null
-        let userId = null
-
-        // If request has authorization header, verify user
-        if (req.headers.authorization) {
-            try {
-                // Extract token
-                const token = req.headers.authorization.split(' ')[1]
-                const decoded = jwt.verify(token, process.env.JWT_SECRET)
-                userId = decoded.userId
-                
-                // Check for workspace-id in headers or query params
-                workspaceId = req.headers['workspace-id'] || req.query.workspace_id
-                
-                if (workspaceId) {
-                    const workspaceAccess = await checkWorkspaceAccess(workspaceId, userId)
-                    if (!workspaceAccess) {
-                        return res.status(403).json({ error: 'User does not have access to this workspace' })
-                    }
-                }
-            } catch (err) {
-                console.error('Token validation error:', err)
-                // Continue without authentication - fall back to anonymous mode
-            }
-        }
-
         let velocityData
         let averageData
-
-        if (workspaceId) {
-            // Authenticated workspace-based lookup
-            velocityData = await getTeamVelocityByWorkspace(name, workspaceId)
-            averageData = await getTeamAverageVelocityByWorkspace(name, workspaceId)
-            
-            // If no data found for this team in the workspace
-            if (!velocityData || velocityData.length === 0) {
-                // Return empty data instead of error for new teams
-                return res.json({
-                    sprints: [],
-                    averages: {
-                        average_velocity: 0,
-                        average_commitment: 0,
-                        completion_rate: 0
-                    }
-                });
-            }
-        } else {
+    
             // Anonymous password-based lookup
-            velocityData = await getTeamVelocity(name, password)
-            averageData = await getTeamAverageVelocity(name, password)
-            
-            // For anonymous mode, verify auth
-            if (!velocityData || !averageData) {
-                return res.status(401).json({ error: 'Invalid team name or password' })
-            }
+        velocityData = await getTeamVelocity(name, password)
+        averageData = await getTeamAverageVelocity(name, password)
+        
+        // For anonymous mode, verify auth
+        if (!velocityData || !averageData) {
+            return res.status(401).json({ error: 'Invalid team name or password' })
         }
 
         res.json({

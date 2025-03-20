@@ -29,7 +29,7 @@ import { FaUsers } from 'react-icons/fa'
 const Navbar: FC = () => {
     const { colorMode, toggleColorMode } = useColorMode()
     const { user, isAuthenticated, logout } = useAuth()
-    const { currentWorkspace, workspaces } = useWorkspace()
+    const { currentWorkspace, workspaces, setCurrentWorkspace } = useWorkspace()
     const isMobile = useBreakpointValue({ base: true, md: false })
 
     const NavLinks = () => (
@@ -143,9 +143,8 @@ const Navbar: FC = () => {
                     {workspaces && workspaces.map(workspace => (
                         <MenuItem 
                             key={workspace.id} 
-                            as={RouterLink} 
-                            to={`/workspaces/${workspace.id}`}
                             onClick={() => {
+                                    setCurrentWorkspace(workspace);
                                     localStorage.setItem('currentWorkspace', workspace.name)
                                     localStorage.setItem('currentWorkspaceId', workspace.id)
                                 }

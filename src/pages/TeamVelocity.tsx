@@ -17,10 +17,6 @@ import {
     Divider,
     useDisclosure,
     FormErrorMessage,
-    Menu,
-    MenuButton,
-    MenuList,
-    MenuItem,
     Badge,
     Flex,
     Spacer,
@@ -29,13 +25,7 @@ import {
     Alert,
     AlertIcon,
     AlertDescription,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
 } from '@chakra-ui/react'
-import { ChevronDownIcon } from '@chakra-ui/icons'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
 import SeoText from '../components/SeoText'
@@ -74,10 +64,10 @@ interface WorkspaceMember {
 }
 
 const TeamVelocity: FC = () => {
-    const { isAuthenticated, user } = useAuth()
+    const { isAuthenticated } = useAuth()
     const { currentWorkspace, getWorkspaceMembers } = useWorkspace()
     const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([])
-    const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+    const [_isLoadingMembers, setIsLoadingMembers] = useState(false)
     
     const [teamName, setTeamName] = useState('')
     const [teamPassword, setTeamPassword] = useState('')
@@ -92,43 +82,6 @@ const TeamVelocity: FC = () => {
     const [formErrors, setFormErrors] = useState<FormErrors>({})
     const { isOpen: isAddSprintOpen, onOpen: onAddSprintOpen, onClose: onAddSprintClose } = useDisclosure()
     const toast = useToast()
-    
-    // Helper function to clear velocity data
-    const clearVelocityData = () => {
-        setIsTeamLoaded(false);
-        setTeamName('');
-        setTeamPassword('');
-        setVelocityData([]);
-        setAverages(null);
-        setFormErrors({});
-        
-        // Clear localStorage
-        localStorage.removeItem('velocityTeamName');
-        localStorage.removeItem('velocityTeamPassword');
-        localStorage.removeItem('velocityTeamLoaded');
-    }
-
-    // Load saved state from localStorage on component mount
-    useEffect(() => {
-        // Only load from localStorage if not authenticated or no workspace
-        if (isAuthenticated && currentWorkspace) {
-            return; // Skip localStorage loading for authenticated users with workspace
-        }
-        
-        const savedTeam = localStorage.getItem('velocityTeamName');
-        const savedPassword = localStorage.getItem('velocityTeamPassword');
-        const savedTeamLoaded = localStorage.getItem('velocityTeamLoaded');
-        
-        if (savedTeam && savedPassword && savedTeamLoaded === 'true') {
-            setTeamName(savedTeam);
-            setTeamPassword(savedPassword);
-            setIsTeamLoaded(true);
-            
-            // Load team data with saved credentials
-            loadTeamData(savedTeam, savedPassword);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, currentWorkspace]);
 
     // Load workspace members when current workspace changes
     useEffect(() => {
@@ -137,19 +90,6 @@ const TeamVelocity: FC = () => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, currentWorkspace]);
-
-    // Save team state to localStorage whenever it changes
-    useEffect(() => {
-        if (isTeamLoaded) {
-            localStorage.setItem('velocityTeamName', teamName);
-            localStorage.setItem('velocityTeamPassword', teamPassword);
-            localStorage.setItem('velocityTeamLoaded', 'true');
-        } else {
-            localStorage.removeItem('velocityTeamName');
-            localStorage.removeItem('velocityTeamPassword');
-            localStorage.removeItem('velocityTeamLoaded');
-        }
-    }, [isTeamLoaded, teamName, teamPassword]);
 
     // Load workspace members
     const loadWorkspaceMembers = async () => {
@@ -162,13 +102,10 @@ const TeamVelocity: FC = () => {
             
             // If we have a workspace, let's automatically create/load a team with the workspace name
             if (!isTeamLoaded) {
-                // Auto-generate a secure password for workspace teams
-                const workspacePassword = `ws-${currentWorkspace.id.substring(0, 8)}`;
                 setTeamName(currentWorkspace.name);
-                setTeamPassword(workspacePassword);
-                
+                setTeamPassword(currentWorkspace.name);
                 // We'll auto-load the team if authenticated and have a workspace
-                handleCreateOrLoadTeam(currentWorkspace.name, workspacePassword);
+                handleCreateOrLoadTeam(currentWorkspace.name, currentWorkspace.name);
             }
         } catch (error) {
             console.error('Error loading workspace members:', error);
@@ -292,7 +229,7 @@ const TeamVelocity: FC = () => {
                         sprintName: data.sprintName,
                         startDate: data.startDate,
                         endDate: data.endDate,
-                        workspace_id: currentWorkspace?.id
+                        workspaceId: currentWorkspace?.id
                     }
                 });
             } else {
@@ -470,7 +407,7 @@ const TeamVelocity: FC = () => {
                         </Text>
                     </VStack>
 
-                    {isAuthenticated && currentWorkspace ? (
+                    {isAuthenticated && currentWorkspace && isTeamLoaded ? (
                         // Authenticated workspace view
                         <Card>
                             <CardBody>

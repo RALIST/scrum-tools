@@ -111,7 +111,7 @@ const RetroLanding: FC = () => {
             
             setIsLoading(true);
             try {
-                const boards = await apiRequest<RetroBoard[]>(`/workspace/${currentWorkspace.id}/retros`);
+                const boards = await apiRequest<RetroBoard[]>(`/workspaces/${currentWorkspace.id}/retros`);
                 setWorkspaceBoards(boards);
             } catch (error) {
                 console.error("Error loading workspace boards:", error);
@@ -145,7 +145,7 @@ const RetroLanding: FC = () => {
                 method: 'POST',
                 body: {
                     name: createSettings.boardName || 'Retro Board',
-                    workspace_id: createSettings.workspaceId,
+                    workspaceId: createSettings.workspaceId,
                     password: createSettings.password,
                     hide_cards_by_default: createSettings.hideCardsByDefault,
                     hide_author_names: createSettings.hideAuthorNames
@@ -227,38 +227,7 @@ const RetroLanding: FC = () => {
 
                     <Center p={8}>
                         <VStack spacing={6} w={{ base: "full", md: "500px" }}>
-                            <Button
-                                colorScheme="blue"
-                                size="lg"
-                                w="full"
-                                onClick={onCreateModalOpen}
-                                isLoading={isLoading}
-                            >
-                                Create New Board
-                            </Button>
-                            <Text textAlign="center">or</Text>
-                            <VStack w="full" spacing={2}>
-                                <Input
-                                    placeholder="Enter board ID"
-                                    value={joinBoardId}
-                                    onChange={(e) => setJoinBoardId(e.target.value)}
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleJoinBoard()
-                                        }
-                                    }}
-                                />
-                                <Button
-                                    colorScheme="green"
-                                    size="lg"
-                                    w="full"
-                                    onClick={handleJoinBoard}
-                                    isLoading={isLoading}
-                                >
-                                    Join Existing Board
-                                </Button>
-                            </VStack>
-                            
+                                                        
                             {isAuthenticated && currentWorkspace && workspaceBoards.length > 0 && (
                                 <Box w="full" mt={4}>
                                     <Text fontWeight="bold" mb={2}>Your Workspace Boards:</Text>
@@ -295,6 +264,37 @@ const RetroLanding: FC = () => {
                                     </VStack>
                                 </Box>
                             )}
+                            <Button
+                                colorScheme="blue"
+                                size="lg"
+                                w="full"
+                                onClick={onCreateModalOpen}
+                                isLoading={isLoading}
+                            >
+                                Create New Board
+                            </Button>
+                            <Text textAlign="center">or</Text>
+                            <VStack w="full" spacing={2}>
+                                <Input
+                                    placeholder="Enter board ID"
+                                    value={joinBoardId}
+                                    onChange={(e) => setJoinBoardId(e.target.value)}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleJoinBoard()
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    colorScheme="green"
+                                    size="lg"
+                                    w="full"
+                                    onClick={handleJoinBoard}
+                                    isLoading={isLoading}
+                                >
+                                    Join Existing Board
+                                </Button>
+                            </VStack>
                         </VStack>
                     </Center>
                     

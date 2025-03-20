@@ -10,7 +10,7 @@ import {
     Spinner,
     Center,
     Text,
-    Flex
+    Flex,
 } from '@chakra-ui/react'
 import { Helmet } from 'react-helmet-async'
 import { RetroBoardSettingsModal, JoinRetroBoardModal, ChangeRetroBoardNameModal } from '../components/modals'
@@ -133,6 +133,7 @@ const RetroBoard: FC = () => {
                     <RetroHeader
                         boardName={board.name}
                         userName={userName}
+                        boardId={board.id}
                         isTimerRunning={isTimerRunning}
                         timeLeft={timeLeft}
                         hideCards={hideCards}

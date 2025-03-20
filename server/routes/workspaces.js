@@ -10,6 +10,8 @@ import {
   getUserWorkspaceRole
 } from '../db/workspaces.js';
 import { getUserByEmail } from '../db/users.js';
+import { getWorkspaceRooms } from '../db/poker.js';
+import { getWorkspaceRetroBoards } from '../db/retro.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -171,6 +173,71 @@ router.get('/:id/members', authenticateToken, async (req, res) => {
     res.json(members);
   } catch (error) {
     console.error('Get members error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get poker rooms for a workspace
+router.get('/:id/rooms', authenticateToken, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const userId = req.user.userId;
+    
+    // Check if user is a member of the workspace
+    const role = await getUserWorkspaceRole(workspaceId, userId);
+    
+    if (!role) {
+      return res.status(403).json({ error: 'You do not have access to this workspace' });
+    }
+    
+    const rooms = await getWorkspaceRooms(workspaceId);
+    
+    // Format rooms for client
+    const roomList = rooms.map(room => ({
+      id: room.id,
+      name: room.name,
+      participantCount: parseInt(room.participant_count) || 0,
+      createdAt: room.created_at,
+      hasPassword: !!room.password,
+      sequence: room.sequence,
+      workspaceId: room.workspace_id
+    }));
+    
+    res.json(roomList);
+  } catch (error) {
+    console.error('Get workspace rooms error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get retro boards for a workspace
+router.get('/:id/retros', authenticateToken, async (req, res) => {
+  try {
+    const workspaceId = req.params.id;
+    const userId = req.user.userId;
+    
+    // Check if user is a member of the workspace
+    const role = await getUserWorkspaceRole(workspaceId, userId);
+    
+    if (!role) {
+      return res.status(403).json({ error: 'You do not have access to this workspace' });
+    }
+    
+    const boards = await getWorkspaceRetroBoards(workspaceId);
+    
+    // Format boards for client
+    const boardList = boards.map(board => ({
+      id: board.id,
+      name: board.name,
+      cardCount: parseInt(board.card_count) || 0,
+      createdAt: board.created_at,
+      hasPassword: board.hasPassword,
+      workspaceId: board.workspace_id
+    }));
+    
+    res.json(boardList);
+  } catch (error) {
+    console.error('Get workspace retro boards error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

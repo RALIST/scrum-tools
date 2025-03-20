@@ -53,7 +53,6 @@ import React from 'react';
 const WorkspaceDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const { 
-    currentWorkspace, 
     setCurrentWorkspace, 
     workspaces, 
     updateWorkspace,

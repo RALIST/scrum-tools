@@ -1,11 +1,11 @@
 import pool from './pool.js'
 
-export const createRoom = async (roomId, name, sequence, password) => {
+export const createRoom = async (roomId, name, sequence, password, workspaceId) => {
     const client = await pool.connect()
     try {
         await client.query(
-            'INSERT INTO rooms (id, name, sequence, password) VALUES ($1, $2, $3, $4)',
-            [roomId, name || roomId, sequence, password]
+            'INSERT INTO rooms (id, name, sequence, password, workspace_id) VALUES ($1, $2, $3, $4, $5)',
+            [roomId, name || roomId, sequence, password, workspaceId || null]
         )
     } catch (error) {
         console.error('Error creating room:', error)
@@ -27,6 +27,39 @@ export const getRooms = async () => {
         return roomsResult.rows
     } catch (error) {
         console.error('Error getting rooms:', error)
+        throw error
+    } finally {
+        client.release()
+    }
+}
+
+export const getWorkspaceRooms = async (workspaceId) => {
+    const client = await pool.connect()
+    try {
+        // First check if workspace_id column exists
+        const checkColumn = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'rooms' AND column_name = 'workspace_id'
+        `)
+        
+        if (checkColumn.rows.length === 0) {
+            // Workspace column doesn't exist yet, return empty array
+            console.log('workspace_id column does not exist in rooms table')
+            return []
+        }
+        
+        const roomsResult = await client.query(`
+            SELECT r.*, COUNT(p.id) as participant_count
+            FROM rooms r
+            LEFT JOIN participants p ON r.id = p.room_id
+            WHERE r.workspace_id = $1
+            GROUP BY r.id
+            ORDER BY r.created_at DESC
+        `, [workspaceId])
+        return roomsResult.rows
+    } catch (error) {
+        console.error('Error getting workspace rooms:', error)
         throw error
     } finally {
         client.release()

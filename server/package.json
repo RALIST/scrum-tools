@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "start": "node index.js",
-        "dev": "nodemon index.js"
+        "dev": "nodemon index.js",
+        "migrate": "node db/migration.js"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",

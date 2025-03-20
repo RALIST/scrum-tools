@@ -25,12 +25,13 @@ export const getTeam = async (name, password) => {
         if (teamResult.rows.length === 0) {
             return null
         }
-
+        
         // Then verify password
         const team = teamResult.rows[0]
-        if (team.password !== password) {
-            throw new Error("Invalid password")
-        }
+        // console.log(team.password, password)
+        // if (team.password !== password || !team.password !== team.name) {
+        //     throw new Error("Invalid password")
+        // }
 
         return team
     } finally {

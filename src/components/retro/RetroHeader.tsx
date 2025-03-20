@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, useMemo } from 'react'
 import {
     Box,
     Heading,
@@ -10,9 +10,12 @@ import {
     Badge,
     Divider,
     useColorMode,
-    Tooltip
+    Tooltip,
+    useClipboard,
+    useToast
 } from '@chakra-ui/react'
-import { ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons'
+import { ViewIcon, ViewOffIcon, TimeIcon, SettingsIcon, EditIcon, CheckIcon, CopyIcon } from '@chakra-ui/icons'
+import config from '../../config'
 
 interface RetroHeaderProps {
     boardName: string
@@ -20,6 +23,7 @@ interface RetroHeaderProps {
     isTimerRunning: boolean
     timeLeft: number
     hideCards: boolean
+    boardId: string
     onToggleCards: () => void
     onToggleTimer: () => void
     onOpenSettings: () => void
@@ -35,7 +39,8 @@ const RetroHeader: FC<RetroHeaderProps> = ({
     onToggleCards,
     onToggleTimer,
     onOpenSettings,
-    onChangeName
+    onChangeName,
+    boardId
 }) => {
     const { colorMode } = useColorMode()
 
@@ -45,17 +50,42 @@ const RetroHeader: FC<RetroHeaderProps> = ({
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
     }
 
+    const shareableLink = useMemo(() => `${config.siteUrl}/retro/${boardId}`, [boardId])
+    const { hasCopied, onCopy } = useClipboard(shareableLink)
+    const toast = useToast()
+
     return (
         <Box textAlign="center">
             <VStack spacing={4}>
                 <Heading as="h1" size="xl">
-                    {boardName}
+                    <HStack>
+                        <Text>{boardName}</Text>
+                        <Tooltip label={"Copy link to room"}>
+                            <IconButton
+                                title='Copy link'
+                                aria-label="Copy link"
+                                icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
+                                onClick={() => {
+                                    onCopy
+                                    toast({
+                                        title: 'Link to board copied',
+                                        status: 'success',
+                                        duration: 2000,
+                                    })
+                                }}
+                                size="xs"
+                            />
+                        </Tooltip>
+                    </HStack>
                 </Heading>
+                <Text fontSize={{ base: "md", md: "lg" }} color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
+                    ID: {boardId}
+                </Text>
                 <HStack justify="center" spacing={4}>
                     <Tooltip label={hideCards ? "Show Cards" : "Hide Cards"}>
                         <IconButton
                             aria-label={hideCards ? "Show Cards" : "Hide Cards"}
-                            icon={hideCards ? <ViewIcon /> : <ViewOffIcon />}
+                            icon={hideCards ? <ViewOffIcon /> : <ViewIcon />}
                             onClick={onToggleCards}
                             colorScheme={hideCards ? "green" : "gray"}
                             size="sm"
@@ -94,7 +124,7 @@ const RetroHeader: FC<RetroHeaderProps> = ({
                     <IconButton
                         aria-label="Change name"
                         icon={<EditIcon />}
-                        size="sm"
+                        size="xs"
                         onClick={onChangeName}
                     />
                 </HStack>

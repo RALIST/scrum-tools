@@ -121,7 +121,7 @@ const PlanningPoker: FC = () => {
                 // Load workspace rooms if authenticated and have a workspace
                 if (isAuthenticated && currentWorkspace) {
                     try {
-                        const wsRooms = await apiRequest<Room[]>(`/workspace/${currentWorkspace.id}/rooms`);
+                        const wsRooms = await apiRequest<Room[]>(`/workspaces/${currentWorkspace.id}/rooms`);
                         setWorkspaceRooms(wsRooms);
                     } catch (error) {
                         console.error("Error loading workspace rooms:", error);
@@ -165,7 +165,7 @@ const PlanningPoker: FC = () => {
                 body: {
                     roomId: newRoomId,
                     name: createSettings.roomName || `Room ${newRoomId}`,
-                    workspace_id: createSettings.workspaceId,
+                    workspaceId: createSettings.workspaceId,
                     sequence: createSettings.sequence,
                     password: createSettings.password
                 },
@@ -227,23 +227,7 @@ const PlanningPoker: FC = () => {
                     {!showRoomList ? (
                         <Center p={8}>
                             <VStack spacing={6} w={{ base: "full", md: "500px" }}>
-                                <Button
-                                    colorScheme="blue"
-                                    size="lg"
-                                    w="full"
-                                    onClick={onCreateModalOpen}
-                                >
-                                    Create New Room
-                                </Button>
-                                <Button
-                                    colorScheme="green"
-                                    size="lg"
-                                    w="full"
-                                    onClick={() => setShowRoomList(true)}
-                                >
-                                    Join Existing Room
-                                </Button>
-                                
+                                                                
                                 {isAuthenticated && currentWorkspace && workspaceRooms.length > 0 && (
                                     <Box w="full" mt={4}>
                                         <Text fontWeight="bold" mb={2}>Your Workspace Rooms:</Text>
@@ -284,6 +268,22 @@ const PlanningPoker: FC = () => {
                                         </VStack>
                                     </Box>
                                 )}
+                                <Button
+                                    colorScheme="blue"
+                                    size="lg"
+                                    w="full"
+                                    onClick={onCreateModalOpen}
+                                >
+                                    Create New Room
+                                </Button>
+                                <Button
+                                    colorScheme="green"
+                                    size="lg"
+                                    w="full"
+                                    onClick={() => setShowRoomList(true)}
+                                >
+                                    Join Existing Room
+                                </Button>
                             </VStack>
                         </Center>
                     ) : (
@@ -419,6 +419,7 @@ const PlanningPoker: FC = () => {
                                                 <FormControl>
                                                     <FormLabel>Workspace (Optional)</FormLabel>
                                                     <Select
+                                                        name='workspaceId'
                                                         value={createSettings.workspaceId || ''}
                                                         onChange={(e) => setCreateSettings(prev => ({
                                                             ...prev,

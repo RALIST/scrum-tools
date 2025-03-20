@@ -18,9 +18,6 @@ import {
     MenuButton,
     MenuList,
     MenuItem,
-    Select,
-    Flex,
-    Spacer,
     Badge,
     Spinner,
 } from '@chakra-ui/react'
@@ -390,33 +387,6 @@ const DailyStandup: FC = () => {
                                 >
                                     Reset
                                 </Button>
-                                
-                                {isAuthenticated && currentWorkspace && workspaceMembers.length > 0 && (
-                                    <Button
-                                        colorScheme="teal"
-                                        onClick={() => {
-                                            // Replace team with workspace members
-                                            const newTeamMembers = workspaceMembers.map(member => ({
-                                                id: member.id,
-                                                name: member.name,
-                                                timeLeft: MEMBER_TIME
-                                            }));
-                                            
-                                            setTeamMembers(newTeamMembers);
-                                            setCurrentMember(-1);
-                                            setIsRunning(false);
-                                            
-                                            toast({
-                                                title: 'Team loaded',
-                                                description: `${workspaceMembers.length} team members added from your workspace`,
-                                                status: 'success',
-                                                duration: 3000,
-                                            });
-                                        }}
-                                    >
-                                        Load Workspace Team
-                                    </Button>
-                                )}
                             </HStack>
 
                             <List spacing={3} width="100%">

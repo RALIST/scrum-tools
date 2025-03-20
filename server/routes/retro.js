@@ -23,13 +23,14 @@ router.post('/retro', async (req, res) => {
         defaultTimer,
         hideCardsByDefault,
         hideAuthorNames,
-        password
+        password,
+        workspaceId
     } = req.body
 
     const defaultName = `Retro ${formatDate(new Date())}`
 
     try {
-        await createRetroBoard(boardId, name || defaultName, {
+        await createRetroBoard(boardId, name || defaultName, workspaceId, {
             defaultTimer,
             hideCardsByDefault,
             hideAuthorNames,
