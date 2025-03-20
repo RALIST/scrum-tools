@@ -25,15 +25,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load user from localStorage on initial render
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
-    
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setToken(storedToken);
     }
-    
+
     setIsLoading(false);
   }, []);
 
@@ -112,23 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('currentWorkspaceId');
       sessionStorage.removeItem('currentWorkspaceId');
       sessionStorage.removeItem('currentWorkspace');
-      
-      // Clear any other app-specific data
-      localStorage.removeItem('velocityTeamName');
-      localStorage.removeItem('velocityTeamPassword');
-      localStorage.removeItem('velocityTeamLoaded');
-      
-      console.log('User logged out, all session data cleared');
-      
-      // Verify everything was cleared
-      const remainingWsId = localStorage.getItem('currentWorkspaceId');
-      if (remainingWsId) {
-        console.warn('Failed to clear currentWorkspaceId from localStorage:', remainingWsId);
-        // Try one more time
-        localStorage.setItem('currentWorkspaceId', '');
-        localStorage.removeItem('currentWorkspaceId');
-      }
-      
     } catch (e) {
       console.error('Error clearing storage during logout:', e);
     }

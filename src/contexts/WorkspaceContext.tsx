@@ -27,7 +27,7 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   
   // Get the initial ID from localStorage only once at mount
   const storedId = localStorage.getItem('currentWorkspaceId');
@@ -37,10 +37,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
-    if (!isAuthenticated) return;
-
+    if (!isAuthenticated || isAuthLoading) return;
     if (!workspaces) refreshWorkspaces();
-  }, [isAuthenticated, workspaces]);
+  }, [workspaces, isAuthenticated]);
 
   // Custom setter for currentWorkspace that also updates workspaceId
   const updateCurrentWorkspace = useCallback((workspace: Workspace | null) => {
@@ -240,7 +239,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         addWorkspaceMember,
         removeWorkspaceMember,
         getWorkspaceMembers,
-        isLoading,
+        isLoading: (isLoading && isAuthLoading),
         refreshWorkspaces
       }}
     >

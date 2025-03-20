@@ -36,15 +36,6 @@ const Navbar: FC = () => {
         <>
             <Link
                 as={RouterLink}
-                to="/"
-                fontSize="lg"
-                fontWeight="bold"
-                _hover={{ textDecoration: 'none', color: 'blue.500' }}
-            >
-                Home
-            </Link>
-            <Link
-                as={RouterLink}
                 to="/retro"
                 fontSize="lg"
                 fontWeight="bold"

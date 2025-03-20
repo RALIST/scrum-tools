@@ -120,7 +120,7 @@ const WorkspaceDetail: FC = () => {
         duration: 5000,
       });
     }
-  }, [id, isLoading, workspaces]);
+  }, [workspaces]);
 
   // Load workspace members
   useEffect(() => {
