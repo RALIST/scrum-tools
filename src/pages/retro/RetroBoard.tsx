@@ -1,4 +1,4 @@
-import { FC, useState, useCallback, useMemo } from "react";
+import { FC, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -19,6 +19,7 @@ import {
   ChangeRetroBoardNameModal,
 } from "../../components/modals";
 import { useRetroSocket } from "../../hooks/useRetroSocket";
+import { useRetroUser } from "../../hooks/useRetroUser"; // Import the new hook
 import { RetroHeader, RetroColumn } from "../../components/retro";
 
 const COLUMNS = [
@@ -32,10 +33,7 @@ const RetroBoard: FC = () => {
   const { boardId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const [userName, setUserName] = useState(
-    () => localStorage.getItem("retroUserName") || ""
-  );
-  const [newCardText, setNewCardText] = useState<{ [key: string]: string }>({});
+  const { userName, setUserNameAndStorage } = useRetroUser(); // Use the new hook
   const {
     isOpen: isSettingsOpen,
     onOpen: onSettingsOpen,
@@ -78,34 +76,33 @@ const RetroBoard: FC = () => {
   const handleJoinBoard = useCallback(
     (name: string, password?: string) => {
       if (!boardId) return;
-      setUserName(name);
-      localStorage.setItem("retroUserName", name);
+      setUserNameAndStorage(name); // Use the function from the hook
       joinBoard(name, password);
     },
-    [boardId, joinBoard]
+    [boardId, joinBoard, setUserNameAndStorage] // Add hook function to dependencies
   );
 
   const handleChangeName = useCallback(
     (newName: string) => {
       if (!boardId) return;
-      changeName(newName);
-      setUserName(newName);
-      localStorage.setItem("retroUserName", newName);
+      changeName(newName); // Send event via socket hook
+      setUserNameAndStorage(newName); // Update local state and storage via user hook
       onChangeNameClose();
     },
-    [boardId, changeName, onChangeNameClose]
+    [boardId, changeName, onChangeNameClose, setUserNameAndStorage] // Add hook function
   );
 
+  // Update handleAddCard to accept text and columnId
   const handleAddCard = useCallback(
-    (columnId: string) => {
-      if (!newCardText[columnId]?.trim() || !isTimerRunning || !userName)
-        return;
+    (columnId: string, text: string) => {
+      // No need to check newCardText state here
+      if (!text.trim() || !isTimerRunning || !userName) return;
 
       const cardId = Math.random().toString(36).substring(7);
-      addCard(cardId, columnId, newCardText[columnId], userName);
-      setNewCardText((prev) => ({ ...prev, [columnId]: "" }));
+      addCard(cardId, columnId, text, userName); // Pass text directly
+      // No need to setNewCardText here
     },
-    [newCardText, isTimerRunning, userName, addCard]
+    [isTimerRunning, userName, addCard] // Removed newCardText dependency
   );
 
   const columnCards = useMemo(() => {
@@ -186,14 +183,8 @@ const RetroBoard: FC = () => {
                   hideAuthorNames={board.hide_author_names}
                   userName={userName}
                   isTimerRunning={isTimerRunning}
-                  inputValue={newCardText[column.id] || ""}
-                  onInputChange={(value) =>
-                    setNewCardText((prev) => ({
-                      ...prev,
-                      [column.id]: value,
-                    }))
-                  }
-                  onAddCard={() => handleAddCard(column.id)}
+                  // Remove inputValue and onInputChange props
+                  onAddCard={(text) => handleAddCard(column.id, text)} // Pass columnId and text
                   onDeleteCard={deleteCard}
                   onVoteCard={toggleVote}
                   onEditCard={editCard}

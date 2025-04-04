@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, useState } from 'react'; // Import useState
 import {
     VStack,
     Heading,
@@ -15,13 +15,14 @@ interface RetroColumnProps {
     cards: RetroCardType[]
     hideCards: boolean
     hideAuthorNames: boolean
-    userName: string
-    isTimerRunning: boolean
-    inputValue: string
-    onInputChange: (value: string) => void
-    onAddCard: () => void
-    onDeleteCard: (cardId: string) => void
-    onVoteCard: (cardId: string) => void
+    userName: string;
+    isTimerRunning: boolean;
+    // Remove inputValue and onInputChange from props
+    // inputValue: string; 
+    // onInputChange: (value: string) => void; 
+    onAddCard: (text: string) => void; // Pass text directly
+    onDeleteCard: (cardId: string) => void;
+    onVoteCard: (cardId: string) => void;
     onEditCard: (cardId: string, text: string) => void
 }
 
@@ -33,14 +34,22 @@ const RetroColumn: FC<RetroColumnProps> = ({
     hideAuthorNames,
     userName,
     isTimerRunning,
-    inputValue,
-    onInputChange,
-    onAddCard,
+    // inputValue, // Removed prop
+    // onInputChange, // Removed prop
+    onAddCard, // Keep onAddCard, but it will now receive text
     onDeleteCard,
     onVoteCard,
-    onEditCard
+    onEditCard,
 }) => {
-    const { colorMode } = useColorMode()
+    const { colorMode } = useColorMode();
+    const [inputValue, setInputValue] = useState(''); // Internal state for input
+
+    const handleAddClick = () => {
+        if (inputValue.trim()) {
+            onAddCard(inputValue.trim()); // Pass the text to the handler
+            setInputValue(''); // Clear input after adding
+        }
+    };
 
     return (
         <Box
@@ -101,9 +110,9 @@ const RetroColumn: FC<RetroColumnProps> = ({
             <Box p={4} borderTop="1px" borderColor={colorMode === 'light' ? 'gray.100' : 'gray.600'}>
                 <RetroCardInput
                     isTimerRunning={isTimerRunning}
-                    value={inputValue}
-                    onChange={onInputChange}
-                    onSubmit={onAddCard}
+                    value={inputValue} // Use internal state
+                    onChange={setInputValue} // Use internal state setter
+                    onSubmit={handleAddClick} // Use internal handler
                     userName={userName}
                 />
             </Box>
