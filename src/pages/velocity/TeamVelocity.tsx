@@ -26,16 +26,19 @@ import {
     AlertIcon,
     AlertDescription,
 } from '@chakra-ui/react'
-import PageContainer from '../components/PageContainer'
-import PageHelmet from '../components/PageHelmet'
-import SeoText from '../components/SeoText'
-import { AddSprintModal } from '../components/modals'
-import { VelocityChart, VelocityStats } from '../components/velocity'
-import { teamVelocitySeo, teamVelocitySeoSections } from '../content/teamVelocitySeo'
-import config from '../config'
-import { useAuth } from '../contexts/AuthContext'
-import { useWorkspace } from '../contexts/WorkspaceContext'
-import { apiRequest } from '../utils/apiUtils'
+import PageContainer from "../../components/PageContainer";
+import PageHelmet from "../../components/PageHelmet";
+import SeoText from "../../components/SeoText";
+import { AddSprintModal } from "../../components/modals";
+import { VelocityChart, VelocityStats } from "../../components/velocity";
+import {
+  teamVelocitySeo,
+  teamVelocitySeoSections,
+} from "../../content/teamVelocitySeo";
+import config from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
+import { apiRequest } from "../../utils/apiUtils";
 
 interface SprintData {
     sprint_name: string

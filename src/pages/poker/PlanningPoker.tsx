@@ -32,15 +32,15 @@ import {
     Badge,
     Spinner,
 } from '@chakra-ui/react'
-import PageContainer from '../components/PageContainer'
-import PageHelmet from '../components/PageHelmet'
-import SeoText from '../components/SeoText'
-import { planningPokerSeoSections } from '../content/planningPokerSeo'
-import { SEQUENCE_LABELS, SequenceType } from '../constants/poker'
-import config from '../config'
-import { useAuth } from '../contexts/AuthContext'
-import { useWorkspace } from '../contexts/WorkspaceContext'
-import { apiRequest } from '../utils/apiUtils'
+import PageContainer from "../../components/PageContainer";
+import PageHelmet from "../../components/PageHelmet";
+import SeoText from "../../components/SeoText";
+import { planningPokerSeoSections } from "../../content/planningPokerSeo";
+import { SEQUENCE_LABELS, SequenceType } from "../../constants/poker";
+import config from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
+import { apiRequest } from "../../utils/apiUtils";
 
 interface Room {
     id: string

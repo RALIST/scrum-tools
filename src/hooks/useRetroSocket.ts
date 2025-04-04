@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Manager } from 'socket.io-client'
-import type { Socket as ClientSocket } from 'socket.io-client'
-import { useToast } from '@chakra-ui/react'
-import config from '../config'
+import { Manager } from 'socket.io-client';
+import type { Socket as ClientSocket } from 'socket.io-client';
+import { useToast } from '@chakra-ui/react';
+import config from '../config';
+import { apiRequest, AuthError } from '../utils/apiUtils'; // Import apiRequest and AuthError
 
 interface RetroCard {
     id: string
@@ -78,12 +79,11 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
 
         const initializeBoard = async () => {
             try {
-                debugLog('Fetching board data', { boardId })
-                const response = await fetch(`${config.apiUrl}/retro/${boardId}`)
-                if (!response.ok) throw new Error('Board not found')
-                const data = await response.json()
+                debugLog('Fetching board data', { boardId });
+                // Use apiRequest instead of fetch
+                const data = await apiRequest<RetroBoard>(`/retro/${boardId}`, { includeAuth: false }); 
 
-                if (!isActive) return
+                if (!isActive) return;
 
                 debugLog('Board data loaded', data)
                 setBoard(data)
@@ -171,10 +171,14 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
                 setSocket(newSocket)
             } catch (error) {
                 if (!isActive) return
-                debugLog('Error initializing board', error)
+                debugLog('Error initializing board', error);
+                // Handle AuthError specifically if needed, though this endpoint is public
+                const description = error instanceof AuthError 
+                    ? 'Authentication error loading board.' 
+                    : error instanceof Error ? error.message : 'Failed to load board';
                 toast({
                     title: 'Error',
-                    description: 'Failed to load board',
+                    description: description,
                     status: 'error',
                     duration: 2000,
                 })
