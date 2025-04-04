@@ -255,32 +255,36 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
         } else {
             socketRef.current.emit('startTimer', { boardId })
         }
-    }, [boardId, isTimerRunning])
+    }, [boardId, isTimerRunning]);
 
     const updateSettings = useCallback((settings: {
-        defaultTimer: number
+        defaultTimer: number;
         hideCardsByDefault: boolean
         hideAuthorNames: boolean
-        password?: string
+        password?: string;
     }) => {
-        if (!socketRef.current || !boardId) return
-        debugLog('Updating settings', settings)
-        socketRef.current.emit('updateSettings', { boardId, settings })
-    }, [boardId])
+        if (!socketRef.current || !boardId) return;
+        debugLog('Updating settings', settings);
+        socketRef.current.emit('updateSettings', { boardId, settings });
+    }, [boardId]);
 
-    const handleSetHideCards = useCallback((hide: boolean) => {
-        if (!socketRef.current || !boardId) return
-        debugLog('Setting hide cards', { hide })
-        socketRef.current.emit('toggleCardsVisibility', { boardId, hideCards: hide })
-    }, [boardId])
+    // Renamed to requestHideCards - only sends the event
+    const requestHideCards = useCallback((hide: boolean) => {
+        if (!socketRef.current || !boardId) return;
+        debugLog('Requesting hide cards', { hide });
+        // Only emit the event, state will be updated by server response
+        socketRef.current.emit('toggleCardsVisibility', { boardId, hideCards: hide });
+    }, [boardId]);
+
+    // The actual state update happens in the 'cardsVisibilityChanged' event handler useEffect
 
     return {
         socket,
         board,
         isTimerRunning,
         timeLeft,
-        hideCards,
-        setHideCards: handleSetHideCards,
+        hideCards, // State is still managed here
+        setHideCards: requestHideCards, // Expose the request function
         hasJoined,
         joinBoard,
         changeName,
