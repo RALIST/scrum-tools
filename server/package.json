@@ -8,7 +8,7 @@
         "db:migrate:create": "node-pg-migrate create --migration-file-language js",
         "db:migrate:up": "node-pg-migrate up",
         "db:migrate:down": "node-pg-migrate down",
-        "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles --forceExit"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",
@@ -29,6 +29,7 @@
         "jest": "^29.7.0",
         "node-pg-migrate": "^7.9.1",
         "nodemon": "^3.0.1",
+        "socket.io-client": "^4.8.1",
         "supertest": "^7.1.0"
     }
 }

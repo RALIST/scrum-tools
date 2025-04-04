@@ -8,18 +8,12 @@ import velocityRoutes from './routes/velocity.js';
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
 import historyRoutes from './routes/history.js';
-// Import the initializers instead of the direct handlers
 import { initializePokerSocket } from './sockets/poker.js';
 import { initializeRetroSocket } from './sockets/retro.js';
-// Removed unused db imports for poker disconnect logic
 import { optionalAuthenticateToken } from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js'; // Import the error handler
 import logger from './logger.js'; // Import the logger
-import { fileURLToPath, pathToFileURL } from 'url'; // Import pathToFileURL for ES Module check
-
-// Remove CommonJS helpers
-// const require = createRequire(import.meta.url); 
-// const __filename = fileURLToPath(import.meta.url); 
+import { pathToFileURL } from 'url'; // Import pathToFileURL for ES Module check
 
 const app = express();
 app.use(cors());
@@ -65,5 +59,5 @@ if (isMainModule) {
     });
 }
 
-// Export app and server for testing
-export { app, server };
+// Export app, server, and io for testing
+export { app, server, io };

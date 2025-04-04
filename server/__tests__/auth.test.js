@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { app, server } from '../index.js'; // Import the app and server
-import pool from '../db/pool.js'; // Import pool to close connection after tests
+import { app, server, io } from '../index.js'; // Import io as well
+import pool from '../db/pool.js'; 
 
 // Basic test suite for authentication routes
 describe('Auth Routes', () => {
@@ -9,10 +9,10 @@ describe('Auth Routes', () => {
   let testUserName = 'Test User';
   let authToken;
 
-  // Close the server and database pool after all tests are done
+  // Close the server and io instance after all tests are done
   afterAll(async () => {
+    io.close(); // Close Socket.IO server
     await new Promise(resolve => server.close(resolve)); // Close the HTTP server
-    await pool.end(); // Close the database connection pool
   });
 
   // Test user registration

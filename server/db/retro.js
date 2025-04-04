@@ -105,16 +105,16 @@ export const deleteRetroCard = async (cardId) => {
 };
 
 export const toggleRetroCardVote = async (cardId, userName) => {
-    // Check if vote exists
-    const checkVoteQuery = 'SELECT * FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
+    // Check if vote exists using the new primary key (card_id, user_name)
+    const checkVoteQuery = 'SELECT 1 FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
     const voteResult = await executeQuery(checkVoteQuery, [cardId, userName]);
 
     if (voteResult.rows.length > 0) {
-        // Remove vote
+        // Remove vote using the new primary key
         const deleteVoteQuery = 'DELETE FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
         await executeQuery(deleteVoteQuery, [cardId, userName]);
     } else {
-        // Add vote
+        // Add vote using only card_id and user_name
         const addVoteQuery = 'INSERT INTO retro_card_votes (card_id, user_name) VALUES ($1, $2)';
         await executeQuery(addVoteQuery, [cardId, userName]);
     }

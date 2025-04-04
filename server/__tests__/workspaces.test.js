@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { app, server } from '../index.js'; // Import the app and server
-import pool from '../db/pool.js'; // Import pool to close connection after tests
+import { app, server, io } from '../index.js'; // Import io as well
+import pool from '../db/pool.js'; 
 
 describe('Workspaces Routes', () => {
   let authToken;
@@ -43,8 +43,8 @@ describe('Workspaces Routes', () => {
   afterAll(async () => {
     // Clean up test data (optional, depends on test strategy)
     // e.g., delete created workspaces, users, members
+    io.close(); // Close Socket.IO server
     await new Promise(resolve => server.close(resolve)); // Close the HTTP server
-    await pool.end(); // Close the database connection pool
   });
 
   // Test creating a workspace

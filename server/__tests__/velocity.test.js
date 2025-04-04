@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { app, server } from '../index.js'; // Import the app and server
-import pool from '../db/pool.js'; // Import pool to close connection after tests
+import { app, server, io } from '../index.js'; // Import io as well
+import pool from '../db/pool.js'; 
 
 describe('Velocity Routes', () => {
   let authToken;
@@ -36,10 +36,10 @@ describe('Velocity Routes', () => {
     testWorkspaceId = resWorkspace.body.workspace.id;
   });
 
-  // Teardown: Close server and DB pool
+  // Teardown: Close server and io instance
   afterAll(async () => {
-    await new Promise(resolve => server.close(resolve));
-    await pool.end();
+    io.close(); // Close Socket.IO server
+    await new Promise(resolve => server.close(resolve)); // Close the HTTP server
   });
 
   // Test creating/finding a workspace team

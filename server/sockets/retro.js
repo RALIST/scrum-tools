@@ -279,9 +279,18 @@ export const initializeRetroSocket = (io) => {
                  logger.warn(`User ${socket.id} disconnected from retro (no specific board info found).`);
             }
 
-            // Clean up timers if the disconnected user was potentially the one running it?
-            // This might need more robust logic depending on how timers are managed.
-            // If timers are board-specific, check if the room is now empty.
+            // Clean up timers if the disconnected user was potentially the one running it
+            if (boardId && activeTimers.has(boardId)) {
+                // More robust logic might be needed if multiple users can control the timer,
+                // but for now, let's assume disconnecting clears any timer associated with the board
+                // the user was on. A better approach might be to clear only if the room becomes empty.
+                logger.info(`Clearing active timer for board ${boardId} due to disconnect of socket ${socket.id}`);
+                clearInterval(activeTimers.get(boardId));
+                activeTimers.delete(boardId);
+                // Optionally, notify remaining users that the timer was stopped due to disconnect?
+                // const roomName = `retro:${boardId}`;
+                // io.to(roomName).emit('timerStopped'); 
+            }
         });
     });
 };
