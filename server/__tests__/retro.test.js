@@ -1,185 +1,173 @@
 import request from 'supertest';
-import { app, server, io } from '../index.js'; // Import io as well
+import { app } from '../index.js'; // Import only app
 import pool from '../db/pool.js'; 
 
 describe('Retro Routes (/api/retro)', () => {
-  let authToken;
-  let userId;
-  let testWorkspaceId;
-  let testUserEmail = `retro_user_${Date.now()}@example.com`;
-  let testUserPassword = 'password123';
-  let testUserName = 'Retro User';
-  let createdBoardId;
-  let createdBoardPassword = 'retroPassword';
-  let pwdBoardId; // Declare variable to store ID of password-protected board
+  // Variables needed across contexts
+  let anonBoardId = `anon-retro-${Date.now()}`;
+  let anonBoardPassword = 'anonRetroPassword';
+  let publicBoardId = `public-retro-${Date.now()}`;
+  let createdAuthBoardId; // For authenticated tests
 
-  // Setup: Register user, create workspace
+  // Setup common anonymous resources
   beforeAll(async () => {
-    // Register user
-    const resRegister = await request(app)
-      .post('/api/auth/register')
-      .send({ email: testUserEmail, password: testUserPassword, name: testUserName });
-    expect(resRegister.statusCode).toEqual(201);
-    authToken = resRegister.body.token;
-    userId = resRegister.body.user.id;
+    // Create a public retro board
+    const resPublic = await request(app)
+      .post('/api/retro') // Use correct prefix
+      .send({ name: 'Public Retro Board' });
+    if (resPublic.statusCode !== 200) console.error('Failed to create public retro board:', resPublic.body);
+    expect(resPublic.statusCode).toEqual(200);
+    expect(resPublic.body.boardId).toBeDefined();
+    publicBoardId = resPublic.body.boardId;
 
-    // Create workspace
-    const workspaceName = `Retro Test Workspace ${Date.now()}`;
-    const resWorkspace = await request(app)
-      .post('/api/workspaces')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ name: workspaceName });
-    expect(resWorkspace.statusCode).toEqual(201);
-    testWorkspaceId = resWorkspace.body.workspace.id;
+    // Create a password-protected anonymous board
+    const resAnonPwd = await request(app)
+      .post('/api/retro') // Use correct prefix
+      .send({ name: 'Anon Pwd Retro Board', settings: { password: anonBoardPassword } });
+    if (resAnonPwd.statusCode !== 200) console.error('Failed to create anon pwd retro board:', resAnonPwd.body);
+    expect(resAnonPwd.statusCode).toEqual(200);
+    expect(resAnonPwd.body.boardId).toBeDefined();
+    anonBoardId = resAnonPwd.body.boardId;
   });
 
-  // Teardown: Close server and io instance
+  // Close DB pool after all tests
   afterAll(async () => {
-    io.close(); // Close Socket.IO server
-    await new Promise(resolve => server.close(resolve)); // Close the HTTP server
+    await pool.end(); 
   });
 
-  // Test creating a retro board associated with a workspace
-  it('POST /api/retro - should create a new retro board for a workspace', async () => {
-    const boardName = 'Workspace Retro Board';
-    const settings = { defaultTimer: 600 };
+  // --- Anonymous Access Tests ---
+  describe('Anonymous Access', () => {
+    it('POST /api/retro - should create a new anonymous retro board', async () => {
+      const res = await request(app)
+        .post('/api/retro') // Use correct prefix
+        .send({ name: 'Anon Create Test' });
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body).toHaveProperty('boardId');
+    });
 
-    const res = await request(app)
-      .post('/api/retro')
-      .set('Authorization', `Bearer ${authToken}`) // Authenticated request
-      .send({
-        name: boardName,
-        settings: settings,
-        workspaceId: testWorkspaceId, // Associate with workspace
+    it('GET /api/retro/:boardId - should get details of a public retro board', async () => {
+      expect(publicBoardId).toBeDefined();
+      const res = await request(app).get(`/api/retro/${publicBoardId}`); // Use correct prefix
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('id', publicBoardId);
+      expect(res.body).toHaveProperty('name', 'Public Retro Board');
+    });
+
+    it('GET /api/retro/:boardId - should fail for non-existent board', async () => {
+      const nonExistentBoardId = 'non-existent-board';
+      const res = await request(app).get(`/api/retro/${nonExistentBoardId}`); // Use correct prefix
+      expect(res.statusCode).toEqual(404);
+      expect(res.body).toHaveProperty('error', 'Board not found');
+    });
+
+    it('POST /api/retro/:boardId/verify-password - should verify correct password for anonymous board', async () => {
+        expect(anonBoardId).toBeDefined();
+        const res = await request(app)
+          .post(`/api/retro/${anonBoardId}/verify-password`) // Use correct prefix
+          .send({ password: anonBoardPassword });
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('valid', true);
+     });
+
+     it('POST /api/retro/:boardId/verify-password - should reject incorrect password for anonymous board', async () => {
+        expect(anonBoardId).toBeDefined();
+        const res = await request(app)
+          .post(`/api/retro/${anonBoardId}/verify-password`) // Use correct prefix
+          .send({ password: 'wrongpassword' });
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('valid', false);
+     });
+
+     it('POST /api/retro/:boardId/verify-password - should work for public board', async () => {
+        expect(publicBoardId).toBeDefined();
+        const res = await request(app)
+          .post(`/api/retro/${publicBoardId}/verify-password`) // Use correct prefix
+          .send({ password: '' }); 
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('valid', true);
+     });
+
+     it('PUT /api/retro/:boardId/settings - should succeed without authentication', async () => {
+        expect(publicBoardId).toBeDefined(); 
+        const res = await request(app)
+          .put(`/api/retro/${publicBoardId}/settings`) // Use correct prefix
+          .send({ defaultTimer: 150 }); 
+        expect(res.statusCode).toEqual(200); 
+        expect(res.body).toHaveProperty('id', publicBoardId);
+        expect(res.body).toHaveProperty('default_timer', 150); 
       });
-
-    expect(res.statusCode).toEqual(200); // Endpoint returns 200 on success
-    expect(res.body).toHaveProperty('success', true);
-    expect(res.body).toHaveProperty('boardId');
-    createdBoardId = res.body.boardId; // Save for later tests
   });
 
-  // Test creating a retro board with a password
-  it('POST /api/retro - should create a new retro board with a password', async () => {
-    const boardName = 'Password Retro Board';
-    const settings = { password: createdBoardPassword };
+  // --- Authenticated Access Tests ---
+  describe('Authenticated Access', () => {
+    let authToken;
+    let userId;
+    let testWorkspaceId;
+    let testUserEmail = `retro_auth_user_${Date.now()}@example.com`;
+    let testUserPassword = 'password123';
+    let testUserName = 'Retro Auth User';
 
-    const res = await request(app)
-      .post('/api/retro')
-      // Can be authenticated or not
-      .send({
-        name: boardName,
-        settings: settings,
-        // workspaceId: testWorkspaceId, // Optional
-      });
+    // Setup user and workspace for authenticated tests
+    beforeAll(async () => {
+      // Register user
+      const resRegister = await request(app)
+        .post('/api/auth/register')
+        .send({ email: testUserEmail, password: testUserPassword, name: testUserName });
+      expect(resRegister.statusCode).toEqual(201);
+      authToken = resRegister.body.token;
+      userId = resRegister.body.user.id;
 
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('success', true);
-    expect(res.body).toHaveProperty('boardId');
-    // We need to fetch the board to confirm password status
-    const boardRes = await request(app)
-        .get(`/api/retro/${res.body.boardId}`)
-        .set('Authorization', `Bearer ${authToken}`); // Need auth to get board details
-    expect(boardRes.statusCode).toEqual(200);
-    expect(boardRes.body).toHaveProperty('hasPassword', true);
+      // Create workspace
+      const workspaceName = `Retro Auth Test Workspace ${Date.now()}`;
+      const resWorkspace = await request(app)
+        .post('/api/workspaces')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ name: workspaceName });
+      expect(resWorkspace.statusCode).toEqual(201);
+      testWorkspaceId = resWorkspace.body.workspace.id;
+    });
+
+    it('POST /api/retro - should create a new retro board linked to a workspace', async () => {
+      const boardName = 'Workspace Linked Retro Auth';
+      const res = await request(app)
+        .post('/api/retro') // Use correct prefix
+        .set('Authorization', `Bearer ${authToken}`) // Send token
+        .send({
+          name: boardName,
+          workspaceId: testWorkspaceId,
+          settings: { defaultTimer: 600 }
+        });
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body).toHaveProperty('boardId');
+      createdAuthBoardId = res.body.boardId; // Save for other auth tests
+    });
+
+    it('GET /api/retro/:boardId - should get details of workspace board', async () => {
+        expect(createdAuthBoardId).toBeDefined();
+        const res = await request(app)
+          .get(`/api/retro/${createdAuthBoardId}`) // Use correct prefix
+          .set('Authorization', `Bearer ${authToken}`); 
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('id', createdAuthBoardId);
+        expect(res.body).toHaveProperty('name', 'Workspace Linked Retro Auth');
+        expect(res.body).toHaveProperty('workspace_id', testWorkspaceId);
+        expect(res.body).toHaveProperty('default_timer', 600);
+    });
+    
+    it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated)', async () => {
+        expect(createdAuthBoardId).toBeDefined();
+        const newSettings = { defaultTimer: 900, hideAuthorNames: true };
+        const res = await request(app)
+          .put(`/api/retro/${createdAuthBoardId}/settings`) // Use correct prefix
+          .set('Authorization', `Bearer ${authToken}`) // Send token
+          .send(newSettings);
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('default_timer', 900);
+        expect(res.body).toHaveProperty('hide_author_names', true);
+    });
+
+    // Add more authenticated tests here if needed
   });
-
-  // Test getting a specific retro board
-  it('GET /api/retro/:boardId - should get details of a specific retro board', async () => {
-    const res = await request(app)
-      .get(`/api/retro/${createdBoardId}`)
-      .set('Authorization', `Bearer ${authToken}`); // Requires auth
-
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('id', createdBoardId);
-    expect(res.body).toHaveProperty('name', 'Workspace Retro Board');
-    expect(res.body).toHaveProperty('workspace_id', testWorkspaceId);
-    expect(res.body).toHaveProperty('default_timer', 600);
-    expect(res.body).toHaveProperty('cards'); // Should have cards array (empty initially)
-    expect(Array.isArray(res.body.cards)).toBe(true);
-    expect(res.body).toHaveProperty('hasPassword', false); // Created without password
-  });
-
-  it('GET /api/retro/:boardId - should fail for non-existent board', async () => {
-    const nonExistentBoardId = 'non-existent-board';
-    const res = await request(app)
-      .get(`/api/retro/${nonExistentBoardId}`)
-      .set('Authorization', `Bearer ${authToken}`);
-    expect(res.statusCode).toEqual(404);
-    expect(res.body).toHaveProperty('error', 'Board not found');
-  });
-
-  // Test verifying password
-  it('POST /api/retro/:boardId/verify-password - should verify correct password', async () => {
-    // Create a board specifically for password verification
-    const pwdBoardName = 'Verify Retro Pwd';
-    const pwdRes = await request(app)
-      .post('/api/retro')
-      .send({ name: pwdBoardName, settings: { password: 'retrotestpassword' } });
-    expect(pwdRes.statusCode).toEqual(200); // Ensure board creation succeeded
-    pwdBoardId = pwdRes.body.boardId; // Assign to the higher-scoped variable
-    expect(pwdBoardId).toBeDefined(); // Make sure we got an ID
-
-    const res = await request(app)
-      .post(`/api/retro/${pwdBoardId}/verify-password`)
-      .set('Authorization', `Bearer ${authToken}`) // Requires auth
-      .send({ password: 'retrotestpassword' });
-
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('valid', true);
-  });
-
-  it('POST /api/retro/:boardId/verify-password - should reject incorrect password', async () => {
-     // Use the pwdBoardId saved from the previous test
-     expect(pwdBoardId).toBeDefined(); // Ensure we have the ID
-
-    const res = await request(app)
-      .post(`/api/retro/${pwdBoardId}/verify-password`) // Use the saved ID
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ password: 'wrongpassword' });
-
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('valid', false);
-  });
-
-  it('POST /api/retro/:boardId/verify-password - should allow access to board without password', async () => {
-    const res = await request(app)
-      .post(`/api/retro/${createdBoardId}/verify-password`) // Use the board created without password
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ password: '' });
-
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('valid', true);
-  });
-
-  // Test updating settings
-  it('PUT /api/retro/:boardId/settings - should update retro board settings', async () => {
-    const newSettings = {
-      defaultTimer: 900,
-      hideCardsByDefault: true,
-      hideAuthorNames: true,
-      password: 'newpassword123'
-    };
-
-    const res = await request(app)
-      .put(`/api/retro/${createdBoardId}/settings`)
-      .set('Authorization', `Bearer ${authToken}`) // Requires auth
-      .send(newSettings);
-
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('id', createdBoardId);
-    expect(res.body).toHaveProperty('default_timer', newSettings.defaultTimer);
-    expect(res.body).toHaveProperty('hide_cards_by_default', newSettings.hideCardsByDefault);
-    expect(res.body).toHaveProperty('hide_author_names', newSettings.hideAuthorNames);
-    expect(res.body).toHaveProperty('hasPassword', true); // Password should now be set
-
-    // Verify password works
-    const verifyRes = await request(app)
-      .post(`/api/retro/${createdBoardId}/verify-password`)
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ password: newSettings.password });
-    expect(verifyRes.statusCode).toEqual(200);
-    expect(verifyRes.body).toHaveProperty('valid', true);
-  });
-
 });

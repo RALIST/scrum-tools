@@ -23,9 +23,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/history', historyRoutes);
-app.use('/api', optionalAuthenticateToken, pokerRoutes);
-app.use('/api', optionalAuthenticateToken, retroRoutes);
-app.use('/api', optionalAuthenticateToken, velocityRoutes);
+app.use('/api/poker', optionalAuthenticateToken, pokerRoutes);
+app.use('/api/retro', optionalAuthenticateToken, retroRoutes);
+app.use('/api/velocity', optionalAuthenticateToken, velocityRoutes);
 
 const server = createServer(app);
 const io = new Server(server, {

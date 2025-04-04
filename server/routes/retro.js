@@ -17,7 +17,7 @@ const formatDate = (date) => {
 };
 
 // Add 'next'
-router.post('/retro', async (req, res, next) => {
+router.post('/', async (req, res, next) => {
     const boardId = Math.random().toString(36).substring(2, 8);
     // Correctly extract settings from req.body.settings
     const { name, settings = {}, workspaceId } = req.body; 
@@ -43,7 +43,7 @@ router.post('/retro', async (req, res, next) => {
 });
 
 // Add 'next'
-router.get('/retro/:boardId', async (req, res, next) => {
+router.get('/:boardId', async (req, res, next) => {
     const { boardId } = req.params;
 
     try {
@@ -61,7 +61,7 @@ router.get('/retro/:boardId', async (req, res, next) => {
 });
 
 // Add 'next'
-router.post('/retro/:boardId/verify-password', async (req, res, next) => {
+router.post('/:boardId/verify-password', async (req, res, next) => {
     const { boardId } = req.params;
     const { password } = req.body;
 
@@ -78,7 +78,7 @@ router.post('/retro/:boardId/verify-password', async (req, res, next) => {
 });
 
 // Add 'next'
-router.put('/retro/:boardId/settings', async (req, res, next) => {
+router.put('/:boardId/settings', async (req, res, next) => {
     const { boardId } = req.params;
     const {
         defaultTimer,
