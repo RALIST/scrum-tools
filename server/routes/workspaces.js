@@ -13,11 +13,13 @@ import { getUserByEmail } from '../db/users.js';
 import { getWorkspaceRooms } from '../db/poker.js';
 import { getWorkspaceRetroBoards } from '../db/retro.js';
 import { authenticateToken } from '../middleware/auth.js';
+import logger from '../logger.js'; // Import the logger
 
 const router = express.Router();
 
 // Create a new workspace
-router.post('/', authenticateToken, async (req, res) => {
+// Add 'next'
+router.post('/', authenticateToken, async (req, res, next) => {
   try {
     const { name, description } = req.body;
     const userId = req.user.userId;
@@ -30,29 +32,33 @@ router.post('/', authenticateToken, async (req, res) => {
     
     res.status(201).json({
       message: 'Workspace created successfully',
-      workspace
+      workspace,
     });
   } catch (error) {
-    console.error('Create workspace error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Create workspace error:', { error: error.message, stack: error.stack, userId: req.user?.userId, body: req.body });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Get user's workspaces
-router.get('/', authenticateToken, async (req, res) => {
+// Add 'next'
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const workspaces = await getUserWorkspaces(userId);
-    
+
     res.json(workspaces);
   } catch (error) {
-    console.error('Get workspaces error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Get workspaces error:', { error: error.message, stack: error.stack, userId: req.user?.userId });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Get a specific workspace
-router.get('/:id', authenticateToken, async (req, res) => {
+// Add 'next'
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const workspace = await getWorkspaceById(workspaceId);
@@ -60,16 +66,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' });
     }
-    
     res.json(workspace);
   } catch (error) {
-    console.error('Get workspace error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Get workspace error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Update a workspace
-router.put('/:id', authenticateToken, async (req, res) => {
+// Add 'next'
+router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const { name, description } = req.body;
@@ -90,16 +97,18 @@ router.put('/:id', authenticateToken, async (req, res) => {
     
     res.json({
       message: 'Workspace updated successfully',
-      workspace
+      workspace,
     });
   } catch (error) {
-    console.error('Update workspace error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Update workspace error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, body: req.body });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Add a member to a workspace
-router.post('/:id/members', authenticateToken, async (req, res) => {
+// Add 'next'
+router.post('/:id/members', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const { email, role } = req.body;
@@ -122,16 +131,19 @@ router.post('/:id/members', authenticateToken, async (req, res) => {
     await addWorkspaceMember(workspaceId, user.id, role || 'member');
     
     res.status(201).json({
-      message: 'Member added successfully'
+      message: 'Member added successfully',
     });
   } catch (error) {
-    console.error('Add member error:', error);
-    res.status(500).json({ error: 'Server error' });
+    // Handle potential specific errors like duplicate member?
+    logger.error('Add member error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, body: req.body });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Remove a member from a workspace
-router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
+// Add 'next'
+router.delete('/:id/members/:memberId', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const memberId = req.params.memberId;
@@ -147,16 +159,18 @@ router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
     await removeWorkspaceMember(workspaceId, memberId);
     
     res.json({
-      message: 'Member removed successfully'
+      message: 'Member removed successfully',
     });
   } catch (error) {
-    console.error('Remove member error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Remove member error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, memberId: req.params.memberId });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Get workspace members
-router.get('/:id/members', authenticateToken, async (req, res) => {
+// Add 'next'
+router.get('/:id/members', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const userId = req.user.userId;
@@ -169,16 +183,17 @@ router.get('/:id/members', authenticateToken, async (req, res) => {
     }
     
     const members = await getWorkspaceMembers(workspaceId);
-    
     res.json(members);
   } catch (error) {
-    console.error('Get members error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Get members error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Get poker rooms for a workspace
-router.get('/:id/rooms', authenticateToken, async (req, res) => {
+// Add 'next'
+router.get('/:id/rooms', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const userId = req.user.userId;
@@ -202,16 +217,17 @@ router.get('/:id/rooms', authenticateToken, async (req, res) => {
       sequence: room.sequence,
       workspaceId: room.workspace_id
     }));
-    
     res.json(roomList);
   } catch (error) {
-    console.error('Get workspace rooms error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Get workspace rooms error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Get retro boards for a workspace
-router.get('/:id/retros', authenticateToken, async (req, res) => {
+// Add 'next'
+router.get('/:id/retros', authenticateToken, async (req, res, next) => {
   try {
     const workspaceId = req.params.id;
     const userId = req.user.userId;
@@ -234,11 +250,11 @@ router.get('/:id/retros', authenticateToken, async (req, res) => {
       hasPassword: board.hasPassword,
       workspaceId: board.workspace_id
     }));
-    
     res.json(boardList);
   } catch (error) {
-    console.error('Get workspace retro boards error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Get workspace retro boards error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 

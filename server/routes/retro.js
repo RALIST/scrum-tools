@@ -13,11 +13,12 @@ const formatDate = (date) => {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-    }).format(date)
-}
+    }).format(date);
+};
 
-router.post('/retro', async (req, res) => {
-    const boardId = Math.random().toString(36).substring(2, 8)
+// Add 'next'
+router.post('/retro', async (req, res, next) => {
+    const boardId = Math.random().toString(36).substring(2, 8);
     const {
         name,
         defaultTimer,
@@ -36,43 +37,52 @@ router.post('/retro', async (req, res) => {
             hideAuthorNames,
             password
         })
-        res.json({ success: true, boardId })
+        res.json({ success: true, boardId });
     } catch (error) {
-        console.error('Error creating retro board:', error)
-        res.status(500).json({ error: 'Internal server error' })
+        console.error('Error creating retro board:', error);
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
-router.get('/retro/:boardId', async (req, res) => {
-    const { boardId } = req.params
+// Add 'next'
+router.get('/retro/:boardId', async (req, res, next) => {
+    const { boardId } = req.params;
 
     try {
-        const board = await getRetroBoard(boardId)
+        const board = await getRetroBoard(boardId);
         if (!board) {
-            return res.status(404).json({ error: 'Board not found' })
+            // Keep specific client error handling here
+            return res.status(404).json({ error: 'Board not found' });
         }
-        res.json(board)
+        res.json(board);
     } catch (error) {
-        console.error('Error getting retro board:', error)
-        res.status(500).json({ error: 'Internal server error' })
+        console.error('Error getting retro board:', error);
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
-router.post('/retro/:boardId/verify-password', async (req, res) => {
-    const { boardId } = req.params
-    const { password } = req.body
+// Add 'next'
+router.post('/retro/:boardId/verify-password', async (req, res, next) => {
+    const { boardId } = req.params;
+    const { password } = req.body;
 
     try {
-        const isValid = await verifyRetroBoardPassword(boardId, password)
-        res.json({ valid: isValid })
+        // Note: verifyRetroBoardPassword itself doesn't throw for invalid password,
+        // it returns false. The catch block here is for unexpected errors (e.g., DB connection).
+        const isValid = await verifyRetroBoardPassword(boardId, password);
+        res.json({ valid: isValid });
     } catch (error) {
-        console.error('Error verifying retro board password:', error)
-        res.status(500).json({ error: 'Internal server error' })
+        console.error('Error verifying retro board password:', error);
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
-router.put('/retro/:boardId/settings', async (req, res) => {
-    const { boardId } = req.params
+// Add 'next'
+router.put('/retro/:boardId/settings', async (req, res, next) => {
+    const { boardId } = req.params;
     const {
         defaultTimer,
         hideCardsByDefault,
@@ -88,11 +98,12 @@ router.put('/retro/:boardId/settings', async (req, res) => {
             password
         })
         const board = await getRetroBoard(boardId)
-        res.json(board)
+        res.json(board);
     } catch (error) {
-        console.error('Error updating retro board settings:', error)
-        res.status(500).json({ error: 'Internal server error' })
+        console.error('Error updating retro board settings:', error);
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
 export default router

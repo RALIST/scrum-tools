@@ -10,21 +10,27 @@ import {
     updateRetroCardAuthor,
     toggleRetroCardVote,
     updateRetroCardText
-} from '../db/retro.js'
+} from '../db/retro.js';
+import logger from '../logger.js'; // Import the logger
 
 // Store active timers and user names
 const activeTimers = new Map()
 const userNames = new Map() // socketId -> name
-const boardVisibility = new Map() // boardId -> hideCards
+const boardVisibility = new Map(); // boardId -> hideCards
 
+// Replace debugLog with direct logger calls or redefine it
+// Let's redefine it for simplicity, using logger.debug
 const debugLog = (message, data) => {
-    console.log(`[DEBUG] ${message}:`, data)
-}
+    logger.debug(message, data); // Use logger.debug
+};
 
-export const handleRetroBoardEvents = (io, socket) => {
+// Handles events for an individual connected socket
+const handleRetroSocketEvents = (io, socket) => {
     socket.on('joinRetroBoard', async ({ boardId, name, password }) => {
         try {
-            debugLog('Joining retro board', { boardId, name })
+            debugLog('Joining retro board', { boardId, name });
+            // Store boardId in socket data for disconnect cleanup
+            socket.data.boardId = boardId; 
             const board = await getRetroBoard(boardId)
             if (!board) {
                 debugLog('Board not found', boardId)
@@ -56,12 +62,12 @@ export const handleRetroBoardEvents = (io, socket) => {
                 socket.emit('timerStarted', { timeLeft: board.time_left })
             }
 
-            socket.emit('retroBoardJoined', board)
+            socket.emit('retroBoardJoined', board);
         } catch (error) {
-            console.error('Error joining retro board:', error)
-            socket.emit('error', { message: 'Failed to join retro board' })
+            logger.error('Error joining retro board:', { boardId, name, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to join retro board' });
         }
-    })
+    });
 
     socket.on('toggleCardsVisibility', async ({ boardId, hideCards }) => {
         try {
@@ -75,12 +81,12 @@ export const handleRetroBoardEvents = (io, socket) => {
 
             // Broadcast to all clients in the room
             debugLog('Broadcasting visibility change', { roomName, hideCards })
-            io.to(roomName).emit('cardsVisibilityChanged', { hideCards })
+            io.to(roomName).emit('cardsVisibilityChanged', { hideCards });
         } catch (error) {
-            console.error('Error toggling cards visibility:', error)
-            socket.emit('error', { message: 'Failed to toggle cards visibility' })
+            logger.error('Error toggling retro cards visibility:', { boardId, hideCards, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to toggle cards visibility' });
         }
-    })
+    });
 
     socket.on('addRetroCard', async ({ boardId, cardId, columnId, text, authorName }) => {
         try {
@@ -89,12 +95,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             debugLog('Emitting board update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', board)
+            io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error) {
-            console.error('Error adding retro card:', error)
-            socket.emit('error', { message: 'Failed to add card' })
+            logger.error('Error adding retro card:', { boardId, cardId, columnId, authorName, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to add card' });
         }
-    })
+    });
 
     socket.on('editRetroCard', async ({ boardId, cardId, text }) => {
         try {
@@ -103,12 +109,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             debugLog('Emitting board update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', board)
+            io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error) {
-            console.error('Error editing retro card:', error)
-            socket.emit('error', { message: 'Failed to edit card' })
+            logger.error('Error editing retro card:', { boardId, cardId, text, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to edit card' });
         }
-    })
+    });
 
     socket.on('deleteRetroCard', async ({ boardId, cardId }) => {
         try {
@@ -117,12 +123,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             debugLog('Emitting board update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', board)
+            io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error) {
-            console.error('Error deleting retro card:', error)
-            socket.emit('error', { message: 'Failed to delete card' })
+            logger.error('Error deleting retro card:', { boardId, cardId, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to delete card' });
         }
-    })
+    });
 
     socket.on('toggleVote', async ({ boardId, cardId }) => {
         try {
@@ -137,12 +143,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             debugLog('Emitting board update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', board)
+            io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error) {
-            console.error('Error toggling vote:', error)
-            socket.emit('error', { message: 'Failed to toggle vote' })
+            logger.error('Error toggling retro vote:', { boardId, cardId, userName: userNames.get(socket.id), socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to toggle vote' });
         }
-    })
+    });
 
     socket.on('updateSettings', async ({ boardId, settings }) => {
         try {
@@ -151,12 +157,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const board = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             debugLog('Emitting settings update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', board)
+            io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error) {
-            console.error('Error updating retro board settings:', error)
-            socket.emit('error', { message: 'Failed to update settings' })
+            logger.error('Error updating retro board settings:', { boardId, settings, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to update settings' });
         }
-    })
+    });
 
     socket.on('changeRetroName', async ({ boardId, newName }) => {
         try {
@@ -181,12 +187,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             const updatedBoard = await getRetroBoard(boardId)
             const roomName = `retro:${boardId}`
             debugLog('Emitting board update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', updatedBoard)
+            io.to(roomName).emit('retroBoardUpdated', updatedBoard);
         } catch (error) {
-            console.error('Error changing name:', error)
-            socket.emit('error', { message: 'Failed to change name' })
+            logger.error('Error changing retro participant name:', { boardId, newName, oldName, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to change name' });
         }
-    })
+    });
 
     socket.on('startTimer', async ({ boardId }) => {
         try {
@@ -215,12 +221,12 @@ export const handleRetroBoardEvents = (io, socket) => {
             }, 1000))
 
             debugLog('Emitting timer start', { roomName, timeLeft: board.default_timer })
-            io.to(roomName).emit('timerStarted', { timeLeft: board.default_timer })
+            io.to(roomName).emit('timerStarted', { timeLeft: board.default_timer });
         } catch (error) {
-            console.error('Error starting timer:', error)
-            socket.emit('error', { message: 'Failed to start timer' })
+            logger.error('Error starting retro timer:', { boardId, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to start timer' });
         }
-    })
+    });
 
     socket.on('stopTimer', async ({ boardId }) => {
         try {
@@ -235,15 +241,47 @@ export const handleRetroBoardEvents = (io, socket) => {
             }
 
             debugLog('Emitting timer stop', { roomName })
-            io.to(roomName).emit('timerStopped')
+            io.to(roomName).emit('timerStopped');
         } catch (error) {
-            console.error('Error stopping timer:', error)
-            socket.emit('error', { message: 'Failed to stop timer' })
+            logger.error('Error stopping retro timer:', { boardId, socketId: socket.id, error: error.message, stack: error.stack });
+            socket.emit('error', { message: 'Failed to stop timer' });
         }
-    })
+    });
 
-    socket.on('disconnect', () => {
-        debugLog('Socket disconnected', { socketId: socket.id })
-        userNames.delete(socket.id)
-    })
-}
+    // Note: The 'disconnect' event is handled in initializeRetroSocket
+};
+
+// Initializes the retro namespace and handles connections/disconnections
+export const initializeRetroSocket = (io) => {
+    io.on('connection', (socket) => {
+        logger.info(`User connected to retro: ${socket.id}`);
+
+        // Handle specific retro events for this socket
+        handleRetroSocketEvents(io, socket);
+
+        // Handle disconnection
+        socket.on('disconnect', () => {
+            const userName = userNames.get(socket.id);
+            const boardId = socket.data.boardId; // Retrieve boardId stored during joinRetroBoard
+            logger.info(`Retro socket disconnected: ${socket.id}`, { userName, boardId });
+            userNames.delete(socket.id);
+
+
+            // Optional: Add logic here if you need to notify others or clean up
+            // board-specific state (like timers or visibility) when a user disconnects,
+            // especially if they were the last user in the room.
+            if (boardId && userName) {
+                 logger.info(`User ${userName} (${socket.id}) disconnected from retro board ${boardId}`);
+                 // Example: Notify others (if needed)
+                 // const roomName = `retro:${boardId}`;
+                 // io.to(roomName).emit('userLeft', { userName });
+            } else {
+                 logger.warn(`User ${socket.id} disconnected from retro (no specific board info found).`);
+            }
+
+            // Clean up timers if the disconnected user was potentially the one running it?
+            // This might need more robust logic depending on how timers are managed.
+            // If timers are board-specific, check if the room is now empty.
+        });
+    });
+};

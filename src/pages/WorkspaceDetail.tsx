@@ -147,7 +147,7 @@ const WorkspaceDetail: FC = () => {
     if (workspace) {
       loadMembers();
     }
-  }, [id, workspace, getWorkspaceMembers, toast]);
+  }, [isLoadingMembers]);
 
   const handleUpdateWorkspace = async () => {
     if (!name.trim() || !id) {

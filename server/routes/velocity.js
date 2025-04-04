@@ -1,7 +1,10 @@
-import express from 'express'
-import { v4 as uuidv4 } from 'uuid'
-import jwt from 'jsonwebtoken'
-import pool from '../db/pool.js'
+import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import jwt from 'jsonwebtoken';
+// Remove direct pool import, use executeQuery instead for helper
+// import pool from '../db/pool.js'; 
+import { executeQuery } from '../db/dbUtils.js'; // Import executeQuery
+import logger from '../logger.js'; // Import the logger
 import {
     createTeam,
     getTeam,
@@ -12,13 +15,14 @@ import {
     getTeamByWorkspace,
 } from '../db/velocity.js'
 
-const router = express.Router()
+const router = express.Router();
 
 // Create a new team - supports both authenticated and anonymous modes
-router.post('/teams', async (req, res) => {
+// Add 'next'
+router.post('/teams', async (req, res, next) => {
     try {
-        const { name, password, workspaceId } = req.body
-        let userId = null
+        const { name, password, workspaceId } = req.body;
+        let userId = null;
 
         // Check if team already exists
         let existingTeam = null
@@ -39,18 +43,20 @@ router.post('/teams', async (req, res) => {
         // Create new team
         const id = uuidv4()
         const team = await createTeam(id, name, password, workspaceId, userId)
-        res.json({ success: true, team })
+        res.json({ success: true, team });
     } catch (error) {
-        console.error('Error creating team:', error)
-        res.status(500).json({ error: 'Failed to find or create team' })
+        logger.error('Error creating/finding team:', { error: error.message, stack: error.stack, body: req.body });
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
 // Get team data - supports both authenticated and anonymous modes
-router.get('/teams/:name/velocity', async (req, res) => {
+// Add 'next'
+router.get('/teams/:name/velocity', async (req, res, next) => {
     try {
-        const { name } = req.params
-        const { password } = req.query
+        const { name } = req.params;
+        const { password } = req.query;
         let velocityData
         let averageData
     
@@ -70,18 +76,20 @@ router.get('/teams/:name/velocity', async (req, res) => {
                 average_commitment: 0,
                 completion_rate: 0
             }
-        })
+        });
     } catch (error) {
-        console.error('Error getting team velocity:', error)
-        res.status(500).json({ error: 'Failed to get team velocity' })
+        logger.error('Error getting team velocity:', { error: error.message, stack: error.stack, teamName: req.params.name, query: req.query });
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
 // Create a new sprint - supports both authenticated and anonymous modes
-router.post('/teams/:name/sprints', async (req, res) => {
+// Add 'next'
+router.post('/teams/:name/sprints', async (req, res, next) => {
     try {
-        const { name } = req.params
-        const { password } = req.query
+        const { name } = req.params;
+        const { password } = req.query;
         const { sprintName, startDate, endDate, workspace_id } = req.body
         let team = null
         let workspaceId = workspace_id || null
@@ -103,10 +111,11 @@ router.post('/teams/:name/sprints', async (req, res) => {
                     }
                     
                     // Get team by workspace
-                    team = await getTeamByWorkspace(name, workspaceId)
+                    team = await getTeamByWorkspace(name, workspaceId);
                 }
             } catch (err) {
-                console.error('Token validation error:', err)
+                // Log as warning, as it might be an expected invalid token
+                logger.warn('Token validation error during sprint creation (falling back to anonymous):', { error: err.message, teamName: name, workspaceId }); 
                 // Continue without authentication - fall back to anonymous mode
             }
         }
@@ -122,43 +131,43 @@ router.post('/teams/:name/sprints', async (req, res) => {
 
         const id = uuidv4()
         const sprint = await createSprint(id, team.id, sprintName, startDate, endDate)
-        res.json(sprint)
+        res.json(sprint);
     } catch (error) {
-        console.error('Error creating sprint:', error)
-        res.status(500).json({ error: 'Failed to create sprint' })
+        logger.error('Error creating sprint:', { error: error.message, stack: error.stack, teamName: req.params.name, body: req.body });
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
 // Update sprint velocity - supports both authenticated and anonymous modes
-router.put('/sprints/:sprintId/velocity', async (req, res) => {
+// Add 'next'
+router.put('/sprints/:sprintId/velocity', async (req, res, next) => {
     try {
-        const { sprintId } = req.params
-        const { committedPoints, completedPoints } = req.body
+        const { sprintId } = req.params;
+        const { committedPoints, completedPoints } = req.body;
         
         // No authorization check needed for updating velocity as it's by sprint ID
         // The sprint was already created under the appropriate team
 
         const velocity = await updateSprintVelocity(sprintId, committedPoints, completedPoints)
-        res.json(velocity)
+        res.json(velocity);
     } catch (error) {
-        console.error('Error updating sprint velocity:', error)
-        res.status(500).json({ error: 'Failed to update sprint velocity' })
+        logger.error('Error updating sprint velocity:', { error: error.message, stack: error.stack, sprintId: req.params.sprintId, body: req.body });
+        // Pass error to the centralized handler
+        next(error);
     }
-})
+});
 
-// Helper function to check workspace access
+// Helper function to check workspace access - Refactored to use executeQuery
 async function checkWorkspaceAccess(workspaceId, userId) {
-    const client = await pool.connect()
-    try {
-        const result = await client.query(
-            `SELECT * FROM workspace_members 
-             WHERE workspace_id = $1 AND user_id = $2`,
-            [workspaceId, userId]
-        )
-        return result.rows.length > 0
-    } finally {
-        client.release()
-    }
+    const queryText = `
+        SELECT 1 FROM workspace_members 
+        WHERE workspace_id = $1 AND user_id = $2
+    `;
+    const params = [workspaceId, userId];
+    // No try/catch needed here, executeQuery handles errors and throws them
+    const result = await executeQuery(queryText, params);
+    return result.rows.length > 0;
 }
 
 export default router

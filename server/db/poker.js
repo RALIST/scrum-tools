@@ -1,205 +1,109 @@
-import pool from './pool.js'
+import { executeQuery } from './dbUtils.js';
+import logger from '../logger.js'; // Import the logger
 
 export const createRoom = async (roomId, name, sequence, password, workspaceId) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'INSERT INTO rooms (id, name, sequence, password, workspace_id) VALUES ($1, $2, $3, $4, $5)',
-            [roomId, name || roomId, sequence, password, workspaceId || null]
-        )
-    } catch (error) {
-        console.error('Error creating room:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = 'INSERT INTO rooms (id, name, sequence, password, workspace_id) VALUES ($1, $2, $3, $4, $5)';
+    const params = [roomId, name || roomId, sequence, password, workspaceId || null];
+    await executeQuery(queryText, params);
+};
 
 export const getRooms = async () => {
-    const client = await pool.connect()
-    try {
-        const roomsResult = await client.query(`
-            SELECT r.*, COUNT(p.id) as participant_count
-            FROM rooms r
-            LEFT JOIN participants p ON r.id = p.room_id
-            GROUP BY r.id
-        `)
-        return roomsResult.rows
-    } catch (error) {
-        console.error('Error getting rooms:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = `
+        SELECT r.*, COUNT(p.id) as participant_count
+        FROM rooms r
+        LEFT JOIN participants p ON r.id = p.room_id
+        GROUP BY r.id
+    `;
+    const result = await executeQuery(queryText);
+    return result.rows;
+};
 
 export const getWorkspaceRooms = async (workspaceId) => {
-    const client = await pool.connect()
-    try {
-        // First check if workspace_id column exists
-        const checkColumn = await client.query(`
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'rooms' AND column_name = 'workspace_id'
-        `)
-        
-        if (checkColumn.rows.length === 0) {
-            // Workspace column doesn't exist yet, return empty array
-            console.log('workspace_id column does not exist in rooms table')
-            return []
-        }
-        
-        const roomsResult = await client.query(`
-            SELECT r.*, COUNT(p.id) as participant_count
-            FROM rooms r
-            LEFT JOIN participants p ON r.id = p.room_id
-            WHERE r.workspace_id = $1
-            GROUP BY r.id
-            ORDER BY r.created_at DESC
-        `, [workspaceId])
-        return roomsResult.rows
-    } catch (error) {
-        console.error('Error getting workspace rooms:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    // Assuming 'workspace_id' column exists after migration.
+    const queryText = `
+        SELECT r.*, COUNT(p.id) as participant_count
+        FROM rooms r
+        LEFT JOIN participants p ON r.id = p.room_id
+        WHERE r.workspace_id = $1
+        GROUP BY r.id
+        ORDER BY r.created_at DESC
+    `;
+    const params = [workspaceId];
+    const result = await executeQuery(queryText, params);
+    return result.rows;
+};
 
 export const getRoom = async (roomId) => {
-    const client = await pool.connect()
-    try {
-        const roomResult = await client.query('SELECT * FROM rooms WHERE id = $1', [roomId])
-        if (roomResult.rows.length === 0) {
-            return null
-        }
+    const roomQuery = 'SELECT * FROM rooms WHERE id = $1';
+    const roomResult = await executeQuery(roomQuery, [roomId]);
 
-        const participantsResult = await client.query(
-            'SELECT * FROM participants WHERE room_id = $1',
-            [roomId]
-        )
-
-        return {
-            ...roomResult.rows[0],
-            participants: new Map(participantsResult.rows.map(p => [p.id, {
-                id: p.id,
-                name: p.name,
-                vote: p.vote
-            }]))
-        }
-    } catch (error) {
-        console.error('Error getting room:', error)
-        throw error
-    } finally {
-        client.release()
+    if (roomResult.rows.length === 0) {
+        return null;
     }
-}
+
+    const participantsQuery = 'SELECT * FROM participants WHERE room_id = $1';
+    const participantsResult = await executeQuery(participantsQuery, [roomId]);
+
+    return {
+        ...roomResult.rows[0],
+        participants: new Map(participantsResult.rows.map(p => [p.id, {
+            id: p.id,
+            name: p.name,
+            vote: p.vote
+        }]))
+    };
+};
 
 export const addParticipant = async (roomId, participantId, name) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'INSERT INTO participants (id, room_id, name) VALUES ($1, $2, $3)',
-            [participantId, roomId, name]
-        )
-    } catch (error) {
-        console.error('Error adding participant:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = 'INSERT INTO participants (id, room_id, name) VALUES ($1, $2, $3)';
+    const params = [participantId, roomId, name];
+    await executeQuery(queryText, params);
+};
 
 export const updateParticipantName = async (roomId, participantId, name) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'UPDATE participants SET name = $1 WHERE room_id = $2 AND id = $3',
-            [name, roomId, participantId]
-        )
-    } catch (error) {
-        console.error('Error updating participant name:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = 'UPDATE participants SET name = $1 WHERE room_id = $2 AND id = $3';
+    const params = [name, roomId, participantId];
+    await executeQuery(queryText, params);
+};
 
 export const updateParticipantVote = async (roomId, participantId, vote) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'UPDATE participants SET vote = $1 WHERE room_id = $2 AND id = $3',
-            [vote, roomId, participantId]
-        )
-    } catch (error) {
-        console.error('Error updating participant vote:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = 'UPDATE participants SET vote = $1 WHERE room_id = $2 AND id = $3';
+    const params = [vote, roomId, participantId];
+    await executeQuery(queryText, params);
+};
 
 export const removeParticipant = async (roomId, participantId) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'DELETE FROM participants WHERE room_id = $1 AND id = $2',
-            [roomId, participantId]
-        )
-    } catch (error) {
-        console.error('Error removing participant:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = 'DELETE FROM participants WHERE room_id = $1 AND id = $2';
+    const params = [roomId, participantId];
+    await executeQuery(queryText, params);
+};
 
 export const resetVotes = async (roomId) => {
-    const client = await pool.connect()
-    try {
-        await client.query(
-            'UPDATE participants SET vote = NULL WHERE room_id = $1',
-            [roomId]
-        )
-    } catch (error) {
-        console.error('Error resetting votes:', error)
-        throw error
-    } finally {
-        client.release()
-    }
-}
+    const queryText = 'UPDATE participants SET vote = NULL WHERE room_id = $1';
+    const params = [roomId];
+    await executeQuery(queryText, params);
+};
 
 export const updateRoomSettings = async (roomId, sequence, password) => {
-    const client = await pool.connect()
-    try {
-        const updates = []
-        const values = []
-        let paramCount = 1
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
 
-        if (sequence !== undefined) {
-            updates.push(`sequence = $${paramCount}`)
-            values.push(sequence)
-            paramCount++
-        }
-
-        if (password !== undefined) {
-            updates.push(`password = $${paramCount}`)
-            values.push(password)
-            paramCount++
-        }
-
-        if (updates.length > 0) {
-            values.push(roomId)
-            await client.query(
-                `UPDATE rooms SET ${updates.join(', ')} WHERE id = $${paramCount}`,
-                values
-            )
-        }
-    } catch (error) {
-        console.error('Error updating room settings:', error)
-        throw error
-    } finally {
-        client.release()
+    if (sequence !== undefined) {
+        updates.push(`sequence = $${paramCount}`);
+        values.push(sequence);
+        paramCount++;
     }
-}
+
+    if (password !== undefined) {
+        updates.push(`password = $${paramCount}`);
+        values.push(password);
+        paramCount++;
+    }
+
+    if (updates.length > 0) {
+        values.push(roomId);
+        const queryText = `UPDATE rooms SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+        await executeQuery(queryText, values);
+    }
+};

@@ -1,9 +1,10 @@
 import pg from 'pg'
 import dotenv from 'dotenv'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import logger from '../logger.js'; // Import the logger
 
-const __filename = fileURLToPath(import.meta.url)
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename)
 
 // Load environment variables
@@ -26,18 +27,21 @@ const pool = new Pool({
 // Test database connection
 pool.connect((err, client, release) => {
     if (err) {
-        console.error('Error connecting to the database:', err.stack)
+        // Use logger.error
+        logger.error('Error connecting to the database:', { stack: err.stack });
     } else {
-        console.log('Successfully connected to database')
-        release()
+        // Use logger.info
+        logger.info('Successfully connected to database');
+        release();
     }
-})
+});
 
 // Add event listener for process termination
 process.on('SIGINT', async () => {
-    console.log('Closing database pool...')
-    await pool.end()
-    process.exit(0)
-})
+    // Use logger.info
+    logger.info('Closing database pool...');
+    await pool.end();
+    process.exit(0);
+});
 
 export default pool

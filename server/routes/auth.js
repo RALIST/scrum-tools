@@ -1,17 +1,19 @@
 import express from 'express';
 import jsonwebtoken from 'jsonwebtoken';
 import { createUser, getUserByEmail, updateLastLogin, verifyPassword } from '../db/users.js';
+import logger from '../logger.js'; // Import the logger
 
 const jwt = jsonwebtoken;
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Should be in env variables
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // TODO: Ensure this is properly set in .env
 
 // Register a new user
-router.post('/register', async (req, res) => {
+// Add 'next'
+router.post('/register', async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
-    
+
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Email, password, and name are required' });
     }
@@ -40,18 +42,22 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     if (error.message === 'User already exists') {
+      // Keep specific client error handling
       return res.status(409).json({ error: 'User already exists' });
     }
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Server error' });
+    // Use logger.error before passing to centralized handler
+    logger.error('Registration error:', { error: error.message, stack: error.stack, email: req.body.email }); 
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 
 // Login
-router.post('/login', async (req, res) => {
+// Add 'next'
+router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
@@ -87,11 +93,13 @@ router.post('/login', async (req, res) => {
         email: user.email,
         name: user.name
       },
-      token
+      token,
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error' });
+    // Use logger.error before passing to centralized handler
+    logger.error('Login error:', { error: error.message, stack: error.stack, email: req.body.email });
+    // Pass error to the centralized handler
+    next(error);
   }
 });
 

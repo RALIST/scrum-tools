@@ -9,10 +9,13 @@ import velocityRoutes from './routes/velocity.js';
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
 import historyRoutes from './routes/history.js';
-import { handlePlanningPokerEvents } from './sockets/poker.js';
-import { handleRetroBoardEvents } from './sockets/retro.js';
-import { getRooms, getRoom, removeParticipant } from './db/poker.js';
+// Import the initializers instead of the direct handlers
+import { initializePokerSocket } from './sockets/poker.js';
+import { initializeRetroSocket } from './sockets/retro.js';
+// Removed unused db imports for poker disconnect logic
 import { optionalAuthenticateToken } from './middleware/auth.js';
+import errorHandler from './middleware/errorHandler.js'; // Import the error handler
+import logger from './logger.js'; // Import the logger
 
 const app = express();
 app.use(cors());
@@ -38,48 +41,16 @@ const io = new Server(server, {
 const pokerIo = io.of('/poker');
 const retroIo = io.of('/retro');
 
-// Planning Poker events
-pokerIo.on('connection', (socket) => {
-    console.log('User connected to poker:', socket.id)
+// Initialize socket namespaces
+initializePokerSocket(pokerIo);
+initializeRetroSocket(retroIo);
 
-    handlePlanningPokerEvents(pokerIo, socket);
+// Apply the centralized error handler *after* all routes
+app.use(errorHandler);
 
-    socket.on('disconnect', async () => {
-        console.log('User disconnected from poker:', socket.id)
-
-        try {
-            // Find the room this participant was in
-            const rooms = await getRooms()
-            for (const room of rooms) {
-                const fullRoom = await getRoom(room.id)
-                if (fullRoom.participants.has(socket.id)) {
-                    await removeParticipant(room.id, socket.id)
-                    const updatedRoom = await getRoom(room.id)
-
-                    pokerIo.to(room.id).emit('participantUpdate', {
-                        participants: Array.from(updatedRoom.participants.values())
-                    })
-                    break
-                }
-            }
-        } catch (error) {
-            console.error('Error handling poker disconnect:', error)
-        }
-    })
-});
-
-// Retro Board events
-retroIo.on('connection', (socket) => {
-    console.log('User connected to retro:', socket.id)
-
-    handleRetroBoardEvents(retroIo, socket);
-
-    socket.on('disconnect', () => {
-        console.log('User disconnected from retro:', socket.id)
-    })
-});
-
-const PORT = 3001
+// Use environment variable for port or default to 3001
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
-})
+    // Use logger instead of console.log
+    logger.info(`Server running on port ${PORT}`); 
+});
