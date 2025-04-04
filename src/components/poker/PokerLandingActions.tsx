@@ -5,7 +5,7 @@ import { Room } from "./RoomListTable";
 interface PokerLandingActionsProps {
   isAuthenticated: boolean;
   currentWorkspace?: { id: string; name: string } | null;
-  workspaceRooms: Room[];
+  rooms: Room[]; // Changed from workspaceRooms
   onShowRoomList: () => void;
   onCreateModalOpen: () => void;
   onJoinRoom: (roomId: string) => void;
@@ -14,18 +14,18 @@ interface PokerLandingActionsProps {
 export const PokerLandingActions: FC<PokerLandingActionsProps> = ({
   isAuthenticated,
   currentWorkspace,
-  workspaceRooms,
+  rooms, // Changed from workspaceRooms
   onShowRoomList,
   onCreateModalOpen,
   onJoinRoom,
 }) => {
   return (
     <VStack spacing={6} w={{ base: "full", md: "500px" }}>
-      {/* Quick Join for Workspace Rooms */}
-      {isAuthenticated && currentWorkspace && workspaceRooms.length > 0 && (
+      {/* Quick Join for Workspace Rooms (now uses the filtered 'rooms' list) */}
+      {isAuthenticated && currentWorkspace && rooms.length > 0 && (
         <Box w="full" mt={4}>
           <Text fontWeight="bold" mb={2}>
-            Your Workspace Rooms:
+            Rooms in {currentWorkspace.name}:
           </Text>
           <VStack
             spacing={2}
@@ -39,7 +39,8 @@ export const PokerLandingActions: FC<PokerLandingActionsProps> = ({
             _dark={{ borderColor: "gray.600" }}
             shadow="sm"
           >
-            {workspaceRooms.slice(0, 3).map((room) => (
+            {/* Display rooms from the passed 'rooms' prop */}
+            {rooms.slice(0, 3).map((room) => (
               <HStack key={room.id} justify="space-between">
                 <HStack>
                   <Text fontWeight="medium">{room.name}</Text>
@@ -54,7 +55,8 @@ export const PokerLandingActions: FC<PokerLandingActionsProps> = ({
                 </Button>
               </HStack>
             ))}
-            {workspaceRooms.length > 3 && (
+            {/* Link to see all rooms (now just toggles the main list view) */}
+            {rooms.length > 3 && (
               <Button
                 size="sm"
                 variant="link"

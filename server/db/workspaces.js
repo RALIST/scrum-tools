@@ -156,3 +156,62 @@ export const getUserWorkspaceRole = async (workspaceId, userId) => {
     client.release();
   }
 };
+
+// --- Workspace Invitations ---
+
+// Create a new invitation token
+export const createInvitation = async (workspaceId, createdBy, roleToAssign, expiresInDays = 7) => {
+  const client = await pool.connect();
+  try {
+    const { randomBytes } = await import('crypto'); // Use dynamic import for crypto
+    const token = randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+    const queryText = `
+      INSERT INTO workspace_invitations (workspace_id, token, role_to_assign, expires_at, created_by)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING token
+    `;
+    const params = [workspaceId, token, roleToAssign, expiresAt, createdBy];
+    const result = await client.query(queryText, params);
+    return result.rows[0].token;
+  } finally {
+    client.release();
+  }
+};
+
+// Find a valid invitation by token
+export const findValidInvitationByToken = async (token) => {
+  const client = await pool.connect();
+  try {
+    const queryText = `
+      SELECT id, workspace_id, role_to_assign
+      FROM workspace_invitations
+      WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
+    `;
+    const params = [token];
+    const result = await client.query(queryText, params);
+    return result.rows[0] || null; // Return the invite details or null if not found/valid
+  } finally {
+    client.release();
+  }
+};
+
+// Mark an invitation as used
+export const markInvitationAsUsed = async (invitationId, usedByUserId) => {
+  const client = await pool.connect();
+  try {
+    const queryText = `
+      UPDATE workspace_invitations
+      SET used_at = NOW(), used_by = $2
+      WHERE id = $1 AND used_at IS NULL -- Ensure it wasn't used concurrently
+      RETURNING id
+    `;
+    const params = [invitationId, usedByUserId];
+    const result = await client.query(queryText, params);
+    return result.rowCount > 0; // Return true if update was successful
+  } finally {
+    client.release();
+  }
+};

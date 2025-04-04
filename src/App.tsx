@@ -17,6 +17,8 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Workspaces from "./pages/workspaces/Workspaces";
 import WorkspaceDetail from "./pages/workspaces/WorkspaceDetail";
+import JoinWorkspacePage from "./pages/workspaces/JoinWorkspacePage"; // Import the new page
+// Component imports remain the same
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PageContainer from "./components/PageContainer";
@@ -56,6 +58,11 @@ const App: FC = () => {
                   <Route path="/retro/:boardId" element={<RetroBoard />} />
                   <Route path="/velocity" element={<TeamVelocity />} />
                   <Route path="/daily-standup" element={<DailyStandup />} />
+                  {/* Workspace Invitation Route */}
+                  <Route
+                    path="/join-workspace"
+                    element={<JoinWorkspacePage />}
+                  />
 
                   {/* Private Routes */}
                   <Route

@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useCallback } from "react"; // Added useCallback
 import {
   Box,
   Heading,
@@ -23,6 +23,7 @@ import {
   FormControl,
   FormLabel,
   Input,
+  Textarea, // Added Textarea back for edit modal
   useToast,
   Spinner,
   Center,
@@ -42,10 +43,11 @@ import {
   useColorMode,
 } from "@chakra-ui/react";
 import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
-import { useWorkspace } from "../../contexts/WorkspaceContext";
+import { useWorkspace, Workspace } from "../../contexts/WorkspaceContext"; // Import Workspace type
 import { useAuth } from "../../contexts/AuthContext";
 import PageHelmet from "../../components/PageHelmet";
 import { Icon } from "@chakra-ui/react";
+import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
 import {
   FaUsers,
   FaUserPlus,
@@ -55,6 +57,35 @@ import {
 } from "react-icons/fa";
 import { MdGridView, MdInsertChart, MdOutlineGames } from "react-icons/md";
 import React from "react";
+// Import the new components
+import WorkspaceDetailHeader from "../../components/workspaces/WorkspaceDetailHeader";
+import WorkspaceToolsPanel from "../../components/workspaces/WorkspaceToolsPanel";
+import WorkspaceMembersPanel from "../../components/workspaces/WorkspaceMembersPanel";
+
+// Define interfaces for the fetched tool data (keep them here or move to a types file)
+interface WorkspacePokerRoom {
+  id: string;
+  name: string;
+  participantCount: number;
+  createdAt: string;
+  hasPassword?: boolean;
+  sequence?: string;
+}
+
+interface WorkspaceRetroBoard {
+  id: string;
+  name: string;
+  cardCount: number;
+  createdAt: string;
+  hasPassword?: boolean;
+}
+
+interface WorkspaceVelocityTeam {
+  id: string;
+  name: string;
+  createdAt: string;
+  avgVelocityPreview?: number | null;
+}
 
 const WorkspaceDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -65,7 +96,7 @@ const WorkspaceDetail: FC = () => {
     addWorkspaceMember,
     removeWorkspaceMember,
     getWorkspaceMembers,
-    isLoading,
+    isLoading: isWorkspaceContextLoading, // Rename to avoid conflict
   } = useWorkspace();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -73,10 +104,17 @@ const WorkspaceDetail: FC = () => {
   const { colorMode } = useColorMode();
 
   // State for workspace data
-  const [workspace, setWorkspace] = useState<any>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null); // Use imported Workspace type
   const [isAdmin, setIsAdmin] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  // State for tool lists
+  const [pokerRooms, setPokerRooms] = useState<WorkspacePokerRoom[]>([]);
+  const [retroBoards, setRetroBoards] = useState<WorkspaceRetroBoard[]>([]);
+  const [velocityTeams, setVelocityTeams] = useState<WorkspaceVelocityTeam[]>(
+    []
+  );
+  const [isLoadingTools, setIsLoadingTools] = useState(false);
 
   // Modal state for edit workspace
   const {
@@ -106,34 +144,69 @@ const WorkspaceDetail: FC = () => {
   } = useDisclosure();
   const cancelRef = React.useRef(null);
 
-  // Load workspace data
-  useEffect(() => {
-    if (!id || isLoading || !workspaces) return;
+  // Function to load associated tools (wrapped in useCallback)
+  const loadTools = useCallback(async () => {
+    if (!id) return;
+    setIsLoadingTools(true);
+    try {
+      const [roomsData, boardsData, teamsData] = await Promise.all([
+        apiRequest<WorkspacePokerRoom[]>(`/workspaces/${id}/rooms`),
+        apiRequest<WorkspaceRetroBoard[]>(`/workspaces/${id}/retros`),
+        apiRequest<WorkspaceVelocityTeam[]>(`/workspaces/${id}/velocity-teams`),
+      ]);
+      setPokerRooms(roomsData || []);
+      setRetroBoards(boardsData || []);
+      setVelocityTeams(teamsData || []);
+    } catch (error) {
+      console.error("Error loading workspace tools:", error);
+      toast({
+        title: "Error Loading Tools",
+        description: "Failed to load tools associated with this workspace.",
+        status: "error",
+        duration: 5000,
+      });
+    } finally {
+      setIsLoadingTools(false);
+    }
+  }, [id, toast]); // Added dependencies
 
-    const findWorkspace = workspaces?.find((w) => w.id === id);
+  // Load workspace data from context
+  useEffect(() => {
+    if (!id || isWorkspaceContextLoading || !workspaces) return;
+
+    const findWorkspace = workspaces?.find((w: Workspace) => w.id === id);
     if (findWorkspace) {
       setWorkspace(findWorkspace);
-      setCurrentWorkspace(findWorkspace);
+      setCurrentWorkspace(findWorkspace); // Set context here
       setName(findWorkspace.name);
       setDescription(findWorkspace.description || "");
       setIsAdmin(findWorkspace.role === "admin");
     } else {
-      navigate("/workspaces");
-      toast({
-        title: "Workspace not found",
-        description:
-          "The workspace you requested does not exist or you do not have access",
-        status: "error",
-        duration: 5000,
-      });
+      // Only navigate away if workspaces have loaded but the specific one wasn't found
+      if (!isWorkspaceContextLoading) {
+        navigate("/workspaces");
+        toast({
+          title: "Workspace not found",
+          description:
+            "The workspace you requested does not exist or you do not have access",
+          status: "error",
+          duration: 5000,
+        });
+      }
     }
-  }, [workspaces]);
+  }, [
+    id,
+    workspaces,
+    isWorkspaceContextLoading,
+    navigate,
+    toast,
+    setCurrentWorkspace,
+  ]); // Added dependencies
 
-  // Load workspace members
+  // Load workspace members and tools when workspace is set
   useEffect(() => {
     const loadMembers = async () => {
       if (!id) return;
-
       setIsLoadingMembers(true);
       try {
         const membersList = await getWorkspaceMembers(id);
@@ -153,8 +226,9 @@ const WorkspaceDetail: FC = () => {
 
     if (workspace) {
       loadMembers();
+      loadTools(); // Load tools when workspace is set
     }
-  }, [isLoadingMembers]);
+  }, [workspace, id, getWorkspaceMembers, loadTools, toast]); // Added dependencies
 
   const handleUpdateWorkspace = async () => {
     if (!name.trim() || !id) {
@@ -166,12 +240,12 @@ const WorkspaceDetail: FC = () => {
       });
       return;
     }
-
     setIsSubmitting(true);
-
     try {
+      // Use the updateWorkspace function from context
       const updated = await updateWorkspace(id, name, description);
-      setWorkspace({ ...workspace, ...updated });
+      // Update local state as well, though context refresh might handle it
+      setWorkspace(updated);
       toast({
         title: "Workspace updated",
         description: "Workspace details have been updated",
@@ -202,11 +276,10 @@ const WorkspaceDetail: FC = () => {
       });
       return;
     }
-
     setIsAddingMember(true);
-
     try {
       await addWorkspaceMember(id, newMemberEmail);
+      // Reload members after adding
       const updatedMembers = await getWorkspaceMembers(id);
       setMembers(updatedMembers);
       setNewMemberEmail("");
@@ -237,9 +310,9 @@ const WorkspaceDetail: FC = () => {
 
   const handleRemoveMember = async () => {
     if (!memberToRemove || !id) return;
-
     try {
       await removeWorkspaceMember(id, memberToRemove.id);
+      // Optimistically update UI or reload members
       setMembers(members.filter((m) => m.id !== memberToRemove.id));
       toast({
         title: "Member removed",
@@ -261,7 +334,8 @@ const WorkspaceDetail: FC = () => {
     }
   };
 
-  if (isLoading || !workspace) {
+  // Show main loading spinner if workspace context is loading or workspace data hasn't been set yet
+  if (isWorkspaceContextLoading || !workspace) {
     return (
       <Center h="200px">
         <Spinner size="xl" color="blue.500" />
@@ -278,35 +352,16 @@ const WorkspaceDetail: FC = () => {
         canonicalUrl={`/workspaces/${id}`}
       />
 
-      <HStack justify="space-between" mb={6} flexWrap="wrap">
-        <VStack align="start" spacing={1}>
-          <HStack>
-            <Heading size="xl">{workspace.name}</Heading>
-            <Badge colorScheme={isAdmin ? "green" : "blue"}>
-              {workspace.role}
-            </Badge>
-          </HStack>
-          {workspace.description && (
-            <Text color="gray.500" fontSize="md">
-              {workspace.description}
-            </Text>
-          )}
-        </VStack>
+      {/* Use the Header Component */}
+      <WorkspaceDetailHeader
+        workspace={workspace}
+        isAdmin={isAdmin}
+        onEditOpen={onEditOpen}
+      />
 
-        {isAdmin && (
-          <Button
-            leftIcon={<Icon as={FaEdit} />}
-            colorScheme="blue"
-            variant="outline"
-            onClick={onEditOpen}
-            mt={{ base: 4, md: 0 }}
-          >
-            Edit Workspace
-          </Button>
-        )}
-      </HStack>
-
-      <Tabs colorScheme="blue" mt={6}>
+      <Tabs colorScheme="blue" mt={6} isLazy>
+        {" "}
+        {/* Added isLazy for performance */}
         <TabList>
           <Tab>
             <Icon as={FaThLarge} mr={2} />
@@ -317,161 +372,32 @@ const WorkspaceDetail: FC = () => {
             Members
           </Tab>
         </TabList>
-
         <TabPanels>
           {/* Tools Panel */}
-          <TabPanel>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6} mt={4}>
-              {/* Planning Poker Card */}
-              <Box
-                p={5}
-                borderWidth={1}
-                borderRadius="md"
-                bg={colorMode === "light" ? "white" : "gray.700"}
-                _hover={{ transform: "translateY(-4px)", shadow: "lg" }}
-                transition="all 0.2s"
-              >
-                <VStack align="start" spacing={3}>
-                  <Icon as={MdOutlineGames} boxSize={8} color="blue.500" />
-                  <Heading size="md">Planning Poker</Heading>
-                  <Text>Estimate user stories with your team in real-time</Text>
-                  <Button
-                    as={RouterLink}
-                    to="/planning-poker"
-                    colorScheme="blue"
-                    size="sm"
-                    mt={2}
-                    width="full"
-                  >
-                    View Poker Rooms
-                  </Button>
-                </VStack>
-              </Box>
-
-              {/* Retro Board Card */}
-              <Box
-                p={5}
-                borderWidth={1}
-                borderRadius="md"
-                bg={colorMode === "light" ? "white" : "gray.700"}
-                _hover={{ transform: "translateY(-4px)", shadow: "lg" }}
-                transition="all 0.2s"
-              >
-                <VStack align="start" spacing={3}>
-                  <Icon as={MdGridView} boxSize={8} color="green.500" />
-                  <Heading size="md">Retro Boards</Heading>
-                  <Text>Collaborate on retrospectives with your team</Text>
-                  <Button
-                    as={RouterLink}
-                    to="/retro"
-                    colorScheme="green"
-                    size="sm"
-                    mt={2}
-                    width="full"
-                  >
-                    View Retro Boards
-                  </Button>
-                </VStack>
-              </Box>
-
-              {/* Team Velocity Card */}
-              <Box
-                p={5}
-                borderWidth={1}
-                borderRadius="md"
-                bg={colorMode === "light" ? "white" : "gray.700"}
-                _hover={{ transform: "translateY(-4px)", shadow: "lg" }}
-                transition="all 0.2s"
-              >
-                <VStack align="start" spacing={3}>
-                  <Icon as={MdInsertChart} boxSize={8} color="purple.500" />
-                  <Heading size="md">Team Velocity</Heading>
-                  <Text>Track your team's velocity across sprints</Text>
-                  <Button
-                    as={RouterLink}
-                    to="/velocity"
-                    colorScheme="purple"
-                    size="sm"
-                    mt={2}
-                    width="full"
-                  >
-                    View Velocity
-                  </Button>
-                </VStack>
-              </Box>
-            </SimpleGrid>
+          <TabPanel px={0} py={4}>
+            {" "}
+            {/* Adjust padding if needed */}
+            <WorkspaceToolsPanel
+              pokerRooms={pokerRooms}
+              retroBoards={retroBoards}
+              velocityTeams={velocityTeams}
+              isLoadingTools={isLoadingTools}
+            />
           </TabPanel>
 
           {/* Members Panel */}
-          <TabPanel>
-            <HStack justifyContent="space-between" mb={4}>
-              <Heading size="md">Workspace Members</Heading>
-              {isAdmin && (
-                <Button
-                  leftIcon={<Icon as={FaUserPlus} />}
-                  colorScheme="blue"
-                  size="sm"
-                  onClick={onAddMemberOpen}
-                >
-                  Add Member
-                </Button>
-              )}
-            </HStack>
-
-            {isLoadingMembers ? (
-              <Center h="100px">
-                <Spinner />
-              </Center>
-            ) : members.length === 0 ? (
-              <Box p={4} borderWidth={1} borderRadius="md" textAlign="center">
-                <Text>No members found</Text>
-              </Box>
-            ) : (
-              <Box overflowX="auto">
-                <Table variant="simple">
-                  <Thead>
-                    <Tr>
-                      <Th>Name</Th>
-                      <Th>Email</Th>
-                      <Th>Role</Th>
-                      {isAdmin && <Th width="100px">Actions</Th>}
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {members.map((member) => (
-                      <Tr key={member.id}>
-                        <Td>{member.name}</Td>
-                        <Td>{member.email}</Td>
-                        <Td>
-                          <Badge
-                            colorScheme={
-                              member.role === "admin" ? "green" : "blue"
-                            }
-                          >
-                            {member.role}
-                          </Badge>
-                        </Td>
-                        {isAdmin && (
-                          <Td>
-                            {member.id !== user?.id && (
-                              <Button
-                                size="sm"
-                                colorScheme="red"
-                                variant="ghost"
-                                leftIcon={<Icon as={FaUserMinus} />}
-                                onClick={() => openRemoveMemberDialog(member)}
-                              >
-                                Remove
-                              </Button>
-                            )}
-                          </Td>
-                        )}
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
-            )}
+          <TabPanel px={0} py={4}>
+            {" "}
+            {/* Adjust padding if needed */}
+            <WorkspaceMembersPanel
+              workspaceId={id || ""} // Pass workspaceId
+              members={members}
+              isLoadingMembers={isLoadingMembers}
+              isAdmin={isAdmin}
+              currentUserId={user?.id}
+              onAddMemberOpen={onAddMemberOpen} // Pass modal opener
+              onRemoveMember={openRemoveMemberDialog} // Pass dialog opener
+            />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -495,10 +421,13 @@ const WorkspaceDetail: FC = () => {
 
               <FormControl>
                 <FormLabel>Description</FormLabel>
-                <Input
+                {/* Changed back to Textarea */}
+                <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Enter workspace description"
+                  resize="vertical"
+                  rows={3}
                 />
               </FormControl>
             </VStack>

@@ -18,10 +18,13 @@ import {
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useWorkspace } from "../../contexts/WorkspaceContext"; // Import useWorkspace
+import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
 import PageHelmet from "../../components/PageHelmet";
 
 const Register: FC = () => {
   const { register, isAuthenticated } = useAuth();
+  const { refreshWorkspaces } = useWorkspace(); // Get refresh function
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -82,8 +85,58 @@ const Register: FC = () => {
         duration: 5000,
         isClosable: true,
       });
+
+      // After successful registration, check for pending invitation
+      const pendingToken = sessionStorage.getItem("pendingInvitationToken");
+      if (pendingToken) {
+        toast({
+          title: "Processing Invitation...",
+          status: "info",
+          duration: 2000,
+        });
+        try {
+          const result = await apiRequest<{
+            message: string;
+            workspaceId: string;
+          }>("/workspace-invitations/accept", {
+            method: "POST",
+            body: { token: pendingToken },
+            // Auth token is now set by register(), apiRequest will use it
+          });
+          sessionStorage.removeItem("pendingInvitationToken"); // Clear token
+          sessionStorage.setItem("processedInvitationToken", pendingToken); // Mark as processed
+          await refreshWorkspaces(); // Refresh workspace list
+          toast({
+            title: "Invitation Accepted!",
+            description: result.message || "Successfully joined the workspace.",
+            status: "success",
+            duration: 3000,
+          });
+          navigate(`/workspaces/${result.workspaceId}`); // Navigate to the joined workspace
+          return; // Stop further navigation
+        } catch (inviteError: any) {
+          sessionStorage.removeItem("pendingInvitationToken"); // Clear token even on error
+          console.error(
+            "Error accepting pending invitation after registration:",
+            inviteError
+          );
+          toast({
+            title: "Failed to Accept Invitation",
+            description:
+              inviteError.response?.data?.error ||
+              inviteError.message ||
+              "Could not apply pending invitation.",
+            status: "error",
+            duration: 5000,
+          });
+          // Continue to default navigation even if invite fails
+        }
+      }
+
+      // Default navigation if no pending token or invite failed
       navigate("/workspaces");
     } catch (error) {
+      // Catch registration errors
       toast({
         title: "Registration failed",
         description:

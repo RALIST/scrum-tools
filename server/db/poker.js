@@ -12,7 +12,9 @@ export const getRooms = async () => {
         SELECT r.*, COUNT(p.id) as participant_count
         FROM rooms r
         LEFT JOIN participants p ON r.id = p.room_id
+        WHERE r.workspace_id IS NULL -- Only select rooms not associated with a workspace
         GROUP BY r.id
+        ORDER BY r.created_at DESC -- Optional: order public rooms
     `;
     const result = await executeQuery(queryText);
     return result.rows;

@@ -39,9 +39,9 @@ interface CreateRoomSettings {
 
 const PlanningPoker: FC = () => {
   const [showRoomList, setShowRoomList] = useState(false);
-  const [activeRooms, setActiveRooms] = useState<Room[]>([]);
-  const [workspaceRooms, setWorkspaceRooms] = useState<Room[]>([]);
-  const [_isLoading, setIsLoading] = useState(false);
+  // Combine rooms into a single state
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(false); // Use the existing isLoading state
   const [isCreating, setIsCreating] = useState(false); // Loading state for creation
   const { colorMode } = useColorMode();
   const navigate = useNavigate();
@@ -52,6 +52,7 @@ const PlanningPoker: FC = () => {
     onClose: onCreateModalClose,
   } = useDisclosure();
   const { isAuthenticated } = useAuth();
+  // Keep workspaces for the modal, currentWorkspace for API calls
   const { currentWorkspace, workspaces } = useWorkspace();
 
   const [createSettings, setCreateSettings] = useState<CreateRoomSettings>({
@@ -95,34 +96,25 @@ const PlanningPoker: FC = () => {
   // Load rooms function using useCallback
   const loadRooms = useCallback(async () => {
     setIsLoading(true);
+    setRooms([]); // Clear previous rooms
     try {
-      // Load public rooms (always load)
-      const publicRooms = await apiRequest<Room[]>("/poker/rooms", {
-        includeAuth: false,
-      });
-      setActiveRooms(publicRooms);
+      // Prepare headers only if in workspace context
+      const headers = currentWorkspace
+        ? { "workspace-id": currentWorkspace.id }
+        : undefined; // Pass undefined if not in workspace
 
-      // Load workspace rooms only if authenticated and have a workspace context
-      if (isAuthenticated && currentWorkspace) {
-        try {
-          // Use the dedicated workspace endpoint
-          const wsRooms = await apiRequest<Room[]>(
-            `/workspaces/${currentWorkspace.id}/rooms`
-          );
-          setWorkspaceRooms(wsRooms);
-        } catch (wsError) {
-          console.error("Error loading workspace rooms:", wsError);
-          // Don't necessarily show a toast for this, maybe workspace has no rooms
-          setWorkspaceRooms([]); // Reset to empty array on error
-        }
-      } else {
-        setWorkspaceRooms([]); // Clear workspace rooms if not authenticated or no workspace
-      }
+      // Fetch rooms - API now handles filtering based on auth/header
+      const fetchedRooms = await apiRequest<Room[]>("/poker/rooms", {
+        // includeAuth: !!currentWorkspace, // Send token if in workspace context
+        // Let apiRequest handle auth based on token presence
+        headers,
+      });
+      setRooms(fetchedRooms);
     } catch (error) {
-      console.error("Error loading public rooms:", error);
+      console.error("Error loading rooms:", error);
       toast({
-        title: "Error",
-        description: "Failed to load public rooms",
+        title: "Error Loading Rooms",
+        description: "Failed to load poker rooms",
         status: "error",
         duration: 3000,
       });
@@ -241,7 +233,7 @@ const PlanningPoker: FC = () => {
               <PokerLandingActions
                 isAuthenticated={isAuthenticated}
                 currentWorkspace={currentWorkspace}
-                workspaceRooms={workspaceRooms}
+                rooms={rooms} // Pass the unified rooms list
                 onShowRoomList={() => setShowRoomList(true)}
                 onCreateModalOpen={onCreateModalOpen}
                 onJoinRoom={handleJoinRoom}
@@ -259,29 +251,34 @@ const PlanningPoker: FC = () => {
             >
               <VStack spacing={6}>
                 <HStack w="full" justify="space-between">
-                  <Heading size="md">Join a Room</Heading>
+                  <Heading size="md">
+                    {currentWorkspace
+                      ? `Rooms in ${currentWorkspace.name}`
+                      : "Public Rooms"}
+                  </Heading>
                   <Button size="sm" onClick={() => setShowRoomList(false)}>
                     Back
                   </Button>
                 </HStack>
 
-                {/* Workspace Rooms Table */}
-                {isAuthenticated && currentWorkspace && (
+                {/* Single Room List Table */}
+                {isLoading ? (
+                  <Center h="100px">
+                    <Spinner />
+                  </Center>
+                ) : (
                   <RoomListTable
-                    title="Workspace Rooms"
-                    rooms={workspaceRooms}
+                    title={
+                      currentWorkspace
+                        ? `Rooms in ${currentWorkspace.name}`
+                        : "Public Rooms"
+                    } // Restore title prop
+                    rooms={rooms}
                     onJoinRoom={handleJoinRoom}
-                    showWorkspaceInfo={true}
-                    workspaceName={currentWorkspace.name}
+                    // showWorkspaceInfo={!!currentWorkspace} // Keep commented out for now
+                    // workspaceName={currentWorkspace?.name}
                   />
                 )}
-
-                {/* Public Rooms Table */}
-                <RoomListTable
-                  title="Public Rooms"
-                  rooms={activeRooms}
-                  onJoinRoom={handleJoinRoom}
-                />
               </VStack>
             </Box>
           )}

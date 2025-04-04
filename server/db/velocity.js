@@ -189,3 +189,24 @@ export const getTeamAverageVelocityByWorkspace = async (name, workspaceId) => {
      // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
+
+// Get all velocity teams associated with a workspace
+export const getWorkspaceVelocityTeams = async (workspaceId) => {
+    const queryText = `
+        SELECT 
+            t.id, 
+            t.name, 
+            t.created_at,
+            -- Optionally, add some aggregated velocity data if needed directly in the list
+            (SELECT CAST(AVG(sv.completed_points) AS DECIMAL(10,1)) 
+             FROM sprints s 
+             JOIN sprint_velocity sv ON s.id = sv.sprint_id 
+             WHERE s.team_id = t.id AND sv.completed_points IS NOT NULL) as avg_velocity_preview
+        FROM teams t
+        WHERE t.workspace_id = $1
+        ORDER BY t.name ASC
+    `;
+    const params = [workspaceId];
+    const result = await executeQuery(queryText, params);
+    return result.rows;
+};

@@ -5,12 +5,23 @@ import { dirname, join } from 'path';
 import logger from '../logger.js'; // Import the logger
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename)
+const __dirname = dirname(__filename);
 
-// Load environment variables
-dotenv.config({ path: join(__dirname, '../.env') })
+// Load environment variables - prioritize .env.local
+try {
+  dotenv.config({ path: join(__dirname, '../.env.local') });
+  logger.info('Loaded environment variables from .env.local');
+} catch (e) {
+  try {
+    dotenv.config({ path: join(__dirname, '../.env') });
+    logger.info('Loaded environment variables from .env');
+  } catch (e2) {
+    logger.warn('Could not load .env.local or .env file for database pool. Using default environment variables if available.');
+  }
+}
 
-const { Pool } = pg
+
+const { Pool } = pg;
 
 const pool = new Pool({
     user: process.env.DB_USER,
