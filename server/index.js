@@ -2,7 +2,6 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import './db/schema.js';
 import pokerRoutes from './routes/poker.js';
 import retroRoutes from './routes/retro.js';
 import velocityRoutes from './routes/velocity.js';
