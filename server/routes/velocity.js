@@ -58,15 +58,30 @@ router.get('/teams/:name/velocity', async (req, res, next) => {
         const { name } = req.params;
         const { password } = req.query;
         let velocityData
-        let averageData
-    
-            // Anonymous password-based lookup
-        velocityData = await getTeamVelocity(name, password)
-        averageData = await getTeamAverageVelocity(name, password)
-        
-        // For anonymous mode, verify auth
+        let averageData;
+
+        // Anonymous password-based lookup
+        // Wrap in try...catch to handle potential "Invalid password" error from DB functions
+        try {
+            velocityData = await getTeamVelocity(name, password);
+            averageData = await getTeamAverageVelocity(name, password);
+        } catch (dbError) {
+            if (dbError.message === "Invalid password" || dbError.message === "Password required for this team" || dbError.message === "Invalid password (team does not require one)") {
+                 // If getTeam inside the DB functions throws due to password mismatch, return 401
+                return res.status(401).json({ error: 'Invalid team name or password' });
+            }
+            // For other unexpected errors, pass to the central handler
+            throw dbError; 
+        }
+
+        // If we reach here, password was valid (or not required and not provided)
+        // The DB functions would return null if team not found, but getTeam throws now.
+        // Let's keep the check just in case, although it might be redundant if getTeam always throws.
         if (!velocityData || !averageData) {
-            return res.status(401).json({ error: 'Invalid team name or password' })
+             // This case might indicate team found but no velocity data yet, or an unexpected null
+             logger.warn('Velocity or average data is null/undefined after successful team fetch', { teamName: name });
+             // Return empty data instead of 401, as the team/password was valid
+             // return res.status(404).json({ error: 'Team found, but no velocity data available' }); 
         }
 
         res.json({

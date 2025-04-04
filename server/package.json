@@ -5,7 +5,8 @@
     "scripts": {
         "start": "node index.js",
         "dev": "nodemon index.js",
-        "migrate": "node db/migration.js"
+        "migrate": "node db/migration.js",
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest" 
     },
     "dependencies": {
         "bcrypt": "^5.1.1",
@@ -23,6 +24,8 @@
     "devDependencies": {
         "@types/bcryptjs": "^2.4.4",
         "@types/pg": "^8.10.3",
-        "nodemon": "^3.0.1"
+        "jest": "^29.7.0",
+        "nodemon": "^3.0.1",
+        "supertest": "^7.1.0"
     }
 }

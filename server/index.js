@@ -16,6 +16,11 @@ import { initializeRetroSocket } from './sockets/retro.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js'; // Import the error handler
 import logger from './logger.js'; // Import the logger
+import { fileURLToPath, pathToFileURL } from 'url'; // Import pathToFileURL for ES Module check
+
+// Remove CommonJS helpers
+// const require = createRequire(import.meta.url); 
+// const __filename = fileURLToPath(import.meta.url); 
 
 const app = express();
 app.use(cors());
@@ -50,7 +55,16 @@ app.use(errorHandler);
 
 // Use environment variable for port or default to 3001
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-    // Use logger instead of console.log
-    logger.info(`Server running on port ${PORT}`); 
-});
+
+// Start the server only if this file is run directly (ES Module way)
+const isMainModule = import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
+    server.listen(PORT, () => {
+        // Use logger instead of console.log
+        logger.info(`Server running on port ${PORT}`);
+    });
+}
+
+// Export app and server for testing
+export { app, server };

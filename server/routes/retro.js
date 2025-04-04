@@ -19,24 +19,21 @@ const formatDate = (date) => {
 // Add 'next'
 router.post('/retro', async (req, res, next) => {
     const boardId = Math.random().toString(36).substring(2, 8);
-    const {
-        name,
-        defaultTimer,
-        hideCardsByDefault,
-        hideAuthorNames,
-        password,
-        workspaceId
-    } = req.body
+    // Correctly extract settings from req.body.settings
+    const { name, settings = {}, workspaceId } = req.body; 
+    // const { // Destructure from settings object
+    //     defaultTimer, 
+    //     hideCardsByDefault, 
+    //     hideAuthorNames, 
+    //     password 
+    // } = settings;
 
-    const defaultName = `Retro ${formatDate(new Date())}`
+    const defaultName = `Retro ${formatDate(new Date())}`;
 
     try {
-        await createRetroBoard(boardId, name || defaultName, workspaceId, {
-            defaultTimer,
-            hideCardsByDefault,
-            hideAuthorNames,
-            password
-        })
+        // Pass the whole settings object directly to createRetroBoard
+        await createRetroBoard(boardId, name || defaultName, workspaceId, settings); 
+        
         res.json({ success: true, boardId });
     } catch (error) {
         console.error('Error creating retro board:', error);

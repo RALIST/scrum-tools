@@ -18,8 +18,10 @@ export const createRetroBoard = async (boardId, name, workspaceId, settings = {}
             hide_cards_by_default, hide_author_names, password, workspace_id
         ) VALUES ($1, $2, false, $3, $4, $5, $6, $7, $8)
     `;
+    // Use defaultTimer for time_left ($3) and the actual value from settings for default_timer ($4)
+    const timerValueToInsert = settings.defaultTimer !== undefined ? settings.defaultTimer : 300;
     const params = [
-        boardId, name || boardId, defaultTimer, defaultTimer, 
+        boardId, name || boardId, timerValueToInsert, timerValueToInsert, 
         hideCardsByDefault, hideAuthorNames, hashedPassword, workspaceId || null
     ];
     await executeQuery(queryText, params);
@@ -44,10 +46,13 @@ export const getRetroBoard = async (boardId) => {
     const cardsResult = await executeQuery(cardsQuery, [boardId]);
 
     const board = boardResult.rows[0];
+    // Ensure hasPassword reflects the presence of a password hash
+    const hasPassword = !!board.password; 
     return {
         ...board,
-        hasPassword: !!board.password,
-        password: undefined, // Don't send password hash to client
+        // Explicitly remove the password hash before returning
+        password: undefined, 
+        hasPassword: hasPassword, // Use the calculated value
         cards: cardsResult.rows.map(card => ({
             ...card,
             votes: card.votes || []
