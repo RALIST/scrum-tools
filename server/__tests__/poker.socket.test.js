@@ -54,7 +54,6 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
     clientSocket2?.close();
     io.close(); 
     await new Promise(resolve => httpServer.close(resolve)); 
-    await pool.end();
   });
 
   // --- Anonymous Access Tests ---

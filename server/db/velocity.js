@@ -28,24 +28,39 @@ export const getTeam = async (name, password) => {
         return null; // Team not found
     }
 
-    const team = teamResult.rows[0];
+  const team = teamResult.rows[0];
 
-    // Verify password using the correct column name 'password'
-    if (team.password) { // Check if a password hash exists
-        if (!password) {
-             // Password required but not provided
-            throw new Error("Password required for this team");
+  // If team is associated with a workspace
+  if (team.workspace_id) {
+      // Accessing workspace teams should primarily happen via workspace context (e.g., getTeamByWorkspace)
+      // If getTeam is called directly for a workspace team, it implies anonymous-like access attempt.
+      // Since workspace teams don't have passwords, any attempt without workspace context should fail.
+      // We previously disallowed providing a password. Now, also disallow *not* providing one here.
+       if (!password) { // Check if password was provided *to this function call*
+            // This function was called without password for a team that needs workspace context.
+             throw new Error("Password or workspace context required for this team.");
+       } else {
+            // Password was provided for a workspace team - this is disallowed.
+             throw new Error("Cannot access workspace team using a password.");
+       }
+  }
+  // If team is NOT associated with a workspace (truly anonymous team), check password if it exists
+  else if (team.password) { // Check if a password hash exists for this non-workspace team
+    if (!password) {
+             // Password required for this anonymous team but not provided
+            throw new Error("Password required for this anonymous team");
         }
         // Compare provided password with the stored hash
-        const isValid = await bcrypt.compare(password, team.password); 
+        const isValid = await bcrypt.compare(password, team.password);
         if (!isValid) {
             // Throw specific error for invalid password
-            throw new Error("Invalid password");
+            throw new Error("Invalid password for anonymous team");
         }
     } else if (password) {
-        // Team has no password hash, but a password was provided for verification
-         throw new Error("Invalid password (team does not require one)");
+         // Anonymous team has no password hash, but a password was provided.
+         throw new Error("Invalid password (anonymous team does not require one)");
     }
+    // If team is anonymous and has no password hash, and no password was provided, access is granted.
 
     // Return team data without the password hash/field
     const { password: _, ...teamData } = team; // Destructure and exclude password

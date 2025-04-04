@@ -78,31 +78,23 @@ router.get('/teams/:name/velocity', async (req, res, next) => {
             // Step 1: Check if the team exists for this workspace
             let team = await getTeamByWorkspace(name, workspaceId);
 
-            // Step 2: If team doesn't exist, create it automatically
+            // Step 2: If team doesn't exist IN THIS WORKSPACE, return 404.
+            // Auto-creation should happen elsewhere (e.g., on the frontend page load if needed)
+            // or potentially in the POST /teams endpoint if called with workspaceId.
             if (!team) {
-                logger.info(`Team '${name}' not found in workspace '${workspaceId}'. Creating it automatically for user ${userId}.`);
-                try {
-                    // Create the team linked to the workspace, no password needed
-                    team = await createTeam(uuidv4(), name, null, workspaceId, userId);
-                    logger.info(`Successfully created team '${team.id}' ('${name}') for workspace '${workspaceId}'.`);
-                    // Since it's new, velocity data is empty
-                    velocityData = [];
-                    averageData = { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' }; // Use string defaults matching DB return type
-                } catch (creationError) {
-                     logger.error(`Failed to automatically create team '${name}' for workspace '${workspaceId}': ${creationError.message}`, { stack: creationError.stack });
-                     // Pass the creation error to the handler
-                     throw creationError;
-                }
-            } else {
-                // Step 3: If team exists, fetch its velocity data
-                logger.info(`Team '${name}' found in workspace '${workspaceId}'. Fetching velocity data.`);
-                velocityData = await getTeamVelocityByWorkspace(name, workspaceId);
-                averageData = await getTeamAverageVelocityByWorkspace(name, workspaceId);
+                 logger.warn(`Team '${name}' not found in workspace '${workspaceId}'.`);
+                 return res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
+            }
+            
+            // Step 3: If team exists, fetch its velocity data
+            logger.info(`Team '${name}' found in workspace '${workspaceId}'. Fetching velocity data.`);
+            velocityData = await getTeamVelocityByWorkspace(name, workspaceId); // Fetches data based on team found above
+            averageData = await getTeamAverageVelocityByWorkspace(name, workspaceId); // Fetches data based on team found above
                  logger.info(`Successfully fetched workspace velocity data for team '${name}' in workspace '${workspaceId}'.`);
                  // Handle case where team exists but has no sprints yet (DB functions return null/defaults)
                  if (velocityData === null) velocityData = [];
                  if (averageData === null) averageData = { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
-            }
+            // } // Remove extra closing brace here
         }
         // --- Anonymous Mode ---
         // Execute if not in workspace mode (no userId or no workspaceId header)
@@ -114,10 +106,18 @@ router.get('/teams/:name/velocity', async (req, res, next) => {
                 averageData = await getTeamAverageVelocity(name, password);
                  logger.info(`Successfully fetched anonymous velocity data for team '${name}'.`);
             } catch (dbError) {
-                // Handle specific password/team errors from getTeam called within DB functions
-                if (dbError.message === "Invalid password" || dbError.message === "Password required for this team" || dbError.message === "Invalid password (team does not require one)") {
-                    logger.warn(`Anonymous auth failed for team '${name}': ${dbError.message}`);
-                    return res.status(401).json({ error: 'Invalid team name or password' });
+                // Handle specific password/team/context errors from getTeam called within DB functions
+                const knownAuthErrors = [
+                    "Invalid password for anonymous team",
+                    "Password required for this anonymous team",
+                    "Invalid password (anonymous team does not require one)",
+                    "Password or workspace context required for this team.", // Added this
+                    "Cannot access workspace team using a password." // Added this
+                ];
+                if (knownAuthErrors.includes(dbError.message)) {
+                     logger.warn(`Anonymous auth/access failed for team '${name}': ${dbError.message}`);
+                     // Return 401 for auth/password issues, maybe 403 for trying password on workspace team? Let's use 401 for simplicity.
+                     return res.status(401).json({ error: 'Invalid team name or password/context required' });
                 }
                 // Re-throw other unexpected DB errors
                 logger.error(`Unexpected DB error during anonymous fetch for team '${name}': ${dbError.message}`, { stack: dbError.stack });

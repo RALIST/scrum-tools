@@ -1,12 +1,8 @@
 import { FC, useState, useEffect, useCallback } from "react"; // Added useCallback
 import {
   Box,
-  Heading,
-  Text,
   Button,
   VStack,
-  HStack,
-  SimpleGrid,
   Tabs,
   TabList,
   TabPanels,
@@ -27,37 +23,21 @@ import {
   useToast,
   Spinner,
   Center,
-  Badge,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   AlertDialog,
   AlertDialogBody,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
-  useColorMode,
 } from "@chakra-ui/react";
-import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useWorkspace, Workspace } from "../../contexts/WorkspaceContext"; // Import Workspace type
 import { useAuth } from "../../contexts/AuthContext";
 import PageHelmet from "../../components/PageHelmet";
 import { Icon } from "@chakra-ui/react";
 import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
-import {
-  FaUsers,
-  FaUserPlus,
-  FaUserMinus,
-  FaEdit,
-  FaThLarge,
-} from "react-icons/fa";
-import { MdGridView, MdInsertChart, MdOutlineGames } from "react-icons/md";
+import { FaUsers, FaThLarge } from "react-icons/fa";
 import React from "react";
-// Import the new components
 import WorkspaceDetailHeader from "../../components/workspaces/WorkspaceDetailHeader";
 import WorkspaceToolsPanel from "../../components/workspaces/WorkspaceToolsPanel";
 import WorkspaceMembersPanel from "../../components/workspaces/WorkspaceMembersPanel";
@@ -101,7 +81,6 @@ const WorkspaceDetail: FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
-  const { colorMode } = useColorMode();
 
   // State for workspace data
   const [workspace, setWorkspace] = useState<Workspace | null>(null); // Use imported Workspace type

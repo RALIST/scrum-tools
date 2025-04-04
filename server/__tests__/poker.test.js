@@ -85,6 +85,19 @@ describe('Poker Routes (/api/poker)', () => {
         expect(res.statusCode).toEqual(200); 
         expect(Array.isArray(res.body)).toBe(true);
       });
+
+      it('GET /api/poker/rooms - anonymous should get only public rooms', async () => {
+        const res = await request(app).get('/api/poker/rooms');
+        expect(res.statusCode).toEqual(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        // Should contain public/anon rooms created in outer beforeAll
+        expect(res.body.some(room => room.id === publicRoomId)).toBe(true);
+        expect(res.body.some(room => room.id === anonRoomId)).toBe(true);
+        // Should NOT contain workspace rooms
+        if (createdAuthRoomId) { // Check if it was created in the other describe block
+             expect(res.body.some(room => room.id === createdAuthRoomId)).toBe(false);
+        }
+      });
   });
 
   // --- Authenticated Access Tests ---
@@ -145,18 +158,38 @@ describe('Poker Routes (/api/poker)', () => {
         expect(res.body).toHaveProperty('error', 'Room already exists');
     });
 
-    it('GET /api/poker/rooms - should get a list including the workspace room', async () => {
-        expect(createdAuthRoomId).toBeDefined();
+    // Removed redundant test case that was covered by the next one
+
+    it('GET /api/poker/rooms - authenticated WITHOUT header should get only public rooms', async () => {
         const res = await request(app)
-          .get('/api/poker/rooms') // Use correct prefix
-          .set('Authorization', `Bearer ${authToken}`); // Auth is optional, but we send it
+          .get('/api/poker/rooms')
+          .set('Authorization', `Bearer ${authToken}`); // Authenticated but no workspace header
         expect(res.statusCode).toEqual(200);
         expect(Array.isArray(res.body)).toBe(true);
-        const foundRoom = res.body.find(room => room.id === createdAuthRoomId);
-        expect(foundRoom).toBeDefined();
-        expect(foundRoom).toHaveProperty('name', 'Workspace Linked Room Auth');
+        // Should contain public/anon rooms
+        expect(res.body.some(room => room.id === publicRoomId)).toBe(true);
+        expect(res.body.some(room => room.id === anonRoomId)).toBe(true);
+         // Should NOT contain the workspace room
+        expect(res.body.some(room => room.id === createdAuthRoomId)).toBe(false);
     });
-    
+
+     it('GET /api/poker/rooms - authenticated WITH header should get ONLY workspace rooms', async () => {
+        expect(createdAuthRoomId).toBeDefined();
+        const res = await request(app)
+          .get('/api/poker/rooms')
+          .set('Authorization', `Bearer ${authToken}`)
+          .set('workspace-id', testWorkspaceId); // Set workspace header
+        expect(res.statusCode).toEqual(200);
+        expect(Array.isArray(res.body)).toBe(true);
+         // Should contain the workspace room
+        expect(res.body.some(room => room.id === createdAuthRoomId)).toBe(true);
+         // Should NOT contain public/anon rooms
+        expect(res.body.some(room => room.id === publicRoomId)).toBe(false);
+        expect(res.body.some(room => room.id === anonRoomId)).toBe(false);
+        // Check if workspaceId matches
+        expect(res.body[0]).toHaveProperty('workspaceId', testWorkspaceId);
+    });
+
      it('POST /api/poker/rooms/:roomId/verify-password - should work for workspace room (authenticated)', async () => {
         expect(createdAuthRoomId).toBeDefined();
         const res = await request(app)
