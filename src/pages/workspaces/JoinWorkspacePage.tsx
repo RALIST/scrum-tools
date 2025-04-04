@@ -148,7 +148,8 @@ const JoinWorkspacePage: FC = () => {
               alignItems="center"
               justifyContent="center"
               textAlign="center"
-              height="200px"
+              // height="200px" // Remove fixed height
+              p={6} // Add padding
               borderRadius="md"
             >
               <AlertIcon boxSize="40px" mr={0} />
@@ -159,11 +160,20 @@ const JoinWorkspacePage: FC = () => {
                 Please log in or register to accept the workspace invitation.
                 The invitation will be applied automatically after you sign in.
               </AlertDescription>
-              <HStack mt={4}>
+              <HStack mt={4} spacing={4}>
+                {" "}
+                {/* Add spacing */}
                 <Button as={RouterLink} to="/login" colorScheme="blue">
                   Login
                 </Button>
-                <Button as={RouterLink} to="/register" variant="outline">
+                <Button
+                  as={RouterLink}
+                  to="/register"
+                  variant="outline"
+                  colorScheme="blue"
+                >
+                  {" "}
+                  {/* Match colorScheme */}
                   Register
                 </Button>
               </HStack>

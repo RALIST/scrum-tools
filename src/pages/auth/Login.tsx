@@ -79,7 +79,8 @@ const Login: FC = () => {
           const result = await apiRequest<{
             message: string;
             workspaceId: string;
-          }>("/workspace-invitations/accept", {
+          }>("/workspaces/invitations/accept", {
+            // Corrected path
             method: "POST",
             body: { token: pendingToken },
             // Auth token is now set by login(), apiRequest will use it
