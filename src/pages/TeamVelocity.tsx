@@ -155,7 +155,7 @@ const TeamVelocity: FC = () => {
             // If authenticated, use API with authentication
             let response;
             if (isAuthenticated) {
-                response = await apiRequest('/teams', {
+                response = await apiRequest('/velocity/teams', { // Use correct prefix
                     method: 'POST',
                     body: {
                         name: name,
@@ -165,7 +165,7 @@ const TeamVelocity: FC = () => {
                 });
             } else {
                 // Legacy non-authenticated flow
-                response = await fetch(`${config.apiUrl}/teams`, {
+                response = await fetch(`${config.apiUrl}/velocity/teams`, { // Use correct prefix
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -223,7 +223,7 @@ const TeamVelocity: FC = () => {
             
             if (isAuthenticated) {
                 // Use authenticated API
-                sprintData = await apiRequest(`/teams/${teamName}/sprints`, {
+                sprintData = await apiRequest(`/velocity/teams/${teamName}/sprints`, { // Use correct prefix
                     method: 'POST',
                     body: {
                         sprintName: data.sprintName,
@@ -235,7 +235,7 @@ const TeamVelocity: FC = () => {
             } else {
                 // Legacy non-authenticated flow
                 const sprintResponse = await fetch(
-                    `${config.apiUrl}/teams/${teamName}/sprints?password=${teamPassword}`,
+                    `${config.apiUrl}/velocity/teams/${teamName}/sprints?password=${teamPassword}`, // Use correct prefix
                     {
                         method: 'POST',
                         headers: {
@@ -260,7 +260,7 @@ const TeamVelocity: FC = () => {
             // Update velocity
             if (isAuthenticated) {
                 // Use authenticated API
-                await apiRequest(`/sprints/${sprintData.id}/velocity`, {
+                await apiRequest(`/velocity/sprints/${sprintData.id}/velocity`, { // Use correct prefix
                     method: 'PUT',
                     body: {
                         committedPoints: parseInt(data.committedPoints),
@@ -269,7 +269,7 @@ const TeamVelocity: FC = () => {
                 });
             } else {
                 // Legacy non-authenticated flow
-                const velocityResponse = await fetch(`${config.apiUrl}/sprints/${sprintData.id}/velocity`, {
+                const velocityResponse = await fetch(`${config.apiUrl}/velocity/sprints/${sprintData.id}/velocity`, { // Use correct prefix
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -321,7 +321,7 @@ const TeamVelocity: FC = () => {
             
             if (isAuthenticated && currentWorkspace) {
                 // Use authenticated API with workspace
-                data = await apiRequest(`/teams/${name}/velocity`, {
+                data = await apiRequest(`/velocity/teams/${name}/velocity`, { // Use correct prefix
                     method: 'GET',
                     headers: {
                         'workspace-id': currentWorkspace.id
@@ -329,11 +329,11 @@ const TeamVelocity: FC = () => {
                 });
             } else if (isAuthenticated) {
                 // Authenticated but no workspace
-                data = await apiRequest(`/teams/${name}/velocity`);
+                data = await apiRequest(`/velocity/teams/${name}/velocity`); // Use correct prefix
             } else {
                 // Legacy non-authenticated flow
                 const response = await fetch(
-                    `${config.apiUrl}/teams/${name}/velocity?password=${password}`
+                    `${config.apiUrl}/velocity/teams/${name}/velocity?password=${password}` // Use correct prefix
                 );
                 
                 if (!response.ok) {

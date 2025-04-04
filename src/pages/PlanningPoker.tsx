@@ -115,7 +115,7 @@ const PlanningPoker: FC = () => {
             setIsLoading(true);
             try {
                 // Load public rooms
-                const publicRooms = await apiRequest<Room[]>('/rooms', { includeAuth: false });
+                const publicRooms = await apiRequest<Room[]>('/poker/rooms', { includeAuth: false }); // Use correct prefix
                 setActiveRooms(publicRooms);
                 
                 // Load workspace rooms if authenticated and have a workspace
@@ -160,7 +160,7 @@ const PlanningPoker: FC = () => {
             // Use authentication if we're creating in a workspace
             const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
             
-            await apiRequest('/rooms', {
+            await apiRequest('/poker/rooms', { // Use correct prefix
                 method: 'POST',
                 body: {
                     roomId: newRoomId,
