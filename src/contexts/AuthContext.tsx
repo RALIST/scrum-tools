@@ -8,6 +8,7 @@ import {
 } from "react";
 import config from "../config";
 import { apiRequest, AuthError } from "../utils/apiUtils"; // Import apiRequest and AuthError
+// Removed useWorkspace import
 
 interface User {
   id: string;
@@ -31,23 +32,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Removed useWorkspace hook call
 
   // Define logout first as it might be used in verifyToken
   const logout = useCallback(() => {
     // Use useCallback for logout as well
     setUser(null);
     setToken(null);
+    // Removed setCurrentWorkspace(null) call
 
     try {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
-      localStorage.removeItem("currentWorkspaceId");
-      sessionStorage.removeItem("currentWorkspaceId");
-      sessionStorage.removeItem("currentWorkspace");
+      localStorage.removeItem("currentWorkspaceId"); // Keep this for now
     } catch (e) {
       console.error("Error clearing storage during logout:", e);
     }
-  }, []); // No dependencies for logout
+  }, []); // Removed setCurrentWorkspace dependency
 
   const verifyToken = useCallback(
     async (currentToken: string, storedUserJSON: string | null) => {

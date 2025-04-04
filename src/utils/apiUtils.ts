@@ -5,6 +5,7 @@ export interface ApiOptions {
   body?: any;
   headers?: Record<string, string>;
   includeAuth?: boolean;
+  queryParams?: Record<string, string | number | boolean>; // Add queryParams option
 }
 
 /**
@@ -40,7 +41,20 @@ export const apiRequest = async <T>(endpoint: string, options: ApiOptions = {}):
     requestOptions.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${config.apiUrl}${endpoint}`, requestOptions);
+  // Construct URL with query parameters if provided
+  let url = `${config.apiUrl}${endpoint}`;
+  if (options.queryParams) {
+    const params = new URLSearchParams();
+    Object.entries(options.queryParams).forEach(([key, value]) => {
+      params.append(key, String(value)); // Convert value to string
+    });
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+  }
+
+  const response = await fetch(url, requestOptions); // Use the potentially modified URL
 
   // Check for authorization errors specifically
   if (response.status === 401) {

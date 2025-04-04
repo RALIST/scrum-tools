@@ -1,6 +1,6 @@
 import { FC } from "react";
 import { Button, VStack, Box, Text, HStack, Badge } from "@chakra-ui/react";
-import { Room } from "./RoomListTable"; // Assuming Room type is exported or defined here/imported
+import { Room } from "./RoomListTable";
 
 interface PokerLandingActionsProps {
   isAuthenticated: boolean;

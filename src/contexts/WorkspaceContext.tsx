@@ -61,21 +61,33 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!isAuthenticated || isAuthLoading) return;
-    if (!workspaces) refreshWorkspaces();
-  }, [workspaces, isAuthenticated]);
-
   // Custom setter for currentWorkspace that also updates workspaceId
+  // Define this BEFORE the useEffect that uses it
   const updateCurrentWorkspace = useCallback((workspace: Workspace | null) => {
     if (workspace) {
       setCurrentWorkspace(workspace);
       setCurrentWorkspaceId(workspace.id);
     }
+    setCurrentWorkspace(workspace); // Set state directly
+    if (workspace) {
+      setCurrentWorkspaceId(workspace.id);
+      localStorage.setItem("currentWorkspaceId", workspace.id); // Save ID to localStorage
+    } else {
+      setCurrentWorkspaceId(null);
+      localStorage.removeItem("currentWorkspaceId"); // Clear ID from localStorage
+    }
   }, []);
 
-  const refreshWorkspaces = async () => {
-    if (!token) return [];
+  // Define refreshWorkspaces before the useEffect that uses it
+  // Wrap in useCallback as it's used in useEffect dependencies
+  const refreshWorkspaces = useCallback(async () => {
+    if (!token) {
+      // If no token (logged out), clear workspaces and current workspace
+      // This is now handled by the useEffect below, but keep for safety/clarity? Or remove?
+      // setWorkspaces(null);
+      // updateCurrentWorkspace(null); // Use the updated setter to clear everything
+      return []; // Return early if not authenticated
+    }
 
     setIsLoading(true);
     try {
@@ -112,7 +124,25 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token, currentWorkspaceId, updateCurrentWorkspace]); // Add dependencies for useCallback
+
+  useEffect(() => {
+    if (!isAuthenticated || isAuthLoading) return;
+    if (!workspaces) refreshWorkspaces();
+  }, [workspaces, isAuthenticated, isAuthLoading, refreshWorkspaces]); // Existing effect to load workspaces
+
+  // Effect to clear workspace when user logs out
+  useEffect(() => {
+    if (!isAuthenticated && !isAuthLoading) {
+      // If user is not authenticated (and auth check is complete)
+      updateCurrentWorkspace(null); // Clear the current workspace
+      setWorkspaces(null); // Clear the list of workspaces
+    }
+    // We might need to trigger refreshWorkspaces if isAuthenticated becomes true later
+    // but the existing useEffect above should handle initial load.
+  }, [isAuthenticated, isAuthLoading, updateCurrentWorkspace]); // Depend on auth state
+
+  // refreshWorkspaces is now defined above the useEffects
 
   const createWorkspace = async (name: string, description: string) => {
     if (!token) throw new Error("Not authenticated");

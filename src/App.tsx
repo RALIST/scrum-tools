@@ -17,7 +17,6 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Workspaces from "./pages/workspaces/Workspaces";
 import WorkspaceDetail from "./pages/workspaces/WorkspaceDetail";
-// Component imports remain the same
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PageContainer from "./components/PageContainer";

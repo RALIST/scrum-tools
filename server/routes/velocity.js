@@ -1,10 +1,8 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
-// Remove direct pool import, use executeQuery instead for helper
-// import pool from '../db/pool.js'; 
 import { executeQuery } from '../db/dbUtils.js'; // Import executeQuery
 import logger from '../logger.js'; // Import the logger
+// Note: authenticateToken/optionalAuthenticateToken is applied in index.js
 import {
     createTeam,
     getTeam,
@@ -13,7 +11,9 @@ import {
     getTeamVelocity,
     getTeamAverageVelocity,
     getTeamByWorkspace,
-} from '../db/velocity.js'
+    getTeamVelocityByWorkspace, // Import workspace-specific function
+    getTeamAverageVelocityByWorkspace, // Import workspace-specific function
+} from '../db/velocity.js';
 
 const router = express.Router();
 
@@ -51,46 +51,96 @@ router.post('/teams', async (req, res, next) => {
     }
 });
 
-// Get team data - supports both authenticated and anonymous modes
-// Add 'next'
+// Get team data - supports both authenticated (workspace) and anonymous modes
+// optionalAuthenticateToken is applied in index.js, so req.user might exist
 router.get('/teams/:name/velocity', async (req, res, next) => {
     try {
         const { name } = req.params;
-        const { password } = req.query;
-        let velocityData
-        let averageData;
+        const { password } = req.query; // For anonymous mode
+        const workspaceId = req.headers['workspace-id']; // Check for workspace context header
+        const userId = req.user?.userId; // User ID from optional token
 
-        // Anonymous password-based lookup
-        // Wrap in try...catch to handle potential "Invalid password" error from DB functions
-        try {
-            velocityData = await getTeamVelocity(name, password);
-            averageData = await getTeamAverageVelocity(name, password);
-        } catch (dbError) {
-            if (dbError.message === "Invalid password" || dbError.message === "Password required for this team" || dbError.message === "Invalid password (team does not require one)") {
-                 // If getTeam inside the DB functions throws due to password mismatch, return 401
-                return res.status(401).json({ error: 'Invalid team name or password' });
+        let velocityData = null;
+        let averageData = null;
+
+        // --- Workspace Mode ---
+        // Check if user is authenticated AND workspace context is provided
+        if (userId && workspaceId) {
+            logger.info(`Attempting workspace velocity fetch: user ${userId}, workspace ${workspaceId}, team ${name}`);
+            // Verify user has access to this workspace
+            const hasAccess = await checkWorkspaceAccess(workspaceId, userId);
+            if (!hasAccess) {
+                logger.warn(`Forbidden access attempt: User ${userId} to workspace ${workspaceId}`);
+                // Return 403 even if the team exists anonymously, workspace access takes precedence
+                return res.status(403).json({ error: 'Forbidden: Access denied to this workspace' });
             }
-            // For other unexpected errors, pass to the central handler
-            throw dbError; 
+
+            // Step 1: Check if the team exists for this workspace
+            let team = await getTeamByWorkspace(name, workspaceId);
+
+            // Step 2: If team doesn't exist, create it automatically
+            if (!team) {
+                logger.info(`Team '${name}' not found in workspace '${workspaceId}'. Creating it automatically for user ${userId}.`);
+                try {
+                    // Create the team linked to the workspace, no password needed
+                    team = await createTeam(uuidv4(), name, null, workspaceId, userId);
+                    logger.info(`Successfully created team '${team.id}' ('${name}') for workspace '${workspaceId}'.`);
+                    // Since it's new, velocity data is empty
+                    velocityData = [];
+                    averageData = { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' }; // Use string defaults matching DB return type
+                } catch (creationError) {
+                     logger.error(`Failed to automatically create team '${name}' for workspace '${workspaceId}': ${creationError.message}`, { stack: creationError.stack });
+                     // Pass the creation error to the handler
+                     throw creationError;
+                }
+            } else {
+                // Step 3: If team exists, fetch its velocity data
+                logger.info(`Team '${name}' found in workspace '${workspaceId}'. Fetching velocity data.`);
+                velocityData = await getTeamVelocityByWorkspace(name, workspaceId);
+                averageData = await getTeamAverageVelocityByWorkspace(name, workspaceId);
+                 logger.info(`Successfully fetched workspace velocity data for team '${name}' in workspace '${workspaceId}'.`);
+                 // Handle case where team exists but has no sprints yet (DB functions return null/defaults)
+                 if (velocityData === null) velocityData = [];
+                 if (averageData === null) averageData = { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
+            }
+        }
+        // --- Anonymous Mode ---
+        // Execute if not in workspace mode (no userId or no workspaceId header)
+        else {
+            logger.info(`Attempting anonymous velocity fetch for team: ${name}`);
+            // Use password from query params
+            try {
+                velocityData = await getTeamVelocity(name, password);
+                averageData = await getTeamAverageVelocity(name, password);
+                 logger.info(`Successfully fetched anonymous velocity data for team '${name}'.`);
+            } catch (dbError) {
+                // Handle specific password/team errors from getTeam called within DB functions
+                if (dbError.message === "Invalid password" || dbError.message === "Password required for this team" || dbError.message === "Invalid password (team does not require one)") {
+                    logger.warn(`Anonymous auth failed for team '${name}': ${dbError.message}`);
+                    return res.status(401).json({ error: 'Invalid team name or password' });
+                }
+                // Re-throw other unexpected DB errors
+                logger.error(`Unexpected DB error during anonymous fetch for team '${name}': ${dbError.message}`, { stack: dbError.stack });
+                throw dbError;
+            }
+             // If getTeamVelocity/AverageVelocity return null (shouldn't happen if getTeam throws), handle it
+             if (velocityData === null || averageData === null) {
+                 // This implies team was found (no password error) but no data exists.
+                 logger.warn(`Anonymous team '${name}' found, but no velocity data available.`);
+                 // Return empty data, not an error
+             }
         }
 
-        // If we reach here, password was valid (or not required and not provided)
-        // The DB functions would return null if team not found, but getTeam throws now.
-        // Let's keep the check just in case, although it might be redundant if getTeam always throws.
-        if (!velocityData || !averageData) {
-             // This case might indicate team found but no velocity data yet, or an unexpected null
-             logger.warn('Velocity or average data is null/undefined after successful team fetch', { teamName: name });
-             // Return empty data instead of 401, as the team/password was valid
-             // return res.status(404).json({ error: 'Team found, but no velocity data available' }); 
-        }
-
+        // --- Response ---
+        // Return data, ensuring defaults for null/undefined cases from either mode
         res.json({
-            sprints: velocityData || [],
+            sprints: velocityData || [], // Ensure array
             averages: averageData || {
+                average_velocity: 0,
                 average_velocity: 0,
                 average_commitment: 0,
                 completion_rate: 0
-            }
+            } // Ensure object with defaults
         });
     } catch (error) {
         logger.error('Error getting team velocity:', { error: error.message, stack: error.stack, teamName: req.params.name, query: req.query });
@@ -99,54 +149,68 @@ router.get('/teams/:name/velocity', async (req, res, next) => {
     }
 });
 
-// Create a new sprint - supports both authenticated and anonymous modes
-// Add 'next'
+// Create a new sprint - supports both authenticated (workspace) and anonymous modes
+// optionalAuthenticateToken is applied in index.js
 router.post('/teams/:name/sprints', async (req, res, next) => {
     try {
         const { name } = req.params;
-        const { password } = req.query;
-        const { sprintName, startDate, endDate, workspace_id } = req.body
-        let team = null
-        let workspaceId = workspace_id || null
-        let userId = null
+        const { password } = req.query; // Password for anonymous access from query
+        const { sprintName, startDate, endDate, workspaceId } = req.body; // workspaceId from body for workspace mode
+        const userId = req.user?.userId; // User ID from optional token
 
-        // If request has authorization header, verify user
-        if (req.headers.authorization) {
+        let team = null;
+
+        // --- Workspace Mode ---
+        // Check if user is authenticated AND workspaceId is provided in the body
+        if (userId && workspaceId) {
+             logger.info(`Attempting workspace sprint creation: user ${userId}, workspace ${workspaceId}, team ${name}`);
+            // Verify user has access to this workspace
+            const hasAccess = await checkWorkspaceAccess(workspaceId, userId);
+            if (!hasAccess) {
+                 logger.warn(`Forbidden sprint creation attempt: User ${userId} to workspace ${workspaceId}`);
+                return res.status(403).json({ error: 'Forbidden: Access denied to this workspace' });
+            }
+
+            // Get the team using workspace context
+            team = await getTeamByWorkspace(name, workspaceId);
+            if (!team) {
+                logger.warn(`Team '${name}' not found in workspace '${workspaceId}' during sprint creation.`);
+                return res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
+            }
+             logger.info(`Workspace team '${name}' identified for sprint creation.`);
+        }
+        // --- Anonymous Mode ---
+        // Execute if not in workspace mode (no userId or no workspaceId in body)
+        else {
+            logger.info(`Attempting anonymous sprint creation for team: ${name}`);
+            // Use password from query params
             try {
-                // Extract token
-                const token = req.headers.authorization.split(' ')[1]
-                const decoded = jwt.verify(token, process.env.JWT_SECRET)
-                userId = decoded.userId
-                
-                // Verify workspace access if provided
-                if (workspaceId) {
-                    const workspaceAccess = await checkWorkspaceAccess(workspaceId, userId)
-                    if (!workspaceAccess) {
-                        return res.status(403).json({ error: 'User does not have access to this workspace' })
-                    }
-                    
-                    // Get team by workspace
-                    team = await getTeamByWorkspace(name, workspaceId);
+                // Verify team and password for anonymous access
+                team = await getTeam(name, password); // This throws on invalid password/team
+                 logger.info(`Anonymous team '${name}' identified for sprint creation.`);
+            } catch (dbError) {
+                if (dbError.message === "Invalid password" || dbError.message === "Password required for this team" || dbError.message === "Invalid password (team does not require one)") {
+                    logger.warn(`Anonymous auth failed for team '${name}' during sprint creation: ${dbError.message}`);
+                    return res.status(401).json({ error: 'Invalid team name or password' });
                 }
-            } catch (err) {
-                // Log as warning, as it might be an expected invalid token
-                logger.warn('Token validation error during sprint creation (falling back to anonymous):', { error: err.message, teamName: name, workspaceId }); 
-                // Continue without authentication - fall back to anonymous mode
+                 logger.error(`Unexpected DB error during anonymous sprint creation auth for team '${name}': ${dbError.message}`, { stack: dbError.stack });
+                throw dbError; // Re-throw other errors
             }
         }
-        
+
+        // If team is still null after checks (shouldn't happen if logic is correct, but as a safeguard)
         if (!team) {
-            // Anonymous mode - verify team and password
-            team = await getTeam(name, password)
-        }
-        
-        if (!team) {
-            return res.status(401).json({ error: 'Invalid team name or authentication' })
+             logger.error(`Team object is unexpectedly null after auth/anonymous checks for team '${name}' during sprint creation.`);
+             // Use 500 for unexpected server state, or 401 if it implies auth failure
+             return res.status(500).json({ error: 'Failed to identify team for sprint creation' });
         }
 
-        const id = uuidv4()
-        const sprint = await createSprint(id, team.id, sprintName, startDate, endDate)
-        res.json(sprint);
+        // --- Create Sprint ---
+        const id = uuidv4();
+        const sprint = await createSprint(id, team.id, sprintName, startDate, endDate);
+        logger.info(`Sprint '${sprint.id}' created successfully for team '${team.id}' ('${name}').`);
+        // Return the created sprint ID (or full object)
+        res.status(201).json({ id: sprint.id }); // Return 201 Created status and sprint ID
     } catch (error) {
         logger.error('Error creating sprint:', { error: error.message, stack: error.stack, teamName: req.params.name, body: req.body });
         // Pass error to the centralized handler
