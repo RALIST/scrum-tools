@@ -1,3 +1,5 @@
+import logger  from '../logger.js'; // Import the logger
+
 /**
  * Centralized Express error handling middleware.
  * 

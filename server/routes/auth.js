@@ -99,8 +99,27 @@ router.post('/login', async (req, res, next) => {
     // Use logger.error before passing to centralized handler
     logger.error('Login error:', { error: error.message, stack: error.stack, email: req.body.email });
     // Pass error to the centralized handler
+    // Pass error to the centralized handler
     next(error);
   }
+});
+
+// Verify token validity
+// Import the middleware we need
+import { authenticateToken } from '../middleware/auth.js'; 
+
+router.get('/verify', authenticateToken, (req, res) => {
+  // If authenticateToken middleware passes without error, the token is valid.
+  // We get user info from the middleware via req.user.
+  // It's good practice to send back some user info to confirm who is verified.
+  res.status(200).json({ 
+      message: 'Token is valid', 
+      user: { // Send back user info attached by middleware
+          id: req.user.userId, 
+          email: req.user.email 
+          // We might need to fetch the name from DB if it's not in the token
+      } 
+  }); 
 });
 
 export default router;
