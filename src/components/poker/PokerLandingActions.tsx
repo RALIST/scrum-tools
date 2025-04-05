@@ -64,7 +64,7 @@ export const PokerLandingActions: FC<PokerLandingActionsProps> = ({
                 alignSelf="flex-end"
                 onClick={onShowRoomList}
               >
-                See all workspace rooms →
+                See all rooms →
               </Button>
             )}
           </VStack>

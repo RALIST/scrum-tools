@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useState, useEffect } from "react"; // Import useState, useEffect
 import {
   Modal,
   ModalOverlay,
@@ -17,31 +17,44 @@ import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 
 interface JoinRoomModalProps {
   isOpen: boolean;
-  userName: string;
-  roomPassword: string;
-  showPassword: boolean;
+  initialUserName: string; // Use initial value
   isPasswordProtected: boolean;
-  onUserNameChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onTogglePassword: () => void;
-  onJoin: () => void;
-  isNameDisabled?: boolean; // Add optional prop
+  onClose: () => void; // Add onClose prop
+  onJoin: (name: string, password?: string) => void; // Updated signature
+  isNameDisabled?: boolean;
 }
 
 const JoinRoomModal: FC<JoinRoomModalProps> = ({
   isOpen,
-  userName,
-  roomPassword,
-  showPassword,
+  initialUserName,
   isPasswordProtected,
-  onUserNameChange,
-  onPasswordChange,
-  onTogglePassword,
+  onClose, // Use onClose
   onJoin,
-  isNameDisabled = false, // Default to false
+  isNameDisabled = false,
 }) => {
+  const [internalUserName, setInternalUserName] = useState(initialUserName);
+  const [internalRoomPassword, setInternalRoomPassword] = useState("");
+  const [internalShowPassword, setInternalShowPassword] = useState(false);
+
+  // Reset internal state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setInternalUserName(initialUserName);
+      setInternalRoomPassword("");
+      setInternalShowPassword(false);
+    }
+  }, [isOpen, initialUserName]);
+
+  const handleJoin = () => {
+    onJoin(
+      internalUserName.trim(),
+      isPasswordProtected ? internalRoomPassword : undefined
+    );
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} closeOnOverlayClick={false}>
+    // Pass onClose to Modal, allow overlay click to close
+    <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
       <ModalContent mx={4}>
         <ModalHeader>Join Planning Poker</ModalHeader>
@@ -49,25 +62,27 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
           <VStack spacing={4}>
             <Input
               placeholder="Enter your name"
-              value={userName}
-              onChange={(e) => onUserNameChange(e.target.value)}
-              isDisabled={isNameDisabled} // Disable input if needed
+              value={internalUserName} // Use internal state
+              onChange={(e) => setInternalUserName(e.target.value)} // Update internal state
+              isDisabled={isNameDisabled}
             />
             {isPasswordProtected && (
               <InputGroup>
                 <Input
-                  type={showPassword ? "text" : "password"}
+                  type={internalShowPassword ? "text" : "password"} // Use internal state
                   placeholder="Enter room password"
-                  value={roomPassword}
-                  onChange={(e) => onPasswordChange(e.target.value)}
+                  value={internalRoomPassword} // Use internal state
+                  onChange={(e) => setInternalRoomPassword(e.target.value)} // Update internal state
                 />
                 <InputRightElement>
                   <IconButton
                     aria-label={
-                      showPassword ? "Hide password" : "Show password"
+                      internalShowPassword ? "Hide password" : "Show password"
                     }
-                    icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    onClick={onTogglePassword}
+                    icon={internalShowPassword ? <ViewOffIcon /> : <ViewIcon />} // Use internal state
+                    onClick={() =>
+                      setInternalShowPassword(!internalShowPassword)
+                    } // Update internal state
                     size="sm"
                     variant="ghost"
                   />
@@ -77,7 +92,9 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
           </VStack>
         </ModalBody>
         <ModalFooter>
-          <Button colorScheme="blue" onClick={onJoin} w="full">
+          <Button colorScheme="blue" onClick={handleJoin} w="full">
+            {" "}
+            {/* Call internal handler */}
             Join Room
           </Button>
         </ModalFooter>

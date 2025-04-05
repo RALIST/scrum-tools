@@ -54,7 +54,7 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
         <ModalHeader>Create Planning Poker Room</ModalHeader>
         <ModalBody>
           <VStack spacing={4}>
-            {/* Room Name is required only if authenticated and linked to a workspace */}
+            {/* Room Name is required only if the user is authenticated AND a specific workspace is selected (not 'No Workspace') */}
             <FormControl isRequired={isAuthenticated && !!currentWorkspaceId}>
               <FormLabel>Room Name</FormLabel>
               <Input

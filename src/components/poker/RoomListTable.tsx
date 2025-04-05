@@ -15,9 +15,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 
-// Re-using the Room interface from PlanningPoker page
 export interface Room {
-  // Add export
   id: string;
   name: string;
   participantCount: number;

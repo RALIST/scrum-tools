@@ -6,31 +6,17 @@ import {
   Button,
   Text,
   VStack,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Badge,
-  IconButton,
   useColorMode,
   useToast,
-  Stack,
-  TableContainer,
-  Wrap,
-  WrapItem,
-  useClipboard,
   useDisclosure,
-  Tooltip,
-  Divider,
-  Spinner, // Import Spinner
-  Center, // Import Center
+  Spinner,
+  Center,
 } from "@chakra-ui/react";
-import { CopyIcon, CheckIcon, SettingsIcon, EditIcon } from "@chakra-ui/icons";
 import PageContainer from "../../components/PageContainer";
 import { Helmet } from "react-helmet-async";
-import { SEQUENCES, SequenceType } from "../../constants/poker";
+import { RoomHeader } from "../../components/poker/RoomHeader";
+import { VotingArea } from "../../components/poker/VotingArea";
+import { ParticipantsTable } from "../../components/poker/ParticipantsTable"; // Import the new table component
 import {
   JoinRoomModal,
   ChangeNameModal,
@@ -39,45 +25,9 @@ import {
 import { usePokerSocket } from "../../hooks/usePokerSocket";
 import { useAuth } from "../../contexts/AuthContext"; // Import useAuth
 import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
-import config from "../../config";
+import { SequenceType } from "../../constants/poker";
 
 const LOCAL_STORAGE_USERNAME_KEY = "planningPokerUsername";
-
-interface CardProps {
-  value: string;
-  isSelected: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-}
-
-const Card: FC<CardProps> = ({ value, isSelected, onClick, disabled }) => {
-  const { colorMode } = useColorMode();
-
-  return (
-    <Button
-      h={{ base: "100px", md: "120px" }}
-      w={{ base: "70px", md: "80px" }}
-      fontSize={{ base: "xl", md: "2xl" }}
-      variant="outline"
-      colorScheme={isSelected ? "blue" : "gray"}
-      bg={
-        isSelected
-          ? colorMode === "light"
-            ? "blue.50"
-            : "blue.900"
-          : "transparent"
-      }
-      onClick={onClick}
-      disabled={disabled}
-      _hover={{
-        transform: disabled ? "none" : "translateY(-4px)",
-        transition: "transform 0.2s",
-      }}
-    >
-      {value}
-    </Button>
-  );
-};
 
 const PlanningPokerRoom: FC = () => {
   const { colorMode } = useColorMode();
@@ -85,13 +35,8 @@ const PlanningPokerRoom: FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user, isAuthenticated } = useAuth();
-  const [userName, setUserName] = useState(""); // For modal input prefill/display
+  const [userName, setUserName] = useState("");
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const shareableLink = useMemo(
-    () => `${config.siteUrl}/planning-poker/${roomId}`,
-    [roomId]
-  );
-  const { hasCopied, onCopy } = useClipboard(shareableLink);
   const {
     isOpen: isChangeNameOpen,
     onOpen: onChangeNameOpen,
@@ -102,13 +47,9 @@ const PlanningPokerRoom: FC = () => {
     onOpen: onSettingsOpen,
     onClose: onSettingsClose,
   } = useDisclosure();
-  const [newUserName, setNewUserName] = useState<string>("");
-  const [roomPassword, setRoomPassword] = useState<string>(""); // For modal input
-  const [showPassword, setShowPassword] = useState(false);
-  const [newSettings, setNewSettings] = useState<{
-    sequence?: SequenceType;
-    password?: string;
-  }>({});
+  // Removed newUserName state
+  // Removed roomPassword and showPassword states
+  // Removed newSettings state
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [isLoadingRoomInfo, setIsLoadingRoomInfo] = useState(true);
   const [roomExists, setRoomExists] = useState<boolean | null>(null);
@@ -258,7 +199,7 @@ const PlanningPokerRoom: FC = () => {
       console.log("[PlanningPokerRoom] Conditions met for showing join modal.");
       onJoinModalOpen();
     } else {
-      // Should have auto-joined, close modal if it was somehow open
+      // Should have auto-joined via initialUserName in the hook, close modal if it was somehow open
       if (isJoinModalOpen) onJoinModalClose();
     }
   }, [
@@ -274,115 +215,81 @@ const PlanningPokerRoom: FC = () => {
 
   // --- Callbacks ---
 
-  // Called when user clicks "Join" in the modal
-  const handleManualJoin = useCallback(() => {
-    // Use state `userName` if unauthenticated, otherwise use context `user.name`
-    const nameToJoin =
-      isAuthenticated && user?.name ? user.name : userName.trim();
-    if (!nameToJoin) {
-      toast({
-        title: "Error",
-        description: "Please enter your name",
-        status: "error",
-      });
-      return;
-    }
-    // Password required only if the room is protected
-    if (isPasswordProtected && !roomPassword.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter the room password",
-        status: "error",
-      });
-      return;
-    }
-    // Save name only if not authenticated
-    if (!isAuthenticated) {
-      localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, nameToJoin);
-    }
-    // Call the hook's joinRoom function
-    joinRoom(nameToJoin, isPasswordProtected ? roomPassword : undefined);
-    // Don't close modal here, let onRoomJoined handle it on success
-  }, [
-    userName,
-    roomPassword,
-    isPasswordProtected,
-    joinRoom,
-    toast,
-    isAuthenticated,
-    user?.name,
-  ]);
+  // Called when user clicks "Join" in the modal - updated signature
+  const handleManualJoin = useCallback(
+    (name: string, password?: string) => {
+      // Name validation (already trimmed in modal)
+      if (!name) {
+        toast({
+          title: "Error",
+          description: "Please enter your name",
+          status: "error",
+        });
+        return;
+      }
+      // Password validation (only if needed)
+      if (isPasswordProtected && !password) {
+        toast({
+          title: "Error",
+          description: "Please enter the room password",
+          status: "error",
+        });
+        return;
+      }
+      // Save name only if not authenticated
+      if (!isAuthenticated) {
+        // Update local state userName as well, since it's used for display
+        setUserName(name);
+        localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, name);
+      }
+      // Call the hook's joinRoom function with data from modal
+      joinRoom(name, password);
+      // Don't close modal here, let onRoomJoined handle it on success
+    },
+    [isPasswordProtected, joinRoom, toast, isAuthenticated] // Removed userName, roomPassword dependencies
+  );
 
-  const handleChangeName = useCallback(() => {
-    if (isAuthenticated) return;
-    if (!newUserName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid name",
-        status: "error",
-      });
-      return;
-    }
-    localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, newUserName);
-    setUserName(newUserName); // Update local state as well
-    changeName(newUserName); // Call hook function
-    onChangeNameClose();
-    toast({ title: "Name Updated", status: "success", duration: 2000 });
-  }, [newUserName, changeName, onChangeNameClose, toast, isAuthenticated]);
+  // Updated handleChangeName to accept newName argument
+  const handleChangeName = useCallback(
+    (newName: string) => {
+      if (isAuthenticated) return;
+      if (!newName.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid name",
+          status: "error",
+        });
+        return;
+      }
+      localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, newName);
+      setUserName(newName); // Update local state as well
+      changeName(newName); // Call hook function
+      onChangeNameClose();
+      toast({ title: "Name Updated", status: "success", duration: 2000 });
+    },
+    [changeName, onChangeNameClose, toast, isAuthenticated] // Removed newUserName dependency
+  );
 
-  const handleUpdateSettings = useCallback(() => {
-    updateRoomSettings(newSettings);
-    onSettingsClose();
-    setNewSettings({});
-  }, [newSettings, updateRoomSettings, onSettingsClose]);
+  // Updated handleUpdateSettings to accept settings argument
+  const handleUpdateSettings = useCallback(
+    (settingsToSave: { sequence?: SequenceType; password?: string }) => {
+      updateRoomSettings(settingsToSave);
+      onSettingsClose();
+      // No need to reset newSettings state as it's removed
+    },
+    [updateRoomSettings, onSettingsClose] // Removed newSettings dependency
+  );
 
   const handleCardSelect = useCallback(
     (value: string) => {
       setSelectedCard(value);
       vote(value);
-      toast({
-        title: "Vote Recorded",
-        description: `You selected ${value} points`,
-        status: "success",
-        duration: 2000,
-      });
+      // Toast is now handled inside VotingArea component
     },
-    [vote, toast]
+    [vote] // Removed toast dependency
   );
 
-  const calculateAverage = useCallback(() => {
-    if (!participants) return 0;
-    const numericVotes = participants
-      .map((p) => p.vote)
-      .filter((v) => v && v !== "?" && !isNaN(Number(v)))
-      .map(Number);
-    if (numericVotes.length === 0) return 0;
-    return numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
-  }, [participants]);
-
-  const getVoteColor = useCallback(
-    (vote: string | null) => {
-      if (!vote || vote === "?" || !isRevealed || !settings) return undefined;
-      const voteNum = Number(vote);
-      const average = calculateAverage();
-      if (isNaN(voteNum)) return undefined;
-      const sequenceValues = SEQUENCES[settings.sequence] || [];
-      const maxDiff = Math.max(
-        ...sequenceValues
-          .filter((v) => v !== "?" && !isNaN(Number(v)))
-          .map((v) => Math.abs(Number(v) - average))
-      );
-      if (maxDiff === 0) return "green.500";
-      const diff = Math.abs(voteNum - average);
-      const percentage = diff / maxDiff;
-      if (percentage <= 0.2) return "green.500";
-      if (percentage <= 0.4) return "green.300";
-      if (percentage <= 0.6) return "yellow.400";
-      if (percentage <= 0.8) return "orange.400";
-      return "red.500";
-    },
-    [isRevealed, settings, calculateAverage]
-  );
+  // Removed calculateAverage and getVoteColor functions, they are now in ParticipantsTable
 
   // --- Render Logic ---
 
@@ -427,89 +334,29 @@ const PlanningPokerRoom: FC = () => {
         {/* Join Modal - controlled by isJoinModalOpen state */}
         <JoinRoomModal
           isOpen={isJoinModalOpen}
-          userName={userName} // Use state for prefill/input
-          roomPassword={roomPassword}
-          showPassword={showPassword}
+          initialUserName={userName} // Pass current userName as initial value
           isPasswordProtected={isPasswordProtected}
-          onUserNameChange={setUserName} // Update state on input change
-          onPasswordChange={setRoomPassword}
-          onTogglePassword={() => setShowPassword(!showPassword)}
-          onJoin={handleManualJoin} // Use the manual join handler
-          // Removed isLoading prop as it's not expected by JoinRoomModalProps
+          onClose={onJoinModalClose} // Pass the close handler
+          onJoin={handleManualJoin} // Pass the updated handler
+          isNameDisabled={isAuthenticated} // Disable name input if authenticated
         />
 
         {/* Main Room Content - Render structure always if room exists */}
         <VStack spacing={{ base: 4, md: 8 }}>
-          {/* Header */}
-          <Box textAlign="center" w="full">
-            <Heading
-              size={{ base: "lg", md: "xl" }}
-              mb={4}
-              textAlign={"center"}
-            >
-              <Stack
-                direction={{ base: "column", md: "row" }}
-                spacing={2}
-                align="center"
-              >
-                <Text>Room {roomId}</Text>
-                <Stack direction={"row"} spacing={2}>
-                  <Tooltip label={"Copy link to room"}>
-                    <IconButton
-                      title="Copy link"
-                      aria-label="Copy link"
-                      icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
-                      onClick={() => {
-                        onCopy();
-                        toast({
-                          title: "Link copied",
-                          status: "success",
-                          duration: 2000,
-                        });
-                      }}
-                      size="sm"
-                    />
-                  </Tooltip>
-                  <Tooltip label={"Change room settings"}>
-                    <IconButton
-                      aria-label="Room Settings"
-                      icon={<SettingsIcon />}
-                      size="sm"
-                      onClick={onSettingsOpen}
-                    />
-                  </Tooltip>
-                </Stack>
-              </Stack>
-            </Heading>
-            <Divider my={2} />
-            {/* Show user name only if joined */}
-            {isJoined && (
-              <VStack spacing={2}>
-                <Stack direction="row" spacing={2}>
-                  <Text
-                    fontSize={{ base: "md", md: "lg" }}
-                    color={colorMode === "light" ? "gray.600" : "gray.300"}
-                  >
-                    {/* Display name from participants list if possible, fallback to state */}
-                    Playing as: {/* Use the destructured 'socket' variable */}
-                    {participants?.find((p) => p.id === socket?.id)?.name ||
-                      userName}
-                  </Text>
-                  {!isAuthenticated && (
-                    <IconButton
-                      aria-label="Change name"
-                      icon={<EditIcon />}
-                      size="xs"
-                      onClick={() => {
-                        setNewUserName(userName);
-                        onChangeNameOpen();
-                      }}
-                    />
-                  )}
-                </Stack>
-              </VStack>
-            )}
-          </Box>
+          {/* Use RoomHeader Component */}
+          <RoomHeader
+            roomId={roomId}
+            isJoined={isJoined}
+            userName={userName} // Pass the state userName as fallback
+            isAuthenticated={isAuthenticated}
+            onSettingsOpen={onSettingsOpen}
+            onChangeNameOpen={() => {
+              // setNewUserName(userName); // No longer needed, modal handles its state
+              onChangeNameOpen();
+            }}
+            participants={participants}
+            socketId={socket?.id} // Pass socket id from the hook
+          />
 
           {/* Show spinner overlay if connecting/joining AFTER initial room check */}
           {showConnectingSpinner && (
@@ -534,91 +381,22 @@ const PlanningPokerRoom: FC = () => {
               shadow="md"
             >
               <VStack spacing={{ base: 4, md: 8 }}>
-                {/* Cards */}
-                <Wrap spacing={4} justify="center">
-                  {(SEQUENCES[settings.sequence] || []).map((value) => (
-                    <WrapItem key={value}>
-                      <Card
-                        value={value}
-                        isSelected={selectedCard === value}
-                        onClick={() => handleCardSelect(value)}
-                        disabled={isRevealed}
-                      />
-                    </WrapItem>
-                  ))}
-                </Wrap>
-                {/* Buttons */}
-                <Stack
-                  direction={{ base: "column", md: "row" }}
-                  spacing={4}
-                  justify="center"
-                  w="full"
-                >
-                  <Button
-                    colorScheme="blue"
-                    onClick={revealVotes}
-                    disabled={isRevealed}
-                    w={{ base: "full", md: "auto" }}
-                  >
-                    Reveal Votes
-                  </Button>
-                  <Button
-                    colorScheme="orange"
-                    onClick={resetVotes}
-                    w={{ base: "full", md: "auto" }}
-                  >
-                    New Round
-                  </Button>
-                </Stack>
-                {/* Table */}
-                <Box w="full" overflowX="auto">
-                  <TableContainer>
-                    <Table variant="simple" size={{ base: "sm", md: "md" }}>
-                      <Thead>
-                        <Tr>
-                          <Th>Participant</Th>
-                          <Th>Status</Th>
-                          {isRevealed && <Th>Vote</Th>}
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {participants.map((participant) => (
-                          <Tr key={participant.id}>
-                            <Td>{participant.name}</Td>
-                            <Td>
-                              <Badge
-                                colorScheme={
-                                  participant.vote ? "green" : "yellow"
-                                }
-                              >
-                                {participant.vote ? "Voted" : "Not Voted"}
-                              </Badge>
-                            </Td>
-                            {isRevealed && (
-                              <Td>
-                                <Text
-                                  color={getVoteColor(participant.vote)}
-                                  fontWeight="bold"
-                                >
-                                  {participant.vote || "No vote"}
-                                </Text>
-                              </Td>
-                            )}
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </TableContainer>
-                  {isRevealed && (
-                    <Text
-                      mt={4}
-                      fontWeight="bold"
-                      textAlign={{ base: "center", md: "left" }}
-                    >
-                      Average (excluding '?'): {calculateAverage().toFixed(1)}
-                    </Text>
-                  )}
-                </Box>
+                {/* Use VotingArea Component */}
+                <VotingArea
+                  sequence={settings.sequence}
+                  selectedCard={selectedCard}
+                  isRevealed={isRevealed}
+                  onCardSelect={handleCardSelect} // Pass the updated handler (without toast)
+                  onRevealVotes={revealVotes}
+                  onResetVotes={resetVotes}
+                />
+
+                {/* Use ParticipantsTable Component */}
+                <ParticipantsTable
+                  participants={participants}
+                  isRevealed={isRevealed}
+                  settings={settings}
+                />
               </VStack>
             </Box>
           )}
@@ -628,10 +406,10 @@ const PlanningPokerRoom: FC = () => {
         {!isAuthenticated && (
           <ChangeNameModal
             isOpen={isChangeNameOpen}
-            newUserName={newUserName}
+            initialUserName={userName} // Pass current userName as initial value
             onClose={onChangeNameClose}
-            onNameChange={setNewUserName}
-            onSave={handleChangeName}
+            // Removed onNameChange prop
+            onSave={handleChangeName} // Pass the updated handler
           />
         )}
 
@@ -641,11 +419,8 @@ const PlanningPokerRoom: FC = () => {
             isOpen={isSettingsOpen}
             onClose={onSettingsClose}
             currentSequence={settings.sequence}
-            newSettings={newSettings}
-            showPassword={showPassword}
-            onTogglePassword={() => setShowPassword(!showPassword)}
-            onSettingsChange={setNewSettings}
-            onSave={handleUpdateSettings}
+            // Removed newSettings, showPassword, onTogglePassword, onSettingsChange props
+            onSave={handleUpdateSettings} // Pass the updated handler
           />
         )}
       </Box>
