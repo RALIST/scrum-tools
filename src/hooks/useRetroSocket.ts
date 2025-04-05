@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Socket as ClientSocket } from 'socket.io-client'; // Keep type import
 import { useToast } from '@chakra-ui/react';
-import { apiRequest, AuthError } from '../utils/apiUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocketManager } from './useSocketManager'; // Import the new hook
 
@@ -35,7 +34,7 @@ interface UseRetroSocketProps {
 }
 
 interface UseRetroSocketResult {
-    board: RetroBoard | null;
+    board: RetroBoard | null; // Board data now comes *only* from socket events
     isTimerRunning: boolean;
     timeLeft: number;
     hideCards: boolean;
@@ -72,17 +71,18 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
     const [hideCards, setHideCards] = useState(false);
     const [hasJoined, setHasJoined] = useState(false);
     const [isJoining, setIsJoining] = useState(false);
-    const [initialBoardDataLoaded, setInitialBoardDataLoaded] = useState(false);
+    // Removed initialBoardDataLoaded state
 
     // --- Refs ---
     const joinParamsRef = useRef<{ name: string; password?: string } | null>(null);
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const toast = useToast();
-    const { user, isAuthenticated } = useAuth(); // Keep access to auth state
+    const { user, isAuthenticated } = useAuth();
     const socketRef = useRef<ClientSocket | null>(null);
 
     // --- Internal Emit Function ---
     const emitJoinBoard = useCallback((socketInstance: ClientSocket | null, name: string, password?: string) => {
+        debugLog('Attempting to call emitJoinBoard');
         if (!socketInstance || !boardId) {
             debugLog('emitJoinBoard condition not met', { hasSocket: !!socketInstance, boardId });
             setIsJoining(false);
@@ -104,22 +104,42 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
         });
     }, [boardId, onJoinError, toast]);
 
+    const emitJoinBoardRef = useRef(emitJoinBoard);
+    useEffect(() => {
+        emitJoinBoardRef.current = emitJoinBoard;
+    }, [emitJoinBoard]);
+
     // --- Callbacks passed to useSocketManager ---
     const handleManagerConnectInternal = useCallback(() => {
         const currentSocket = socketRef.current;
         debugLog('Socket connected via useSocketManager');
-        if (joinParamsRef.current && !hasJoined) {
-            debugLog('Processing pending join after connect');
-            const { name, password } = joinParamsRef.current;
-            emitJoinBoard(currentSocket, name, password);
+
+        const currentIsAuthenticated = isAuthenticated;
+        const currentUserName = user?.name;
+
+        // Attempt auto-join if authenticated, has name, and not already joined
+        // Board data check is removed, rely on server logic or component logic before calling join
+        if (currentIsAuthenticated && currentUserName && !hasJoined) {
+             debugLog('Attempting auto-join after connect', { userName: currentUserName });
+             // Assume board exists and has no password for auto-join attempt
+             // Server will reject if password is required
+             emitJoinBoardRef.current(currentSocket, currentUserName, undefined);
+             joinParamsRef.current = null;
         }
-    }, [hasJoined, emitJoinBoard]);
+        // Process manual join if it was pending and auto-join didn't happen
+        else if (joinParamsRef.current && !hasJoined) {
+            debugLog('Processing pending manual join after connect');
+            const { name, password } = joinParamsRef.current;
+            emitJoinBoardRef.current(currentSocket, name, password);
+        }
+    }, [hasJoined, isAuthenticated, user?.name]); // Removed board dependency
 
     const handleManagerDisconnect = useCallback((reason: ClientSocket.DisconnectReason) => {
         debugLog('Socket disconnected via useSocketManager', { reason });
         setHasJoined(false);
         setIsJoining(false);
         joinParamsRef.current = null;
+        setBoard(null); // Clear board data on disconnect
         if (reason !== 'io client disconnect') {
             toast({ title: 'Disconnected', description: 'Connection lost. Attempting to reconnect...', status: 'warning', duration: 3000 });
         }
@@ -135,7 +155,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
     // --- Use the Socket Manager Hook ---
     const { socket, isConnected, isConnecting } = useSocketManager({
         namespace: '/retro',
-        autoConnect: false, // Connect manually after fetching initial data
+        autoConnect: !!boardId, // Connect automatically if boardId is present
         onConnect: handleManagerConnectInternal,
         onDisconnect: handleManagerDisconnect,
         onError: handleManagerError
@@ -149,13 +169,13 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
     // --- Retro-Specific Event Handlers ---
     const handleRetroBoardJoined = useCallback((data: RetroBoard) => {
         debugLog('Joined retro board', data);
-        setBoard(data);
+        setBoard(data); // Set board data received upon joining
         setIsTimerRunning(data.timer_running);
         setTimeLeft(data.time_left);
         setHideCards(data.hide_cards_by_default);
         setHasJoined(true);
         setIsJoining(false);
-        joinParamsRef.current = null;
+        joinParamsRef.current = null; // Clear join params on successful join
         onBoardJoined();
     }, [onBoardJoined]);
 
@@ -193,7 +213,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
         if (errorMessage.toLowerCase().includes('password') || errorMessage.toLowerCase().includes('join')) {
             setIsJoining(false);
             joinParamsRef.current = null;
-            setHasJoined(false);
+            setHasJoined(false); // Ensure not marked as joined on join error
             if (onJoinError) onJoinError(errorMessage);
             else toast({ title: 'Join Error', description: errorMessage, status: 'error', duration: 3000 });
         } else {
@@ -201,90 +221,17 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
         }
     }, [onJoinError, toast]);
 
-    // --- Effect for Initial Board Data Fetch ---
-    useEffect(() => {
-        if (!boardId) {
-            setBoard(null);
-            setInitialBoardDataLoaded(false);
-            setHasJoined(false);
-            setIsJoining(false);
-            joinParamsRef.current = null;
-            if (socketRef.current?.connected) {
-                debugLog('boardId is null, disconnecting socket');
-                socketRef.current.disconnect();
-            }
-            return;
-        }
-
-        let isActive = true;
-        setInitialBoardDataLoaded(false);
-        setHasJoined(false);
-        setIsJoining(false);
-        joinParamsRef.current = null;
-
-        const fetchInitialData = async () => {
-            debugLog('Fetching initial board data', { boardId });
-            try {
-                const initialBoardData = await apiRequest<RetroBoard>(`/retro/${boardId}`, { includeAuth: false });
-                if (!isActive) return;
-
-                debugLog('Initial board data loaded', initialBoardData);
-                setBoard(initialBoardData);
-                setIsTimerRunning(initialBoardData.timer_running);
-                setTimeLeft(initialBoardData.time_left);
-                setHideCards(initialBoardData.hide_cards_by_default);
-                setInitialBoardDataLoaded(true);
-
-                // Prepare for auto-join *after* fetching data
-                // Use auth state directly here
-                const currentIsAuthenticated = isAuthenticated;
-                const currentUserName = user?.name;
-                if (currentIsAuthenticated && currentUserName && initialBoardData && !initialBoardData.hasPassword) {
-                    debugLog('Preparing for auto-join', { userName: currentUserName });
-                    joinParamsRef.current = { name: currentUserName };
-                }
-
-                // Connect the socket now using socketRef
-                const currentSocket = socketRef.current;
-                if (currentSocket && !currentSocket.connected) {
-                    debugLog('Connecting socket after initial data load...');
-                    currentSocket.connect();
-                } else if (currentSocket?.connected) {
-                     debugLog('Socket already connected, connect handler will process pending join if any.');
-                     // REMOVED manual call to handleManagerConnectInternal()
-                } else {
-                    // If no socket instance yet, useSocketManager will handle connection attempt
-                    debugLog('Socket instance not yet available from manager. Connection will be attempted.');
-                }
-
-            } catch (error) {
-                if (!isActive) return;
-                debugLog('Error fetching initial board data', error);
-                const description = error instanceof AuthError
-                    ? 'Authentication error loading board.'
-                    : error instanceof Error ? error.message : 'Failed to load board';
-                toast({ title: 'Initialization Error', description, status: 'error', duration: 3000, isClosable: true });
-                setInitialBoardDataLoaded(true); // Mark as loaded even on error
-                setBoard(null);
-            }
-        };
-
-        fetchInitialData();
-
-        return () => {
-            isActive = false;
-        };
-    // Dependencies: Only boardId. Auth state and toast are accessed directly inside.
-    }, [boardId]); // Removed isAuthenticated, user?.name, toast
+    // --- Effect for Initial Board Data Fetch (REMOVED) ---
+    // useEffect(() => { ... }, [boardId]);
 
     // --- Effect for Retro-Specific Event Listeners ---
     useEffect(() => {
         const currentSocket = socketRef.current;
-        if (!currentSocket || !initialBoardDataLoaded) {
-             if (!currentSocket) {
-                 setHasJoined(false);
-                 setIsJoining(false);
-             }
+        if (!currentSocket) {
+            // Reset state if socket becomes null
+            setHasJoined(false);
+            setIsJoining(false);
+            setBoard(null); // Clear board data when socket is not available
             return;
         }
 
@@ -297,25 +244,41 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
         currentSocket.on('timerUpdate', handleTimerUpdate);
         currentSocket.on('error', handleRetroError);
 
+        // Request initial state when listeners are attached and socket is connected
+        // This assumes the server has an event to provide the initial state upon request or join
+        if (currentSocket.connected && !hasJoined && !board) {
+             debugLog('Socket connected, fetching initial board state via event');
+             // Ensure boardId is available before emitting
+             if (boardId) {
+                 currentSocket.emit('getInitialBoardState', { boardId });
+             }
+        }
+
         return () => {
             debugLog('Detaching retro event listeners');
-            currentSocket.off('retroBoardJoined', handleRetroBoardJoined);
-            currentSocket.off('retroBoardUpdated', handleRetroBoardUpdated);
-            currentSocket.off('cardsVisibilityChanged', handleCardsVisibilityChanged);
-            currentSocket.off('timerStarted', handleTimerStarted);
-            currentSocket.off('timerStopped', handleTimerStopped);
-            currentSocket.off('timerUpdate', handleTimerUpdate);
-            currentSocket.off('error', handleRetroError);
+            if (currentSocket) {
+                currentSocket.off('retroBoardJoined', handleRetroBoardJoined);
+                currentSocket.off('retroBoardUpdated', handleRetroBoardUpdated);
+                currentSocket.off('cardsVisibilityChanged', handleCardsVisibilityChanged);
+                currentSocket.off('timerStarted', handleTimerStarted);
+                currentSocket.off('timerStopped', handleTimerStopped);
+                currentSocket.off('timerUpdate', handleTimerUpdate);
+                currentSocket.off('error', handleRetroError);
+            }
         };
+    // Rerun when handlers change or socket instance changes
     }, [
-        initialBoardDataLoaded,
+        socket, // Re-attach if socket instance changes
         handleRetroBoardJoined,
         handleRetroBoardUpdated,
         handleCardsVisibilityChanged,
         handleTimerStarted,
         handleTimerStopped,
         handleTimerUpdate,
-        handleRetroError
+        handleRetroError,
+        boardId, // Need boardId for getInitialBoardState emit
+        hasJoined, // Need hasJoined for getInitialBoardState condition
+        board // Need board for getInitialBoardState condition
     ]);
 
     // Effect to manage the client-side timer interval (Unchanged)
@@ -353,20 +316,22 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
             return;
         }
          debugLog('Manual joinBoard requested', { name });
-         joinParamsRef.current = { name, password };
          const currentSocket = socketRef.current;
 
          if (currentSocket && isConnected) {
-             emitJoinBoard(currentSocket, name, password);
+             emitJoinBoardRef.current(currentSocket, name, password);
          } else if (currentSocket && !isConnected) {
-              debugLog('Socket exists but not connected, attempting connect...');
-             setIsJoining(true);
-             currentSocket.connect();
+              debugLog('Socket exists but not connected, storing manual join details and attempting connect...');
+              joinParamsRef.current = { name, password }; // Store params for onConnect handler
+              setIsJoining(true);
+              currentSocket.connect();
         } else {
-             debugLog('No socket instance, connection should be in progress or initiated by fetch effect.');
+             debugLog('No socket instance yet, storing manual join details.');
+             joinParamsRef.current = { name, password }; // Store params for onConnect handler
              setIsJoining(true);
+             // useSocketManager should handle the connection attempt
         }
-    }, [boardId, hasJoined, isJoining, isConnected, emitJoinBoard]);
+    }, [boardId, hasJoined, isJoining, isConnected]);
 
     const changeName = useCallback((newName: string) => {
         if (!socketRef.current || !boardId || !hasJoined) return;
@@ -425,11 +390,10 @@ export const useRetroSocket = ({ boardId, onBoardJoined, onJoinError }: UseRetro
         socketRef.current.emit('toggleCardsVisibility', { boardId, hideCards: hide });
     }, [boardId, hasJoined]);
 
-    // Combined loading state includes connection, joining, and initial data load
-    const combinedLoadingState = isConnecting || isJoining || !initialBoardDataLoaded;
+    // Combined loading state includes connection and joining states
+    const combinedLoadingState = isConnecting || isJoining; // Removed initialBoardDataLoaded
 
     return {
-        // socket: socketRef.current, // Expose socket instance via ref if needed
         board,
         isTimerRunning,
         timeLeft,

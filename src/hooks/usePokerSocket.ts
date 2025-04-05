@@ -111,14 +111,14 @@ export const usePokerSocket = ({ roomId, initialUserName, onRoomJoined, onJoinEr
         if (reason !== 'io client disconnect') {
             toast({ title: 'Disconnected', description: 'Connection lost. Attempting to reconnect...', status: 'warning', duration: 3000 });
         }
-    }, [toast]);
+    }, []);
 
     const handleManagerError = useCallback((err: Error) => {
         debugLog('Socket connection error via useSocketManager', err);
         setIsJoining(false);
         pendingJoinRef.current = null;
         toast({ title: 'Connection Error', description: err.message, status: 'error', duration: 5000, isClosable: true });
-    }, [toast]);
+    }, []);
 
     // --- Use the Socket Manager Hook ---
     const { socket, isConnected, isConnecting } = useSocketManager({

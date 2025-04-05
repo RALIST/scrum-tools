@@ -1,37 +1,82 @@
-import { FC, useCallback } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { VStack, useToast, Spinner, Center, Text } from "@chakra-ui/react";
-import { JoinRetroBoardModal } from "../../components/modals"; // Only need Join modal here
-import { useRetroSocket } from "../../hooks/useRetroSocket";
+import {
+  VStack,
+  useToast,
+  Spinner,
+  Center,
+  Text,
+  useDisclosure,
+} from "@chakra-ui/react";
+import { JoinRetroBoardModal } from "../../components/modals";
+import {
+  useRetroSocket,
+  RetroBoard as RetroBoardType,
+} from "../../hooks/useRetroSocket"; // Import type
 import { useRetroUser } from "../../hooks/useRetroUser";
-import { useAuth } from "../../contexts/AuthContext"; // Import useAuth
-import RetroBoardView from "../../components/retro/RetroBoardView"; // Import the new view component
+import { useAuth } from "../../contexts/AuthContext";
+import RetroBoardView from "../../components/retro/RetroBoardView";
+import { apiRequest, AuthError } from "../../utils/apiUtils"; // Import apiRequest
+
+// Add a separate debug log function for this component
+const componentDebugLog = (message: string, data?: any) => {
+  console.log(`[RetroBoard Component] ${message}`, data || "");
+};
 
 const RetroBoard: FC = () => {
   const { boardId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
   const { userName, setUserNameAndStorage, isNameFixed } = useRetroUser();
-  const { user, isAuthenticated } = useAuth(); // Get user and auth status
+  const { user, isAuthenticated } = useAuth();
+  const {
+    isOpen: isJoinModalOpen,
+    onOpen: onJoinModalOpen,
+    onClose: onJoinModalClose,
+  } = useDisclosure();
 
-  // Callback for when board is successfully joined
+  // State for initial board data loading
+  const [initialBoardData, setInitialBoardData] =
+    useState<RetroBoardType | null>(null);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+  const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
+
+  // Callback for when board is successfully joined via socket
   const onBoardJoined = useCallback(() => {
+    componentDebugLog("onBoardJoined triggered");
     toast({
       title: "Joined Board",
       status: "success",
       duration: 2000,
     });
-  }, [toast]);
+    onJoinModalClose(); // Close modal on successful join
+  }, [toast, onJoinModalClose]);
 
-  // Use the socket hook to manage board state and actions
+  // Callback for join errors from socket hook
+  const onJoinError = useCallback(
+    (message: string) => {
+      toast({
+        title: "Join Error",
+        description: message,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      // Show modal again if join failed (e.g., wrong password)
+      onJoinModalOpen();
+    },
+    [toast, onJoinModalOpen]
+  );
+
+  // Use the socket hook - it now primarily manages socket state and events
   const {
-    board,
+    board: socketBoard, // Rename to avoid conflict with initialBoardData
     isTimerRunning,
     timeLeft,
     hideCards,
-    setHideCards, // Note: This is now requestHideCards from the hook
+    setHideCards,
     hasJoined,
-    joinBoard,
+    joinBoard, // Function to initiate joining via socket
     changeName,
     addCard,
     editCard,
@@ -39,17 +84,131 @@ const RetroBoard: FC = () => {
     toggleVote,
     toggleTimer,
     updateSettings,
+    isConnectingOrJoining, // Combined socket connecting/joining state
   } = useRetroSocket({
-    boardId: boardId || "",
+    boardId: boardId || null,
     onBoardJoined,
+    onJoinError,
   });
+
+  // Effect 1: Fetch initial board data when boardId changes
+  useEffect(() => {
+    if (!boardId) {
+      setInitialBoardData(null);
+      setIsLoadingInitialData(false);
+      setInitialLoadError(null);
+      return;
+    }
+
+    let isActive = true;
+    setIsLoadingInitialData(true);
+    setInitialLoadError(null);
+    setInitialBoardData(null); // Clear previous data
+
+    const fetchInitialData = async () => {
+      componentDebugLog("Fetching initial board data", { boardId });
+      try {
+        const data = await apiRequest<RetroBoardType>(`/retro/${boardId}`, {
+          includeAuth: false,
+        });
+        if (!isActive) return;
+        componentDebugLog("Initial board data loaded", data);
+        setInitialBoardData(data);
+      } catch (error) {
+        if (!isActive) return;
+        // Use console.error for errors
+        console.error(
+          "[RetroBoard Component] Error fetching initial board data",
+          error
+        );
+        const description =
+          error instanceof AuthError
+            ? "Authentication error loading board."
+            : error instanceof Error
+            ? error.message
+            : "Failed to load board";
+        setInitialLoadError(description);
+        toast({
+          title: "Initialization Error",
+          description,
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        if (isActive) setIsLoadingInitialData(false);
+      }
+    };
+
+    fetchInitialData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [boardId, toast]); // Depend only on boardId and toast
+
+  // Effect 2: Handle auto-join or modal display *after* initial data is loaded
+  useEffect(() => {
+    // Wait for initial data load and ensure boardId is valid
+    if (isLoadingInitialData || !initialBoardData || !boardId) {
+      return;
+    }
+
+    // If already joined (e.g., via socket reconnect), ensure modal is closed
+    if (hasJoined) {
+      if (isJoinModalOpen) onJoinModalClose();
+      return;
+    }
+
+    // Determine if auto-join should happen
+    const shouldAutoJoin =
+      isAuthenticated && user?.name && !initialBoardData.hasPassword;
+
+    if (shouldAutoJoin) {
+      // Attempt auto-join only if not already connecting/joining via socket
+      if (!isConnectingOrJoining) {
+        componentDebugLog("Attempting auto-join from component effect", {
+          userName: user.name,
+        });
+        joinBoard(user.name); // Call the hook's join function
+      }
+      // Ensure modal is closed during auto-join attempt
+      if (isJoinModalOpen) onJoinModalClose();
+    } else {
+      // If auto-join conditions not met, show modal (if not already joined/connecting)
+      if (!isConnectingOrJoining && !hasJoined) {
+        if (!isJoinModalOpen) {
+          componentDebugLog(
+            "Conditions met for showing join modal (manual/password)"
+          );
+          onJoinModalOpen();
+        }
+      } else {
+        // If connecting/joining or already joined, ensure modal is closed
+        if (isJoinModalOpen) onJoinModalClose();
+      }
+    }
+  }, [
+    initialBoardData,
+    isLoadingInitialData,
+    hasJoined,
+    isConnectingOrJoining,
+    isAuthenticated,
+    user?.name,
+    boardId, // Include boardId to re-evaluate if it changes
+    joinBoard, // Include joinBoard as it's called
+    onJoinModalOpen,
+    onJoinModalClose,
+    isJoinModalOpen,
+  ]);
 
   // Handler for joining the board (passed to JoinRetroBoardModal)
   const handleJoinBoard = useCallback(
     (name: string, password?: string) => {
       if (!boardId) return;
+      // Set user name locally *before* calling joinBoard
       setUserNameAndStorage(name);
-      joinBoard(name, password);
+      joinBoard(name, password); // Call the hook's function
     },
     [boardId, joinBoard, setUserNameAndStorage]
   );
@@ -58,9 +217,9 @@ const RetroBoard: FC = () => {
   const handleChangeNameSubmit = useCallback(
     (newName: string) => {
       if (!boardId) return;
-      changeName(newName);
+      // Update local name first for immediate UI feedback if needed
       setUserNameAndStorage(newName);
-      // Closing the modal is handled within RetroBoardView now
+      changeName(newName); // Call the hook's function
     },
     [boardId, changeName, setUserNameAndStorage]
   );
@@ -68,20 +227,33 @@ const RetroBoard: FC = () => {
   // Handler for adding a card (passed to RetroBoardView -> RetroColumn)
   const handleAddCard = useCallback(
     (columnId: string, text: string) => {
+      // Use the board state from the hook for checks
       if (!text.trim() || !isTimerRunning || !userName) return;
-      const cardId = Math.random().toString(36).substring(7); // Consider more robust ID generation
+      const cardId = Math.random().toString(36).substring(7);
       addCard(cardId, columnId, text, userName);
     },
-    [isTimerRunning, userName, addCard]
+    [isTimerRunning, userName, addCard] // Depend on hook state/functions
   );
 
   // Memoized handler for toggling card visibility
   const handleToggleCards = useCallback(() => {
-    setHideCards(!hideCards); // Call the function from the hook
-  }, [hideCards, setHideCards]); // Depend on current state and the setter function
+    setHideCards(!hideCards); // Call the hook's function
+  }, [hideCards, setHideCards]);
 
-  // Show loading state while board data is being fetched
-  if (!board) {
+  // --- Render Logic ---
+
+  componentDebugLog("Rendering Check", {
+    boardExists: !!socketBoard, // Check socketBoard for rendering board view
+    initialDataExists: !!initialBoardData, // Check initial data for modal password check
+    hasJoined,
+    isConnectingOrJoining,
+    isJoinModalOpen,
+    isLoadingInitialData,
+  });
+
+  // Loading State Check: Show spinner if initial data is loading OR if connecting/joining before being joined.
+  if (isLoadingInitialData || (!hasJoined && isConnectingOrJoining)) {
+    componentDebugLog("Render Decision: Loading Spinner");
     return (
       <Center minH="calc(100vh - 120px)">
         <VStack spacing={4}>
@@ -92,38 +264,63 @@ const RetroBoard: FC = () => {
     );
   }
 
-  // Show join modal if the user hasn't joined yet
-  if (!hasJoined) {
+  // Handle initial load error
+  if (!initialBoardData && !isLoadingInitialData) {
+    componentDebugLog("Render Decision: Initial Load Error");
+    return (
+      <Center minH="calc(100vh - 120px)">
+        <Text color="red.500">
+          Error loading board data: {initialLoadError || "Unknown error"}
+        </Text>
+      </Center>
+    );
+  }
+
+  // Join Modal Check (using state managed by the effect)
+  if (isJoinModalOpen && initialBoardData) {
+    // Ensure initialBoardData exists before rendering modal
+    componentDebugLog("Render Decision: Join Modal");
     return (
       <JoinRetroBoardModal
         isOpen={true}
-        onClose={() => navigate("/retro")} // Navigate back if modal is closed
+        onClose={() => navigate("/retro")}
         onJoin={handleJoinBoard}
-        hasPassword={board?.hasPassword} // Pass password requirement info
-        initialName={isAuthenticated ? user?.name : null} // Pass user name if authenticated
-        isNameDisabled={isAuthenticated} // Disable name input if authenticated
+        hasPassword={initialBoardData.hasPassword} // Use initial data here
+        initialName={isAuthenticated ? user?.name : userName}
+        isNameDisabled={isAuthenticated}
       />
     );
   }
 
-  // Render the main board view component
+  // Board View Check: Show only if joined and socketBoard data exists
+  if (hasJoined && socketBoard) {
+    componentDebugLog("Render Decision: RetroBoardView");
+    return (
+      <RetroBoardView
+        board={socketBoard} // Use data from socket hook
+        userName={userName}
+        isTimerRunning={isTimerRunning}
+        timeLeft={timeLeft}
+        hideCards={hideCards}
+        onToggleCards={handleToggleCards}
+        onToggleTimer={toggleTimer}
+        onChangeNameSubmit={handleChangeNameSubmit}
+        onAddCard={handleAddCard}
+        onEditCard={editCard}
+        onDeleteCard={deleteCard}
+        onVoteCard={toggleVote}
+        onUpdateSettings={updateSettings}
+        isNameFixed={isNameFixed}
+      />
+    );
+  }
+
+  // Fallback Error State: If none of the above conditions are met
+  componentDebugLog("Render Decision: Fallback Error Message");
   return (
-    <RetroBoardView
-      board={board}
-      userName={userName}
-      isTimerRunning={isTimerRunning}
-      timeLeft={timeLeft}
-      hideCards={hideCards}
-      onToggleCards={handleToggleCards} // Pass the memoized handler
-      onToggleTimer={toggleTimer}
-      onChangeNameSubmit={handleChangeNameSubmit}
-      onAddCard={handleAddCard}
-      onEditCard={editCard}
-      onDeleteCard={deleteCard}
-      onVoteCard={toggleVote}
-      onUpdateSettings={updateSettings}
-      isNameFixed={isNameFixed} // Pass the flag down
-    />
+    <Center minH="calc(100vh - 120px)">
+      <Text>Error loading board or joining session.</Text>
+    </Center>
   );
 };
 
