@@ -252,12 +252,34 @@ const RetroBoard: FC = () => {
   // Handler for adding a card (passed to RetroBoardView -> RetroColumn)
   const handleAddCard = useCallback(
     (columnId: string, text: string) => {
-      // Use the board state from the hook for checks
-      if (!text.trim() || !isTimerRunning || !userName) return;
+      // Determine the author name to use, falling back to localStorage if state is null/empty
+      let authorNameToUse = userName;
+      if (!authorNameToUse) {
+        try {
+          authorNameToUse = localStorage.getItem("retroUserName");
+        } catch (e) {
+          console.error(
+            "[RetroBoard Component] Error reading username from localStorage in handleAddCard",
+            e
+          );
+        }
+      }
+
+      // Check conditions with the potentially updated authorNameToUse
+      if (!text.trim() || !isTimerRunning || !authorNameToUse) {
+        console.warn("[RetroBoard Component] handleAddCard blocked:", {
+          text: text.trim(),
+          isTimerRunning,
+          authorNameToUse,
+        });
+        return;
+      }
+
       const cardId = Math.random().toString(36).substring(7);
-      addCard(cardId, columnId, text, userName);
+      // Pass the determined name (client-side check passed). Server uses its own name mapping anyway.
+      addCard(cardId, columnId, text, authorNameToUse);
     },
-    [isTimerRunning, userName, addCard] // Depend on hook state/functions
+    [isTimerRunning, userName, addCard] // Keep userName dependency so callback updates if state changes
   );
 
   // Memoized handler for toggling card visibility
@@ -320,10 +342,27 @@ const RetroBoard: FC = () => {
   // Board View Check: Show only if joined and socketBoard data exists
   if (hasJoined && socketBoard) {
     componentDebugLog("Render Decision: RetroBoardView");
+
+    // Determine the name to display, falling back to localStorage if state is null/empty
+    // This ensures the header shows the name immediately after joining.
+    let nameToDisplay = userName;
+    if (!nameToDisplay) {
+      try {
+        nameToDisplay = localStorage.getItem("retroUserName");
+      } catch (e) {
+        console.error(
+          "[RetroBoard Component] Error reading username from localStorage for display",
+          e
+        );
+      }
+    }
+    // Default to empty string if still null after checking localStorage
+    nameToDisplay = nameToDisplay || "";
+
     return (
       <RetroBoardView
         board={socketBoard} // Use data from socket hook
-        userName={userName}
+        userName={nameToDisplay} // Pass the potentially corrected name
         isTimerRunning={isTimerRunning}
         timeLeft={timeLeft}
         hideCards={hideCards}

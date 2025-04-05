@@ -101,16 +101,24 @@ const handleRetroSocketEvents = (io, socket) => {
         }
     });
 
-    socket.on('addRetroCard', async ({ boardId, cardId, columnId, text, authorName }) => {
+    socket.on('addRetroCard', async ({ boardId, cardId, columnId, text /*, authorName - Ignored */ }) => {
         try {
-            debugLog('Adding retro card', { boardId, cardId, columnId, authorName })
-            await addRetroCard(boardId, cardId, columnId, text, authorName)
-            const board = await getRetroBoard(boardId)
-            const roomName = `retro:${boardId}`
-            debugLog('Emitting board update', { roomName })
+            const userName = userNames.get(socket.id); // Get author name from server-side map
+            if (!userName) {
+                debugLog('Add card failed: User name not found for socket', { socketId: socket.id });
+                socket.emit('error', { message: 'Cannot add card: User not identified.' });
+                return;
+            }
+            debugLog('Adding retro card', { boardId, cardId, columnId, authorName: userName }); // Log the correct name
+            await addRetroCard(boardId, cardId, columnId, text, userName); // Use server-verified name
+            const board = await getRetroBoard(boardId);
+            const roomName = `retro:${boardId}`;
+            debugLog('Emitting board update', { roomName });
             io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error) {
-            logger.error('Error adding retro card:', { boardId, cardId, columnId, authorName, socketId: socket.id, error: error.message, stack: error.stack });
+            // Log the error with the retrieved userName if available
+            const userName = userNames.get(socket.id);
+            logger.error('Error adding retro card:', { boardId, cardId, columnId, authorName: userName, socketId: socket.id, error: error.message, stack: error.stack });
             socket.emit('error', { message: 'Failed to add card' });
         }
     });
