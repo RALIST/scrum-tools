@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Manager } from 'socket.io-client';
 import type { Socket as ClientSocket } from 'socket.io-client';
 import { useToast } from '@chakra-ui/react';
 import config from '../config';
 import { apiRequest, AuthError } from '../utils/apiUtils'; // Import apiRequest and AuthError
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 interface RetroCard {
     id: string
@@ -68,9 +69,10 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
     const [hasJoined, setHasJoined] = useState(false)
     const socketRef = useRef<ClientSocket | null>(null)
     const joinParamsRef = useRef<{ name: string; password?: string } | null>(null)
-    const initRef = useRef(false)
-    const toast = useToast()
+    const initRef = useRef(false);
+    const toast = useToast();
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to store interval ID
+    const { user, isAuthenticated } = useAuth(); // Get auth state
 
     useEffect(() => {
         if (!boardId || initRef.current) return
@@ -86,13 +88,26 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
 
                 if (!isActive) return;
 
-                debugLog('Board data loaded', data)
-                setBoard(data)
-                setIsTimerRunning(data.timer_running)
-                setTimeLeft(data.time_left)
-                setHideCards(data.hide_cards_by_default)
+                debugLog('Board data loaded', data);
+                setBoard(data);
+                setIsTimerRunning(data.timer_running);
+                setTimeLeft(data.time_left);
+                setHideCards(data.hide_cards_by_default);
 
-                debugLog('Setting up socket connection')
+                // --- Auto-join logic ---
+                // Check if user is authenticated, has a name, board exists, and board doesn't require a password
+                if (isAuthenticated && user?.name && data && !data.hasPassword) {
+                    debugLog('User authenticated, attempting auto-join', { userName: user.name });
+                    // Store join params immediately for potential reconnects
+                    joinParamsRef.current = { name: user.name };
+                    // No need to wait for socket connection here, it will auto-join on 'connect' event
+                } else {
+                    debugLog('Auto-join conditions not met or board requires password');
+                }
+                // --- End Auto-join logic ---
+
+
+                debugLog('Setting up socket connection');
                 
                 const manager = new Manager(config.socketUrl, {
                     reconnection: true,
@@ -159,10 +174,14 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
 
                 newSocket.on('error', (data: { message: string }) => {
                     if (!isActive) return
-                    debugLog('Socket error', data)
+                    debugLog('Socket error', data);
+                    // Clear join params on join-related errors
+                    if (data.message.toLowerCase().includes('password') || data.message.toLowerCase().includes('join')) {
+                        joinParamsRef.current = null;
+                    }
                     toast({
                         title: 'Error',
-                        description: data.message,
+                        description: data.message, // Keep original message
                         status: 'error',
                         duration: 2000,
                     })
@@ -200,11 +219,12 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
                 clearInterval(timerIntervalRef.current);
                 timerIntervalRef.current = null;
             }
-            initRef.current = false
-            joinParamsRef.current = null
-            setHasJoined(false)
+            initRef.current = false;
+            joinParamsRef.current = null; // Clear join params on full cleanup
+            setHasJoined(false);
         }
-    }, [boardId, onBoardJoined, toast])
+    // Add toast dependency. Keep user/isAuthenticated out for stability.
+    }, [boardId, onBoardJoined, toast]);
 
     // Effect to manage the client-side timer interval
     useEffect(() => {

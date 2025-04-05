@@ -4,13 +4,16 @@ import { VStack, useToast, Spinner, Center, Text } from "@chakra-ui/react";
 import { JoinRetroBoardModal } from "../../components/modals"; // Only need Join modal here
 import { useRetroSocket } from "../../hooks/useRetroSocket";
 import { useRetroUser } from "../../hooks/useRetroUser";
+import { useAuth } from "../../contexts/AuthContext"; // Import useAuth
 import RetroBoardView from "../../components/retro/RetroBoardView"; // Import the new view component
 
 const RetroBoard: FC = () => {
   const { boardId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { userName, setUserNameAndStorage } = useRetroUser();
+  // Get isNameFixed from the updated hook
+  const { userName, setUserNameAndStorage, isNameFixed } = useRetroUser();
+  const { user, isAuthenticated } = useAuth(); // Get user and auth status
 
   // Callback for when board is successfully joined
   const onBoardJoined = useCallback(() => {
@@ -98,6 +101,8 @@ const RetroBoard: FC = () => {
         onClose={() => navigate("/retro")} // Navigate back if modal is closed
         onJoin={handleJoinBoard}
         hasPassword={board?.hasPassword} // Pass password requirement info
+        initialName={isAuthenticated ? user?.name : null} // Pass user name if authenticated
+        isNameDisabled={isAuthenticated} // Disable name input if authenticated
       />
     );
   }
@@ -118,6 +123,7 @@ const RetroBoard: FC = () => {
       onDeleteCard={deleteCard}
       onVoteCard={toggleVote}
       onUpdateSettings={updateSettings}
+      isNameFixed={isNameFixed} // Pass the flag down
     />
   );
 };

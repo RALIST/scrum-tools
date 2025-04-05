@@ -27,9 +27,6 @@ import { CreateRoomModal } from "../../components/poker/CreateRoomModal";
 import { RoomListTable, Room } from "../../components/poker/RoomListTable"; // Import Room type too
 import { PokerLandingActions } from "../../components/poker/PokerLandingActions";
 
-// Remove local Room interface if imported from RoomListTable
-// interface Room { ... }
-
 interface CreateRoomSettings {
   password?: string;
   sequence: SequenceType;

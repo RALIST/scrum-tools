@@ -44,6 +44,7 @@ interface RetroBoardViewProps {
     hideCardsByDefault: boolean;
     hideAuthorNames: boolean;
   }) => void;
+  isNameFixed: boolean; // Add the new prop
 }
 
 const RetroBoardView: FC<RetroBoardViewProps> = ({
@@ -60,6 +61,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
   onDeleteCard,
   onVoteCard,
   onUpdateSettings,
+  isNameFixed, // Destructure the new prop
 }) => {
   const { colorMode } = useColorMode();
   const {
@@ -113,6 +115,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
             onToggleTimer={onToggleTimer}
             onOpenSettings={onSettingsOpen} // Use local disclosure handler
             onChangeName={onChangeNameOpen} // Use local disclosure handler
+            isNameFixed={isNameFixed} // Pass the flag down to the header
           />
           <Flex flex={1} minH={0} overflowX="auto">
             {" "}
@@ -156,13 +159,15 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
           onSave={onUpdateSettings}
         />
 
-        {/* Change Name Modal */}
-        <ChangeRetroBoardNameModal
-          isOpen={isChangeNameOpen}
-          onClose={onChangeNameClose}
-          currentName={userName || ""} // Pass current name
-          onChangeName={onChangeNameSubmit} // Pass handler from props
-        />
+        {/* Change Name Modal - Conditionally render based on isNameFixed */}
+        {!isNameFixed && (
+          <ChangeRetroBoardNameModal
+            isOpen={isChangeNameOpen}
+            onClose={onChangeNameClose}
+            currentName={userName || ""} // Pass current name
+            onChangeName={onChangeNameSubmit} // Pass handler from props
+          />
+        )}
       </Box>
     </>
   );

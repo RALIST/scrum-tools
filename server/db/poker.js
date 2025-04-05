@@ -35,6 +35,17 @@ export const getWorkspaceRooms = async (workspaceId) => {
     return result.rows;
 };
 
+// New function to get basic room info (existence and password status)
+export const getPokerRoomInfo = async (roomId) => {
+    // Select only necessary fields: id and whether a password exists
+    const queryText = 'SELECT id, password IS NOT NULL as "hasPassword" FROM rooms WHERE id = $1';
+    const params = [roomId];
+    const result = await executeQuery(queryText, params);
+    // Return the first row found, or null if no room matches the ID
+    return result.rows.length > 0 ? result.rows[0] : null;
+};
+
+
 export const getRoom = async (roomId) => {
     const roomQuery = 'SELECT * FROM rooms WHERE id = $1';
     const roomResult = await executeQuery(roomQuery, [roomId]);

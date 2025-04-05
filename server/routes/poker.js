@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { createRoom, getRooms, getRoom, getWorkspaceRooms } from '../db/poker.js'; // Import getWorkspaceRooms
+// Import the new DB function
+import { createRoom, getRooms, getRoom, getWorkspaceRooms, getPokerRoomInfo } from '../db/poker.js';
 import logger from '../logger.js'; // Import logger
 
 const router = express.Router();
@@ -104,4 +105,25 @@ router.post('/rooms/:roomId/verify-password', async (req, res, next) => {
     }
 });
 
-export default router
+// New endpoint to get basic info for a specific room
+router.get('/rooms/:roomId/info', async (req, res, next) => {
+    const { roomId } = req.params;
+    logger.info(`Fetching info for poker room: ${roomId}`);
+    try {
+        const roomInfo = await getPokerRoomInfo(roomId);
+        if (!roomInfo) {
+            logger.warn(`Room info request failed: Room ${roomId} not found.`);
+            // Return 404 if room doesn't exist
+            return res.status(404).json({ error: 'Room not found' });
+        }
+        // Return basic info (e.g., id, hasPassword)
+        logger.info(`Found info for room ${roomId}:`, roomInfo);
+        res.json(roomInfo);
+    } catch (error) {
+        logger.error(`Error fetching info for room ${roomId}:`, { error: error.message, stack: error.stack });
+        next(error); // Pass error to the centralized handler
+    }
+});
+
+
+export default router;

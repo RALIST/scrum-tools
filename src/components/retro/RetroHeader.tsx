@@ -43,6 +43,7 @@ interface RetroHeaderProps {
   onToggleTimer: () => void;
   onOpenSettings: () => void;
   onChangeName: () => void;
+  isNameFixed: boolean; // Add the new prop
 }
 
 const RetroHeader: FC<RetroHeaderProps> = ({
@@ -56,6 +57,7 @@ const RetroHeader: FC<RetroHeaderProps> = ({
   onOpenSettings,
   onChangeName,
   boardId,
+  isNameFixed, // Destructure the new prop
 }) => {
   const { colorMode } = useColorMode();
   const shareableLink = useMemo(
@@ -140,13 +142,18 @@ const RetroHeader: FC<RetroHeaderProps> = ({
           Share your thoughts about the sprint
         </Text>
         <HStack justify="center">
-          <Text>Your name: {userName}</Text>
-          <IconButton
-            aria-label="Change name"
-            icon={<EditIcon />}
-            size="xs"
-            onClick={onChangeName}
-          />
+          {/* Conditionally render edit button */}
+          {!isNameFixed && (
+            <>
+              <Text>Your name: {userName}</Text>
+              <IconButton
+                aria-label="Change name"
+                icon={<EditIcon />}
+                size="xs"
+                onClick={onChangeName}
+              />
+            </>
+          )}
         </HStack>
       </VStack>
     </Box>
