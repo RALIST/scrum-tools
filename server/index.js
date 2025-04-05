@@ -17,6 +17,7 @@ import { pathToFileURL } from 'url'; // Import pathToFileURL for ES Module check
 import dotenv from 'dotenv'; // Import dotenv for environment variable management
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { initializePool } from './db/pool.js'; // Import the pool initialization function
 
 // Create proper __dirname equivalent for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +39,8 @@ if (env == "development") {
    console.warn('No environment variables loaded. Using default environment variables if available.');
 }
 
+
+initializePool(); // Initialize the database pool
 
 const app = express();
 app.use(cors());

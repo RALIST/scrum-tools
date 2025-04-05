@@ -1,4 +1,4 @@
-import pool from './pool.js';
+import { pool } from './pool.js';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 

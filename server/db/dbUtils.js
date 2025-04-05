@@ -1,4 +1,4 @@
-import pool from './pool.js';
+import { pool } from './pool.js';
 import logger from '../logger.js'; // Import the logger
 
 /**

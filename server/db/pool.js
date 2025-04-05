@@ -2,29 +2,33 @@ import pg from 'pg'
 import logger from '../logger.js'; // Import the logger
 
 const { Pool } = pg;
+let pool;
 
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME,
-    password: String(process.env.DB_PASSWORD || ''),
-    port: parseInt(process.env.DB_PORT || '5432'),
-    max: 20, // Maximum number of clients in the pool
-    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-    connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-})
-
-// Test database connection
-pool.connect((err, client, release) => {
-    if (err) {
-        // Use logger.error
-        logger.error('Error connecting to the database:', { stack: err.stack });
-    } else {
-        // Use logger.info
-        logger.info('Successfully connected to database');
-        release();
-    }
-});
+// Initialize function that you can call after environment variables are loaded
+function initializePool() {
+    pool = new Pool({
+        user: process.env.DB_USER || '',
+        host: process.env.DB_HOST || 'localhost',
+        database: process.env.DB_NAME || '',
+        password: String(process.env.DB_PASSWORD || ''),
+        port: parseInt(process.env.DB_PORT || '5432'),
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+    });
+    
+    // Test connection...
+    pool.connect((err, client, release) => {
+        if (err) {
+            // Use logger.error
+            logger.error('Error connecting to the database:', { stack: err.stack });
+        } else {
+            // Use logger.info
+            logger.info('Successfully connected to database');
+            release();
+        }
+    });
+}
 
 // Add event listener for process termination
 process.on('SIGINT', async () => {
@@ -34,4 +38,4 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-export default pool
+export { pool, initializePool };
