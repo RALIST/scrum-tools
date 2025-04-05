@@ -84,8 +84,8 @@ const PlanningPokerRoom: FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const toast = useToast();
-  const { user, isAuthenticated } = useAuth(); // Get auth state
-  const [userName, setUserName] = useState(""); // Initialize empty, set in useEffect
+  const { user, isAuthenticated } = useAuth();
+  const [userName, setUserName] = useState(""); // For modal input prefill/display
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const shareableLink = useMemo(
     () => `${config.siteUrl}/planning-poker/${roomId}`,
@@ -103,7 +103,7 @@ const PlanningPokerRoom: FC = () => {
     onClose: onSettingsClose,
   } = useDisclosure();
   const [newUserName, setNewUserName] = useState<string>("");
-  const [roomPassword, setRoomPassword] = useState<string>("");
+  const [roomPassword, setRoomPassword] = useState<string>(""); // For modal input
   const [showPassword, setShowPassword] = useState(false);
   const [newSettings, setNewSettings] = useState<{
     sequence?: SequenceType;
@@ -111,121 +111,118 @@ const PlanningPokerRoom: FC = () => {
   }>({});
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [isLoadingRoomInfo, setIsLoadingRoomInfo] = useState(true);
-  const [roomExists, setRoomExists] = useState<boolean | null>(null); // null: unknown, true: exists, false: not found
-
-  const onRoomJoined = useCallback(() => {
-    toast({
-      title: "Joined Room",
-      status: "success",
-      duration: 2000,
-    });
-    // No need for showJoinModal state anymore
-  }, [toast]); // Add toast dependency back
-
-  // Conditionally call the socket hook only if the room is known to exist
-  const socketData = usePokerSocket({
-    // Pass roomId only if roomExists is true, otherwise pass empty string to disable hook internally
-    roomId: roomExists === true ? roomId || "" : "",
-    onRoomJoined,
-  });
-
-  // Destructure later, only when roomExists is true
+  const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  // State to control modal visibility explicitly
   const {
+    isOpen: isJoinModalOpen,
+    onOpen: onJoinModalOpen,
+    onClose: onJoinModalClose,
+  } = useDisclosure();
+
+  // --- Callbacks for the hook ---
+  const onRoomJoined = useCallback(() => {
+    console.log("[PlanningPokerRoom] onRoomJoined callback triggered.");
+    toast({ title: "Joined Room", status: "success", duration: 2000 });
+    onJoinModalClose(); // Close modal on successful join
+  }, [toast, onJoinModalClose]);
+
+  const handleJoinError = useCallback(
+    (message: string) => {
+      console.log(
+        "[PlanningPokerRoom] handleJoinError callback triggered:",
+        message
+      );
+      toast({
+        title: "Join Error",
+        description: message || "Failed to join the room.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+      // Re-open modal if the error requires user input (e.g., wrong password or missing name)
+      if (message.toLowerCase().includes("password") || !isAuthenticated) {
+        onJoinModalOpen();
+      }
+    },
+    [toast, onJoinModalOpen, isAuthenticated]
+  );
+
+  // Determine initial username for auto-join attempt (only if applicable)
+  const initialJoinName = useMemo(() => {
+    // Auto-join only if authenticated, room exists, and is NOT password protected
+    if (
+      isAuthenticated &&
+      user?.name &&
+      roomExists === true &&
+      !isPasswordProtected
+    ) {
+      return user.name;
+    }
+    return null;
+  }, [isAuthenticated, user?.name, roomExists, isPasswordProtected]);
+
+  // --- Socket Hook ---
+  const {
+    socket, // Destructure socket here
     participants,
     settings,
     isRevealed,
     isJoined,
-    joinRoom,
+    joinRoom, // Function provided by the hook to initiate join
     changeName,
     vote,
     revealVotes,
     resetVotes,
     updateSettings: updateRoomSettings,
-    isConnectingOrJoining,
-  } = socketData;
+    isConnectingOrJoining, // Tracks connection OR join attempt
+  } = usePokerSocket({
+    roomId: roomExists === true ? roomId || "" : "", // Only connect if room exists
+    initialUserName: initialJoinName, // Pass name for potential auto-join
+    onRoomJoined,
+    onJoinError: handleJoinError,
+  });
 
-  // Check room password protection and set initial username
+  // --- Effects ---
+
+  // Effect 1: Set initial user name state (for display or modal prefill)
   useEffect(() => {
-    // Set initial username from auth or localStorage
-    console.log("[PlanningPokerRoom] useEffect: Setting initial username.");
     if (isAuthenticated && user?.name) {
       setUserName(user.name);
     } else {
       const savedName = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY);
-      if (savedName) {
-        setUserName(savedName);
-      } else {
-        setUserName(""); // Ensure it's empty if nothing found
-      }
+      setUserName(savedName || "");
     }
+  }, [isAuthenticated, user?.name]);
 
-    // Check password protection
+  // Effect 2: Check room existence and password status
+  useEffect(() => {
     if (!roomId) {
-      console.log(
-        "[PlanningPokerRoom] useEffect: No roomId found, navigating back."
-      );
       navigate("/planning-poker");
       return;
     }
     console.log(
-      `[PlanningPokerRoom] useEffect: Checking room existence for roomId: ${roomId}`
+      `[PlanningPokerRoom] Checking room existence for roomId: ${roomId}`
     );
-
     let isActive = true;
-    setRoomExists(null); // Reset existence state on new roomId check
+    setRoomExists(null);
     setIsLoadingRoomInfo(true);
-    console.log(
-      "[PlanningPokerRoom] useEffect: Set isLoadingRoomInfo=true, roomExists=null"
-    );
 
-    // Use the new specific endpoint to check room existence and password status
     apiRequest<{ id: string; hasPassword: boolean }>(
-      `/poker/rooms/${roomId}/info`,
-      {
-        method: "GET",
-        includeAuth: false, // No auth needed just to check existence/password status
-      }
+      `/poker/rooms/${roomId}/info`
     )
       .then((roomInfo) => {
-        // The endpoint returns the room info directly if found, or 404 if not
-        if (!isActive) {
-          console.log(
-            "[PlanningPokerRoom] useEffect: API returned but component inactive."
-          );
-          return;
-        }
-        console.log(
-          `[PlanningPokerRoom] useEffect: API /poker/rooms/${roomId}/info returned:`,
-          roomInfo
-        );
-        // If we get here, the room exists (no 404 was thrown by apiRequest)
+        if (!isActive) return;
+        console.log(`[PlanningPokerRoom] API /info returned:`, roomInfo);
         setIsPasswordProtected(roomInfo.hasPassword);
         setRoomExists(true);
-        console.log(
-          "[PlanningPokerRoom] useEffect: Set roomExists=true, isPasswordProtected=",
-          roomInfo.hasPassword
-        );
       })
       .catch((err: any) => {
-        // Catch specific errors
         if (!isActive) return;
-        console.error(
-          `[PlanningPokerRoom] useEffect: Error fetching room info for ${roomId}:`,
-          err
-        );
-        setRoomExists(false); // Assume room doesn't exist on error
-
-        // Check if it was a 404 error specifically
-        if (err.message && err.message.includes("404")) {
-          console.log(
-            "[PlanningPokerRoom] useEffect: Set roomExists=false (404 Not Found from API)"
-          );
+        console.error(`[PlanningPokerRoom] Error fetching room info:`, err);
+        setRoomExists(false);
+        if (err.message?.includes("404")) {
           toast({ title: "Room not found", status: "error", duration: 3000 });
         } else {
-          // Generic error for other issues (network, server error, etc.)
-          console.log(
-            "[PlanningPokerRoom] useEffect: Set roomExists=false due to other API error"
-          );
           toast({
             title: "Error checking room",
             status: "error",
@@ -234,79 +231,78 @@ const PlanningPokerRoom: FC = () => {
         }
       })
       .finally(() => {
-        if (isActive) {
-          setIsLoadingRoomInfo(false);
-          console.log(
-            "[PlanningPokerRoom] useEffect: Set isLoadingRoomInfo=false"
-          );
-        }
+        if (isActive) setIsLoadingRoomInfo(false);
       });
 
     return () => {
-      console.log(
-        `[PlanningPokerRoom] useEffect: Cleanup for roomId: ${roomId}`
-      );
       isActive = false;
     };
-    // Only re-fetch if roomId changes.
   }, [roomId, navigate, toast]);
 
-  // Effect for automatic joining when authenticated and applicable
+  // Effect 3: Decide whether to show the join modal AFTER room check is done
+  // AND after initial connection attempt (isConnectingOrJoining becomes false)
   useEffect(() => {
-    // Trigger only if room exists, user is authenticated, room doesn't require password, and not already joined/joining
+    // Don't show modal while initial room info is loading, or connecting/joining, or already joined
     if (
-      roomExists === true &&
-      isAuthenticated &&
-      user?.name &&
-      !isPasswordProtected &&
-      !isJoined &&
-      !isConnectingOrJoining
+      isLoadingRoomInfo ||
+      isConnectingOrJoining ||
+      isJoined ||
+      roomExists !== true
     ) {
-      // Use console.log instead of debugLog which is not defined here
-      console.log("[PlanningPokerRoom] Auto-joining authenticated user:", {
-        userName: user.name,
-      });
-      // We need access to the joinRoom function from the hook here.
-      // Ensure socketData is destructured or accessed correctly.
-      // Let's assume socketData.joinRoom is available.
-      socketData.joinRoom(user.name); // Automatically join with user's name
+      if (isJoinModalOpen) onJoinModalClose(); // Ensure closed if conditions not met
+      return;
     }
-    // Dependencies: run when room existence is confirmed, auth state changes, password status known, or join status changes
+
+    // Conditions to show modal: Room exists, not joined, not connecting, AND (unauthenticated OR password needed)
+    if (!isAuthenticated || isPasswordProtected) {
+      console.log("[PlanningPokerRoom] Conditions met for showing join modal.");
+      onJoinModalOpen();
+    } else {
+      // Should have auto-joined, close modal if it was somehow open
+      if (isJoinModalOpen) onJoinModalClose();
+    }
   }, [
     roomExists,
-    isAuthenticated,
-    user?.name,
-    isPasswordProtected,
     isJoined,
     isConnectingOrJoining,
-    socketData.joinRoom, // Added socketData.joinRoom dependency
+    isAuthenticated,
+    isPasswordProtected,
+    onJoinModalOpen,
+    onJoinModalClose,
+    isLoadingRoomInfo,
   ]);
 
-  const handleJoinRoom = useCallback(() => {
-    if (!userName.trim()) {
+  // --- Callbacks ---
+
+  // Called when user clicks "Join" in the modal
+  const handleManualJoin = useCallback(() => {
+    // Use state `userName` if unauthenticated, otherwise use context `user.name`
+    const nameToJoin =
+      isAuthenticated && user?.name ? user.name : userName.trim();
+    if (!nameToJoin) {
       toast({
         title: "Error",
         description: "Please enter your name",
         status: "error",
-        duration: 2000,
       });
       return;
     }
-
+    // Password required only if the room is protected
     if (isPasswordProtected && !roomPassword.trim()) {
       toast({
         title: "Error",
         description: "Please enter the room password",
         status: "error",
-        duration: 2000,
       });
       return;
     }
-    // Save name to localStorage only if user is NOT authenticated
+    // Save name only if not authenticated
     if (!isAuthenticated) {
-      localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, userName);
+      localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, nameToJoin);
     }
-    joinRoom(userName, roomPassword);
+    // Call the hook's joinRoom function
+    joinRoom(nameToJoin, isPasswordProtected ? roomPassword : undefined);
+    // Don't close modal here, let onRoomJoined handle it on success
   }, [
     userName,
     roomPassword,
@@ -314,31 +310,24 @@ const PlanningPokerRoom: FC = () => {
     joinRoom,
     toast,
     isAuthenticated,
+    user?.name,
   ]);
 
   const handleChangeName = useCallback(() => {
-    // Should not be callable if authenticated, but add check just in case
     if (isAuthenticated) return;
-
     if (!newUserName.trim()) {
       toast({
         title: "Error",
         description: "Please enter a valid name",
         status: "error",
-        duration: 2000,
       });
       return;
     }
-
     localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, newUserName);
-    setUserName(newUserName);
-    changeName(newUserName);
+    setUserName(newUserName); // Update local state as well
+    changeName(newUserName); // Call hook function
     onChangeNameClose();
-    toast({
-      title: "Name Updated",
-      status: "success",
-      duration: 2000,
-    });
+    toast({ title: "Name Updated", status: "success", duration: 2000 });
   }, [newUserName, changeName, onChangeNameClose, toast, isAuthenticated]);
 
   const handleUpdateSettings = useCallback(() => {
@@ -362,57 +351,43 @@ const PlanningPokerRoom: FC = () => {
   );
 
   const calculateAverage = useCallback(() => {
-    // Ensure participants is available before calculating
     if (!participants) return 0;
     const numericVotes = participants
       .map((p) => p.vote)
-      .filter((vote) => vote && vote !== "?" && !isNaN(Number(vote)))
+      .filter((v) => v && v !== "?" && !isNaN(Number(v)))
       .map(Number);
-
     if (numericVotes.length === 0) return 0;
-    const avg = numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
-    return avg;
+    return numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
   }, [participants]);
 
   const getVoteColor = useCallback(
     (vote: string | null) => {
-      // Ensure settings is available
       if (!vote || vote === "?" || !isRevealed || !settings) return undefined;
-
       const voteNum = Number(vote);
       const average = calculateAverage();
-
       if (isNaN(voteNum)) return undefined;
-
       const sequenceValues = SEQUENCES[settings.sequence] || [];
       const maxDiff = Math.max(
         ...sequenceValues
           .filter((v) => v !== "?" && !isNaN(Number(v)))
           .map((v) => Math.abs(Number(v) - average))
       );
-
-      // Avoid division by zero if maxDiff is 0
       if (maxDiff === 0) return "green.500";
-
       const diff = Math.abs(voteNum - average);
       const percentage = diff / maxDiff;
-
       if (percentage <= 0.2) return "green.500";
       if (percentage <= 0.4) return "green.300";
       if (percentage <= 0.6) return "yellow.400";
       if (percentage <= 0.8) return "orange.400";
       return "red.500";
     },
-    [isRevealed, settings, calculateAverage] // Added settings dependency
+    [isRevealed, settings, calculateAverage]
   );
 
-  // --- Loading and Room Existence Handling ---
+  // --- Render Logic ---
 
-  // Show loading spinner while checking room info OR connecting socket *if* room existence is not yet determined or is true
-  const showLoadingSpinner =
-    isLoadingRoomInfo || (roomExists !== false && isConnectingOrJoining);
-
-  if (showLoadingSpinner) {
+  // Show main loading spinner only during initial room info check
+  if (isLoadingRoomInfo || roomExists === null) {
     return (
       <Center minH="calc(100vh - 60px)">
         <Spinner size="xl" />
@@ -420,7 +395,7 @@ const PlanningPokerRoom: FC = () => {
     );
   }
 
-  // Handle case where room explicitly does not exist after checking
+  // Handle room not found
   if (roomExists === false) {
     return (
       <Center minH="calc(100vh - 60px)">
@@ -435,16 +410,10 @@ const PlanningPokerRoom: FC = () => {
     );
   }
 
-  // Determine if the join modal should be open
-  // Show if: room exists, not currently joining/connecting, not already joined, AND (user is unauthenticated OR room needs a password)
-  const shouldShowJoinModal =
-    roomExists === true &&
-    !isConnectingOrJoining && // Don't show modal while attempting auto-join or connecting
-    !isJoined &&
-    (!isAuthenticated || isPasswordProtected);
+  // At this point, roomExists === true
+  // Show connection/joining spinner overlay if applicable (but not initial room check)
+  const showConnectingSpinner = !isJoined && isConnectingOrJoining;
 
-  // Render room content OR the modal (only if roomExists is true)
-  // Render the main structure always, conditionally render modal and room content details
   return (
     <PageContainer>
       <Helmet>
@@ -455,193 +424,208 @@ const PlanningPokerRoom: FC = () => {
         bg={colorMode === "light" ? "gray.50" : "gray.900"}
         minH="calc(100vh - 60px)"
       >
-        {/* Render Join Modal conditionally */}
+        {/* Join Modal - controlled by isJoinModalOpen state */}
         <JoinRoomModal
-          isOpen={shouldShowJoinModal} // Use the calculated state
-          userName={userName}
+          isOpen={isJoinModalOpen}
+          userName={userName} // Use state for prefill/input
           roomPassword={roomPassword}
           showPassword={showPassword}
           isPasswordProtected={isPasswordProtected}
-          onUserNameChange={setUserName}
+          onUserNameChange={setUserName} // Update state on input change
           onPasswordChange={setRoomPassword}
           onTogglePassword={() => setShowPassword(!showPassword)}
-          onJoin={handleJoinRoom}
+          onJoin={handleManualJoin} // Use the manual join handler
+          // Removed isLoading prop as it's not expected by JoinRoomModalProps
         />
 
-        {/* Render room content structure only if room exists */}
-        {roomExists === true && (
-          <VStack spacing={{ base: 4, md: 8 }}>
-            {/* Header Section - Render basic info always */}
-            <Box textAlign="center" w="full">
-              <Heading
-                size={{ base: "lg", md: "xl" }}
-                mb={4}
-                textAlign={"center"}
+        {/* Main Room Content - Render structure always if room exists */}
+        <VStack spacing={{ base: 4, md: 8 }}>
+          {/* Header */}
+          <Box textAlign="center" w="full">
+            <Heading
+              size={{ base: "lg", md: "xl" }}
+              mb={4}
+              textAlign={"center"}
+            >
+              <Stack
+                direction={{ base: "column", md: "row" }}
+                spacing={2}
+                align="center"
               >
+                <Text>Room {roomId}</Text>
+                <Stack direction={"row"} spacing={2}>
+                  <Tooltip label={"Copy link to room"}>
+                    <IconButton
+                      title="Copy link"
+                      aria-label="Copy link"
+                      icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
+                      onClick={() => {
+                        onCopy();
+                        toast({
+                          title: "Link copied",
+                          status: "success",
+                          duration: 2000,
+                        });
+                      }}
+                      size="sm"
+                    />
+                  </Tooltip>
+                  <Tooltip label={"Change room settings"}>
+                    <IconButton
+                      aria-label="Room Settings"
+                      icon={<SettingsIcon />}
+                      size="sm"
+                      onClick={onSettingsOpen}
+                    />
+                  </Tooltip>
+                </Stack>
+              </Stack>
+            </Heading>
+            <Divider my={2} />
+            {/* Show user name only if joined */}
+            {isJoined && (
+              <VStack spacing={2}>
+                <Stack direction="row" spacing={2}>
+                  <Text
+                    fontSize={{ base: "md", md: "lg" }}
+                    color={colorMode === "light" ? "gray.600" : "gray.300"}
+                  >
+                    {/* Display name from participants list if possible, fallback to state */}
+                    Playing as: {/* Use the destructured 'socket' variable */}
+                    {participants?.find((p) => p.id === socket?.id)?.name ||
+                      userName}
+                  </Text>
+                  {!isAuthenticated && (
+                    <IconButton
+                      aria-label="Change name"
+                      icon={<EditIcon />}
+                      size="xs"
+                      onClick={() => {
+                        setNewUserName(userName);
+                        onChangeNameOpen();
+                      }}
+                    />
+                  )}
+                </Stack>
+              </VStack>
+            )}
+          </Box>
+
+          {/* Show spinner overlay if connecting/joining AFTER initial room check */}
+          {showConnectingSpinner && (
+            <Center
+              position="absolute"
+              top="50%"
+              left="50%"
+              transform="translate(-50%, -50%)"
+              zIndex="overlay"
+            >
+              <Spinner size="xl" />
+            </Center>
+          )}
+
+          {/* Main Content Area - Render only if joined */}
+          {isJoined && participants && settings && (
+            <Box
+              w="full"
+              p={{ base: 4, md: 8 }}
+              borderRadius="lg"
+              bg={colorMode === "light" ? "white" : "gray.700"}
+              shadow="md"
+            >
+              <VStack spacing={{ base: 4, md: 8 }}>
+                {/* Cards */}
+                <Wrap spacing={4} justify="center">
+                  {(SEQUENCES[settings.sequence] || []).map((value) => (
+                    <WrapItem key={value}>
+                      <Card
+                        value={value}
+                        isSelected={selectedCard === value}
+                        onClick={() => handleCardSelect(value)}
+                        disabled={isRevealed}
+                      />
+                    </WrapItem>
+                  ))}
+                </Wrap>
+                {/* Buttons */}
                 <Stack
                   direction={{ base: "column", md: "row" }}
-                  spacing={2}
-                  align="center"
+                  spacing={4}
+                  justify="center"
+                  w="full"
                 >
-                  <Text>Room {roomId}</Text>
-                  <Stack direction={"row"} spacing={2}>
-                    <Tooltip label={"Copy link to room"}>
-                      <IconButton
-                        title="Copy link"
-                        aria-label="Copy link"
-                        icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
-                        onClick={() => {
-                          onCopy(); // Correctly call onCopy
-                          toast({
-                            title: "Link to room copied",
-                            status: "success",
-                            duration: 2000,
-                          });
-                        }}
-                        size="sm"
-                      />
-                    </Tooltip>
-                    <Tooltip label={"Change room settings"}>
-                      <IconButton
-                        aria-label="Room Settings"
-                        icon={<SettingsIcon />}
-                        size="sm"
-                        onClick={onSettingsOpen}
-                      />
-                    </Tooltip>
-                  </Stack>
-                </Stack>
-              </Heading>
-              <Divider my={2} />
-              {/* Show user name only if joined */}
-              {isJoined && (
-                <VStack spacing={2}>
-                  <Stack direction="row" spacing={2}>
-                    <Text
-                      fontSize={{ base: "md", md: "lg" }}
-                      color={colorMode === "light" ? "gray.600" : "gray.300"}
-                    >
-                      Playing as: {userName}
-                    </Text>
-                    {/* Hide change name button if authenticated */}
-                    {!isAuthenticated && (
-                      <IconButton
-                        aria-label="Change name"
-                        icon={<EditIcon />}
-                        size="xs"
-                        onClick={() => {
-                          setNewUserName(userName);
-                          onChangeNameOpen();
-                        }}
-                      />
-                    )}
-                  </Stack>
-                </VStack>
-              )}
-            </Box>
-
-            {/* Main Content (Cards, Table, Buttons) - Only if joined AND data is available */}
-            {isJoined && participants && settings && (
-              <Box
-                w="full"
-                p={{ base: 4, md: 8 }}
-                borderRadius="lg"
-                bg={colorMode === "light" ? "white" : "gray.700"}
-                shadow="md"
-              >
-                <VStack spacing={{ base: 4, md: 8 }}>
-                  <Wrap spacing={4} justify="center">
-                    {(SEQUENCES[settings.sequence] || []).map((value) => (
-                      <WrapItem key={value}>
-                        <Card
-                          value={value}
-                          isSelected={selectedCard === value}
-                          onClick={() => handleCardSelect(value)}
-                          disabled={isRevealed}
-                        />
-                      </WrapItem>
-                    ))}
-                  </Wrap>
-
-                  <Stack
-                    direction={{ base: "column", md: "row" }}
-                    spacing={4}
-                    justify="center"
-                    w="full"
+                  <Button
+                    colorScheme="blue"
+                    onClick={revealVotes}
+                    disabled={isRevealed}
+                    w={{ base: "full", md: "auto" }}
                   >
-                    <Button
-                      colorScheme="blue"
-                      onClick={revealVotes}
-                      disabled={isRevealed}
-                      w={{ base: "full", md: "auto" }}
-                    >
-                      Reveal Votes
-                    </Button>
-                    <Button
-                      colorScheme="orange"
-                      onClick={resetVotes}
-                      w={{ base: "full", md: "auto" }}
-                    >
-                      New Round
-                    </Button>
-                  </Stack>
-
-                  <Box w="full" overflowX="auto">
-                    <TableContainer>
-                      <Table variant="simple" size={{ base: "sm", md: "md" }}>
-                        <Thead>
-                          <Tr>
-                            <Th>Participant</Th>
-                            <Th>Status</Th>
-                            {isRevealed && <Th>Vote</Th>}
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {participants.map((participant) => (
-                            <Tr key={participant.id}>
-                              <Td>{participant.name}</Td>
+                    Reveal Votes
+                  </Button>
+                  <Button
+                    colorScheme="orange"
+                    onClick={resetVotes}
+                    w={{ base: "full", md: "auto" }}
+                  >
+                    New Round
+                  </Button>
+                </Stack>
+                {/* Table */}
+                <Box w="full" overflowX="auto">
+                  <TableContainer>
+                    <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                      <Thead>
+                        <Tr>
+                          <Th>Participant</Th>
+                          <Th>Status</Th>
+                          {isRevealed && <Th>Vote</Th>}
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {participants.map((participant) => (
+                          <Tr key={participant.id}>
+                            <Td>{participant.name}</Td>
+                            <Td>
+                              <Badge
+                                colorScheme={
+                                  participant.vote ? "green" : "yellow"
+                                }
+                              >
+                                {participant.vote ? "Voted" : "Not Voted"}
+                              </Badge>
+                            </Td>
+                            {isRevealed && (
                               <Td>
-                                <Badge
-                                  colorScheme={
-                                    participant.vote ? "green" : "yellow"
-                                  }
+                                <Text
+                                  color={getVoteColor(participant.vote)}
+                                  fontWeight="bold"
                                 >
-                                  {participant.vote ? "Voted" : "Not Voted"}
-                                </Badge>
+                                  {participant.vote || "No vote"}
+                                </Text>
                               </Td>
-                              {isRevealed && (
-                                <Td>
-                                  <Text
-                                    color={getVoteColor(participant.vote)}
-                                    fontWeight="bold"
-                                  >
-                                    {participant.vote || "No vote"}
-                                  </Text>
-                                </Td>
-                              )}
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                    </TableContainer>
-                    {isRevealed && (
-                      <Text
-                        mt={4}
-                        fontWeight="bold"
-                        textAlign={{ base: "center", md: "left" }}
-                      >
-                        Average (excluding '?'): {calculateAverage().toFixed(1)}
-                      </Text>
-                    )}
-                  </Box>
-                </VStack>
-              </Box>
-            )}
-          </VStack>
-        )}
+                            )}
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                  {isRevealed && (
+                    <Text
+                      mt={4}
+                      fontWeight="bold"
+                      textAlign={{ base: "center", md: "left" }}
+                    >
+                      Average (excluding '?'): {calculateAverage().toFixed(1)}
+                    </Text>
+                  )}
+                </Box>
+              </VStack>
+            </Box>
+          )}
+        </VStack>
 
-        {/* Conditionally render ChangeNameModal (ensure room exists and user is not authenticated) */}
-        {roomExists === true && !isAuthenticated && (
+        {/* Change Name Modal */}
+        {!isAuthenticated && (
           <ChangeNameModal
             isOpen={isChangeNameOpen}
             newUserName={newUserName}
@@ -651,8 +635,8 @@ const PlanningPokerRoom: FC = () => {
           />
         )}
 
-        {/* Render Settings Modal (ensure room exists and settings are loaded) */}
-        {roomExists === true && settings && (
+        {/* Settings Modal */}
+        {settings && ( // Ensure settings exist before rendering
           <RoomSettingsModal
             isOpen={isSettingsOpen}
             onClose={onSettingsClose}
