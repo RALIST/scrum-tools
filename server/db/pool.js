@@ -7,19 +7,17 @@ import logger from '../logger.js'; // Import the logger
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables - prioritize .env.local
-try {
-  dotenv.config({ path: join(__dirname, '../.env.local') });
-  logger.info('Loaded environment variables from .env.local');
-} catch (e) {
-  try {
-    dotenv.config({ path: join(__dirname, '../.env') });
-    logger.info('Loaded environment variables from .env');
-  } catch (e2) {
-    logger.warn('Could not load .env.local or .env file for database pool. Using default environment variables if available.');
-  }
+const env = process.env.NODE_ENV || 'development'; // Default to development if not set
+console.log(`Current environment: ${env}`);
+if (env == "development") {
+   dotenv.config({ path: path.join(__dirname, '.env.development') });
+   console.log('Development environment variables loaded from .env.development');
+} else if (env == "production") {
+   dotenv.config({ path: path.join(__dirname, '.env') });
+   console.log('Production environment variables loaded from .env');
+} else {
+   console.warn('No environment variables loaded. Using default environment variables if available.');
 }
-
 
 const { Pool } = pg;
 
