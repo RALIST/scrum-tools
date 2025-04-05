@@ -1,5 +1,6 @@
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import {
   VStack,
   useToast,
@@ -34,11 +35,10 @@ const RetroBoard: FC = () => {
     onClose: onJoinModalClose,
   } = useDisclosure();
 
-  // State for initial board data loading (now done in component)
-  const [initialBoardData, setInitialBoardData] =
-    useState<RetroBoardType | null>(null);
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
-  const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
+  // Remove old state for initial data loading
+  // const [initialBoardData, setInitialBoardData] = useState<RetroBoardType | null>(null);
+  // const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+  // const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
 
   // Callback for when board is successfully joined via socket
   const onBoardJoined = useCallback(() => {
@@ -90,73 +90,76 @@ const RetroBoard: FC = () => {
     onJoinError,
   });
 
-  // Effect 1: Fetch initial board data when boardId changes
-  useEffect(() => {
+  // --- React Query for initial board data ---
+  const initialBoardQueryKey = ["retroBoard", boardId];
+
+  const fetchInitialBoardData = async (): Promise<RetroBoardType> => {
     if (!boardId) {
-      setInitialBoardData(null);
-      setIsLoadingInitialData(false);
-      setInitialLoadError(null);
-      return;
+      throw new Error("Board ID is required");
     }
+    componentDebugLog("Fetching initial board data via React Query", {
+      boardId,
+    });
+    // Fetch public info first, auth handled by apiRequest if needed later
+    return await apiRequest<RetroBoardType>(`/retro/${boardId}`, {
+      includeAuth: false,
+    });
+  };
 
-    let isActive = true;
-    setIsLoadingInitialData(true);
-    setInitialLoadError(null);
-    setInitialBoardData(null); // Clear previous data
+  const {
+    data: initialBoardData, // Data from the query
+    isLoading: isLoadingInitialData, // Loading state from the query
+    isError: isInitialError, // Error state from the query
+    error: initialLoadError, // Error object from the query
+  } = useQuery<RetroBoardType, Error>({
+    // Specify types
+    queryKey: initialBoardQueryKey,
+    queryFn: fetchInitialBoardData,
+    enabled: !!boardId, // Only run query if boardId exists
+    retry: 1, // Retry once on error
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+  });
 
-    const fetchInitialData = async () => {
-      componentDebugLog("Fetching initial board data", { boardId });
-      try {
-        const data = await apiRequest<RetroBoardType>(`/retro/${boardId}`, {
-          includeAuth: false, // Fetch public info first
-        });
-        if (!isActive) return;
-        componentDebugLog("Initial board data loaded", data);
-        setInitialBoardData(data);
-      } catch (error) {
-        if (!isActive) return;
-        console.error(
-          "[RetroBoard Component] Error fetching initial board data",
-          error
-        );
-        const description =
-          error instanceof AuthError
-            ? "Authentication error loading board."
-            : error instanceof Error
-            ? error.message
-            : "Failed to load board";
-        setInitialLoadError(description);
-        toast({
-          title: "Initialization Error",
-          description,
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      } finally {
-        if (isActive) setIsLoadingInitialData(false);
-      }
-    };
+  // Effect to show toast on initial load error
+  useEffect(() => {
+    if (isInitialError && initialLoadError) {
+      const description =
+        initialLoadError instanceof AuthError
+          ? "Authentication error loading board."
+          : initialLoadError instanceof Error
+          ? initialLoadError.message
+          : "Failed to load board";
+      toast({
+        title: "Initialization Error",
+        description,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  }, [isInitialError, initialLoadError, toast]);
+  // --- End React Query ---
 
-    fetchInitialData();
+  // Remove old useEffect for fetching initial data
 
-    return () => {
-      isActive = false;
-    };
-  }, [boardId, toast]);
-
-  // Effect 2: Handle auto-join or modal display *after* initial data is loaded
+  // Effect 2: Handle auto-join or modal display *after* initial data is loaded (or query finishes)
   useEffect(() => {
     componentDebugLog("Running Auto-Join/Modal Effect", {
-      isLoadingInitialData,
-      initialBoardDataExists: !!initialBoardData,
+      isLoadingInitialData, // Use loading state from useQuery
+      initialBoardDataExists: !!initialBoardData, // Use data from useQuery
       boardId,
       hasJoined,
       isConnectingOrJoining,
       isAuthenticated,
     });
-    // Wait for initial data load and ensure boardId is valid
-    if (isLoadingInitialData || !initialBoardData || !boardId) {
+    // Wait for query to finish and ensure boardId is valid
+    // Also check for error state from the query
+    if (
+      isLoadingInitialData ||
+      isInitialError ||
+      !initialBoardData ||
+      !boardId
+    ) {
       return;
     }
 
@@ -214,8 +217,9 @@ const RetroBoard: FC = () => {
       }
     }
   }, [
-    initialBoardData,
-    isLoadingInitialData,
+    initialBoardData, // Use data from useQuery
+    isLoadingInitialData, // Use loading state from useQuery
+    isInitialError, // Add error state dependency
     hasJoined,
     isConnectingOrJoining,
     isAuthenticated,
@@ -295,10 +299,10 @@ const RetroBoard: FC = () => {
     hasJoined,
     isConnectingOrJoining,
     isJoinModalOpen,
-    isLoadingInitialData,
+    isLoadingInitialData, // Use loading state from useQuery
   });
 
-  // Loading State Check: Show spinner if initial data is loading OR if connecting/joining before being joined.
+  // Loading State Check: Show spinner if initial data query is loading OR if connecting/joining before being joined.
   if (isLoadingInitialData || (!hasJoined && isConnectingOrJoining)) {
     componentDebugLog("Render Decision: Loading Spinner");
     return (
@@ -311,19 +315,21 @@ const RetroBoard: FC = () => {
     );
   }
 
-  // Handle initial load error
-  if (!initialBoardData && !isLoadingInitialData) {
+  // Handle initial load error (using state from useQuery)
+  if (isInitialError && !isLoadingInitialData) {
     componentDebugLog("Render Decision: Initial Load Error");
+    const errorMessage =
+      initialLoadError instanceof Error
+        ? initialLoadError.message
+        : "Unknown error";
     return (
       <Center minH="calc(100vh - 120px)">
-        <Text color="red.500">
-          Error loading board data: {initialLoadError || "Unknown error"}
-        </Text>
+        <Text color="red.500">Error loading board data: {errorMessage}</Text>
       </Center>
     );
   }
 
-  // Join Modal Check (using state managed by the effect)
+  // Join Modal Check (using state managed by the effect and data from useQuery)
   if (isJoinModalOpen && initialBoardData) {
     // Ensure initialBoardData exists before rendering modal
     componentDebugLog("Render Decision: Join Modal");

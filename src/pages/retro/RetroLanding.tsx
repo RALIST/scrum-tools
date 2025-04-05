@@ -1,5 +1,6 @@
 import { FC, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import mutation hooks
 import {
   Box,
   Heading,
@@ -50,13 +51,20 @@ interface CreateBoardSettings {
   hideAuthorNames?: boolean;
 }
 
+// Define the type for the mutation function's return value
+interface CreateBoardResponse {
+  boardId: string;
+}
+
 const RetroLanding: FC = () => {
   const { colorMode } = useColorMode();
   const navigate = useNavigate();
   const toast = useToast();
+  const queryClient = useQueryClient(); // Get query client instance
   const [joinBoardId, setJoinBoardId] = useState("");
-  const [workspaceBoards, setWorkspaceBoards] = useState<RetroBoard[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Remove isCreating state, use state from useMutation
+  // const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false); // State for joining loading
   const { isAuthenticated } = useAuth();
   const { currentWorkspace, workspaces } = useWorkspace();
   const {
@@ -101,36 +109,108 @@ const RetroLanding: FC = () => {
 
   // Update workspaceId when currentWorkspace changes
   useEffect(() => {
-    if (currentWorkspace) {
+    // Only update if the currentWorkspace ID actually changes
+    if (currentWorkspace?.id !== createSettings.workspaceId) {
       setCreateSettings((prev) => ({
         ...prev,
-        workspaceId: currentWorkspace.id,
+        workspaceId: currentWorkspace?.id || undefined,
+        // Optionally reset board name when workspace changes
+        // boardName: "",
       }));
     }
-  }, [currentWorkspace]);
+  }, [currentWorkspace, createSettings.workspaceId]); // Add dependency
 
-  // Load workspace boards
+  // --- React Query for fetching workspace boards ---
+  const workspaceBoardsQueryKey = [
+    "retroBoards",
+    { workspaceId: currentWorkspace?.id },
+  ];
+
+  const fetchWorkspaceBoards = async (): Promise<RetroBoard[]> => {
+    if (!currentWorkspace?.id) {
+      return []; // Don't fetch if no workspace ID
+    }
+    // Assuming apiRequest handles auth based on token presence
+    return await apiRequest<RetroBoard[]>(
+      `/workspaces/${currentWorkspace.id}/retros`
+    );
+  };
+
+  const {
+    data: workspaceBoards = [], // Default to empty array
+    isLoading: isLoadingBoards, // Use a specific name for loading boards
+    isError: isBoardsError,
+    error: boardsError,
+  } = useQuery<RetroBoard[], Error>({
+    queryKey: workspaceBoardsQueryKey,
+    queryFn: fetchWorkspaceBoards,
+    // Only run query if authenticated and in a workspace context
+    enabled: !!isAuthenticated && !!currentWorkspace?.id,
+  });
+
+  // Effect to show toast on board loading error
   useEffect(() => {
-    const loadWorkspaceBoards = async () => {
-      if (!isAuthenticated || !currentWorkspace) return;
+    if (isBoardsError && boardsError) {
+      console.error("Error loading workspace boards:", boardsError);
+      toast({
+        title: "Error Loading Workspace Boards",
+        description: boardsError.message || "Failed to load boards",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  }, [isBoardsError, boardsError, toast]);
+  // --- End React Query ---
 
-      setIsLoading(true);
-      try {
-        const boards = await apiRequest<RetroBoard[]>(
-          `/workspaces/${currentWorkspace.id}/retros`
-        );
-        setWorkspaceBoards(boards);
-      } catch (error) {
-        console.error("Error loading workspace boards:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // --- React Query Mutation for creating a board ---
+  const createBoardMutation = useMutation<
+    CreateBoardResponse, // Type of the data returned by the mutation function
+    Error, // Type of the error
+    void // Type of the variables passed to the mutation function (none needed here as settings are from state)
+  >({
+    mutationFn: async () => {
+      const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
+      return await apiRequest<CreateBoardResponse>("/retro", {
+        method: "POST",
+        body: {
+          name: createSettings.boardName || "Retro Board",
+          workspaceId: createSettings.workspaceId,
+          password: createSettings.password,
+          hide_cards_by_default: createSettings.hideCardsByDefault,
+          hide_author_names: createSettings.hideAuthorNames,
+        },
+        includeAuth,
+      });
+    },
+    onSuccess: (data) => {
+      // Invalidate the workspace boards query to refetch the list
+      queryClient.invalidateQueries({ queryKey: workspaceBoardsQueryKey });
 
-    loadWorkspaceBoards();
-  }, [isAuthenticated, currentWorkspace]);
+      toast({
+        title: "Board Created",
+        description: `Board "${
+          createSettings.boardName || "Retro Board"
+        }" created.`,
+        status: "success",
+        duration: 2000,
+      });
+      onCreateModalClose();
+      navigate(`/retro/${data.boardId}`); // Navigate after success using returned boardId
+    },
+    onError: (error) => {
+      toast({
+        title: "Error Creating Board",
+        description: error.message || "Failed to create retro board",
+        status: "error",
+        duration: 3000,
+      });
+    },
+  });
+  // --- End React Query Mutation ---
 
-  const handleCreateBoard = async () => {
+  const handleCreateBoardSubmit = () => {
+    // Renamed original function
     // Validate board name if authenticated and in a workspace
     if (
       isAuthenticated &&
@@ -145,40 +225,7 @@ const RetroLanding: FC = () => {
       });
       return;
     }
-
-    try {
-      setIsLoading(true);
-
-      // Use authentication if we're creating in a workspace
-      const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
-
-      const data = await apiRequest<{ boardId: string }>("/retro", {
-        method: "POST",
-        body: {
-          name: createSettings.boardName || "Retro Board",
-          workspaceId: createSettings.workspaceId,
-          password: createSettings.password,
-          hide_cards_by_default: createSettings.hideCardsByDefault,
-          hide_author_names: createSettings.hideAuthorNames,
-        },
-        includeAuth,
-      });
-
-      onCreateModalClose();
-      navigate(`/retro/${data.boardId}`);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create retro board",
-        status: "error",
-        duration: 3000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    createBoardMutation.mutate(); // Call the mutation
   };
 
   const handleJoinBoard = () => {
@@ -191,9 +238,12 @@ const RetroLanding: FC = () => {
       });
       return;
     }
+    setIsJoining(true); // Set loading state for join button
     navigate(`/retro/${joinBoardId.trim()}`);
+    // No need to setIsJoining(false) as the component will unmount on navigation
   };
 
+  // Show loading spinner while workspaces context is loading initially
   if (isAuthenticated && !workspaces) {
     return (
       <Center h="200px">
@@ -244,8 +294,16 @@ const RetroLanding: FC = () => {
 
           <Center p={8}>
             <VStack spacing={6} w={{ base: "full", md: "500px" }}>
+              {/* Use isLoadingBoards for the spinner/conditional rendering */}
+              {isAuthenticated && currentWorkspace && isLoadingBoards && (
+                <Center h="100px">
+                  <Spinner />
+                </Center>
+              )}
+              {/* Show board list only if authenticated, in workspace, not loading, and boards exist */}
               {isAuthenticated &&
                 currentWorkspace &&
+                !isLoadingBoards &&
                 workspaceBoards.length > 0 && (
                   <Box w="full" mt={4}>
                     <Text fontWeight="bold" mb={2}>
@@ -259,7 +317,8 @@ const RetroLanding: FC = () => {
                       borderRadius="md"
                       shadow="sm"
                     >
-                      {workspaceBoards.slice(0, 5).map((board) => (
+                      {/* Use data from useQuery */}
+                      {workspaceBoards.slice(0, 5).map((board: RetroBoard) => (
                         <HStack key={board.id} justify="space-between">
                           <Text fontWeight="medium">{board.name}</Text>
                           <Button
@@ -277,6 +336,7 @@ const RetroLanding: FC = () => {
                           variant="link"
                           colorScheme="blue"
                           alignSelf="flex-end"
+                          // TODO: Implement view more functionality if needed
                         >
                           View more workspace boards
                         </Button>
@@ -289,7 +349,7 @@ const RetroLanding: FC = () => {
                 size="lg"
                 w="full"
                 onClick={onCreateModalOpen}
-                isLoading={isLoading}
+                isLoading={createBoardMutation.isPending} // Use loading state from mutation
               >
                 Create New Board
               </Button>
@@ -310,7 +370,7 @@ const RetroLanding: FC = () => {
                   size="lg"
                   w="full"
                   onClick={handleJoinBoard}
-                  isLoading={isLoading}
+                  isLoading={isJoining} // Use isJoining for this button
                 >
                   Join Existing Board
                 </Button>
@@ -427,8 +487,8 @@ const RetroLanding: FC = () => {
                 </Button>
                 <Button
                   colorScheme="blue"
-                  onClick={handleCreateBoard}
-                  isLoading={isLoading}
+                  onClick={handleCreateBoardSubmit} // Use the renamed submit handler
+                  isLoading={createBoardMutation.isPending} // Use loading state from mutation
                 >
                   Create Board
                 </Button>

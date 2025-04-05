@@ -1,4 +1,5 @@
 import { FC, useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useMutation
 import {
   Container,
   Heading,
@@ -84,11 +85,10 @@ const TeamVelocity: FC = () => {
   const [committedPoints, setCommittedPoints] = useState("");
   const [completedPoints, setCompletedPoints] = useState("");
 
-  // State for displaying data
-  const [velocityData, setVelocityData] = useState<SprintData[]>([]);
-  const [averages, setAverages] = useState<TeamAverages | null>(null);
-  const [isTeamLoaded, setIsTeamLoaded] = useState(false); // Indicates if data for a team (anon or workspace) is loaded
-  const [isLoadingData, setIsLoadingData] = useState(false); // Loading state for team data fetch
+  // Restore useState for velocity data and averages for anonymous mode
+  const [anonVelocityData, setAnonVelocityData] = useState<SprintData[]>([]);
+  const [anonAverages, setAnonAverages] = useState<TeamAverages | null>(null);
+  const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
   const {
     isOpen: isAddSprintOpen,
@@ -96,6 +96,7 @@ const TeamVelocity: FC = () => {
     onClose: onAddSprintClose,
   } = useDisclosure();
   const toast = useToast();
+  const queryClient = useQueryClient(); // Get client instance
 
   // Determine the effective team name (from workspace or state)
   const effectiveTeamName = currentWorkspace ? currentWorkspace.name : teamName;
@@ -109,6 +110,8 @@ const TeamVelocity: FC = () => {
 
     setIsLoadingMembers(true);
     try {
+      // Assuming getWorkspaceMembers is now potentially using React Query or similar
+      // If it's still a direct function call, this is fine.
       const members = await getWorkspaceMembers(currentWorkspace.id);
       setWorkspaceMembers(members);
     } catch (error) {
@@ -123,85 +126,141 @@ const TeamVelocity: FC = () => {
     loadWorkspaceMembers();
   }, [loadWorkspaceMembers]);
 
-  // Load team data function
-  const loadTeamData = useCallback(
-    async (name: string, password?: string) => {
-      if (!name || (!password && !currentWorkspace)) {
-        // Need password if anonymous
-        console.warn(
-          "Attempted to load team data without name/password or workspace context"
-        );
-        return;
-      }
+  // --- React Query for fetching team velocity data ---
+  const teamVelocityQueryKey = [
+    "teamVelocity",
+    { teamName: effectiveTeamName, workspaceId: currentWorkspace?.id },
+  ];
 
-      setIsLoadingData(true);
-      setVelocityData([]); // Clear previous data
-      setAverages(null);
-
-      try {
-        let data;
-        const endpoint = `/velocity/teams/${name}/velocity`;
-
-        if (currentWorkspace) {
-          // Use authenticated API with workspace ID in header (assuming API supports this)
-          // Or adjust if API expects workspace ID differently
-          data = await apiRequest<{
-            sprints: SprintData[];
-            averages: TeamAverages;
-          }>(endpoint, {
-            method: "GET",
-            // Pass workspace ID in header for authenticated requests
-            headers: { "workspace-id": currentWorkspace.id },
-          });
-        } else {
-          // Anonymous lookup requires password in queryParams
-          if (!password) {
-            throw new Error("Password required for anonymous team lookup");
-          }
-          // Use apiRequest with queryParams
-          data = await apiRequest<{
-            sprints: SprintData[];
-            averages: TeamAverages;
-          }>(endpoint, {
-            method: "GET",
-            includeAuth: false, // Explicitly false for anonymous
-            queryParams: { password },
-          });
-        }
-
-        if (data && data.sprints) {
-          setVelocityData(data.sprints);
-          setAverages(data.averages || null);
-          setIsTeamLoaded(true); // Mark team as loaded
-          setFormErrors({}); // Clear form errors on successful load
-        } else {
-          throw new Error("Invalid data format received");
-        }
-      } catch (error) {
-        console.error("Error loading team data:", error);
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to load team data";
-        toast({
-          title: "Error Loading Data",
-          description: errorMessage,
-          status: "error",
-          duration: 3000,
-        });
-        setIsTeamLoaded(false); // Ensure team is marked as not loaded on error
-      } finally {
-        setIsLoadingData(false);
-      }
-    },
-    [currentWorkspace, toast]
-  ); // Removed name/password dependencies, pass them directly
-
-  // Auto-load data if workspace is selected and team name is set
-  useEffect(() => {
-    if (isAuthenticated && currentWorkspace && !isTeamLoaded) {
-      // Automatically load data for the workspace team
-      loadTeamData(currentWorkspace.name);
+  const fetchTeamVelocityData = async (): Promise<{
+    sprints: SprintData[];
+    averages: TeamAverages;
+  }> => {
+    if (!effectiveTeamName) {
+      throw new Error("Team name is required to fetch velocity data.");
     }
-  }, [isAuthenticated, currentWorkspace, isTeamLoaded, loadTeamData]);
+
+    const endpoint = `/velocity/teams/${effectiveTeamName}/velocity`;
+    let options: any = { method: "GET" };
+
+    if (currentWorkspace) {
+      options.headers = { "workspace-id": currentWorkspace.id };
+    } else {
+      if (!teamPassword) {
+        // This condition should ideally not be met if 'enabled' works correctly
+        throw new Error("Password required for anonymous team lookup.");
+      }
+      options.includeAuth = false;
+      options.queryParams = { password: teamPassword };
+    }
+
+    return await apiRequest<{ sprints: SprintData[]; averages: TeamAverages }>(
+      endpoint,
+      options
+    );
+  };
+
+  const {
+    data: teamData,
+    isLoading: isLoadingData, // Use isLoading from useQuery
+    isError: isDataError,
+    error: dataError,
+    isSuccess: isDataSuccess, // Use isSuccess flag
+  } = useQuery<{ sprints: SprintData[]; averages: TeamAverages }, Error>({
+    queryKey: teamVelocityQueryKey,
+    queryFn: fetchTeamVelocityData,
+    // Enable query only when in workspace mode AND team is considered loaded
+    enabled: !!currentWorkspace && isTeamLoaded,
+    retry: 1,
+  });
+
+  // --- Mutation for creating/checking anonymous team ---
+  // Define this mutation before it's used in isLoadingDisplayData and handleCreateOrLoadTeam
+  const createOrLoadTeamMutation = useMutation<
+    {
+      success: boolean;
+      team: any;
+      sprints: SprintData[];
+      averages: TeamAverages;
+    },
+    Error,
+    { name: string; password: string }
+  >({
+    mutationFn: async (variables) => {
+      return await apiRequest<{
+        success: boolean;
+        team: any;
+        sprints: SprintData[];
+        averages: TeamAverages;
+      }>(`/velocity/teams`, {
+        method: "POST",
+        body: variables,
+        includeAuth: false,
+      });
+    },
+    onSuccess: (data) => {
+      // Receive data in onSuccess
+      toast({
+        title: "Team Ready",
+        description: "Team found or created successfully.", // Simplified message
+        status: "success", // Use success status
+        duration: 2000,
+      });
+      // Set isTeamLoaded to true AFTER the POST request succeeds
+      setIsTeamLoaded(true);
+      setFormErrors({}); // Clear errors
+      // Save the returned data to local state for anonymous mode
+      setAnonVelocityData(data.sprints || []);
+      setAnonAverages(data.averages || null);
+    },
+    onError: (error) => {
+      console.error("Error creating/loading team:", error);
+      toast({
+        title: "Error Accessing Team",
+        description: error.message || "Failed to create or load team",
+        status: "error",
+        duration: 3000,
+      });
+      setIsTeamLoaded(false); // Ensure team is marked as not loaded on error
+    },
+  });
+  // --- End Mutation ---
+
+  // Determine which data source to use based on mode
+  const isLoadingDisplayData = currentWorkspace
+    ? isLoadingData // Use query loading state for workspace
+    : createOrLoadTeamMutation.isPending; // Use mutation loading state initially for anonymous
+  const velocityData = currentWorkspace
+    ? teamData?.sprints || []
+    : anonVelocityData;
+  const averages = currentWorkspace ? teamData?.averages || null : anonAverages;
+
+  // Effect to handle successful data fetch for workspace mode and clear form errors
+  useEffect(() => {
+    if (isDataSuccess && currentWorkspace) {
+      // Only clear errors if query succeeded (workspace mode)
+      setFormErrors({});
+      // Set isTeamLoaded true when workspace data successfully loads
+      setIsTeamLoaded(true);
+    }
+  }, [isDataSuccess, currentWorkspace]);
+
+  // Effect to show toast on data loading error (for workspace query) and reset isTeamLoaded
+  useEffect(() => {
+    if (isDataError && dataError && currentWorkspace) {
+      // Only handle query errors in workspace mode
+      console.error("Error loading team data:", dataError);
+      toast({
+        title: "Error Loading Data",
+        description: dataError.message || "Failed to load team data",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      setIsTeamLoaded(false); // Reset isTeamLoaded on error
+    }
+  }, [isDataError, dataError, toast, currentWorkspace]);
+  // --- End React Query for fetching data ---
 
   const validateTeamForm = (): boolean => {
     const errors: FormErrors = {};
@@ -215,7 +274,6 @@ const TeamVelocity: FC = () => {
       isValid = false;
     }
 
-    // Password validation only needed if not in workspace context
     if (!currentWorkspace) {
       if (!teamPassword.trim()) {
         errors.teamPassword = "Password is required";
@@ -230,121 +288,103 @@ const TeamVelocity: FC = () => {
     return isValid;
   };
 
-  const handleCreateOrLoadTeam = async () => {
+  // handleCreateOrLoadTeam is now defined after the mutation
+  const handleCreateOrLoadTeam = () => {
     if (!validateTeamForm()) return;
+    if (currentWorkspace) return; // Should not happen if UI is correct
 
-    // Don't proceed if in workspace mode (this button shouldn't be visible anyway)
-    if (currentWorkspace) {
-      console.warn(
-        "handleCreateOrLoadTeam called unexpectedly in workspace mode."
-      );
-      return;
-    }
-
-    setIsLoadingData(true); // Show loading state during create/load attempt
-    try {
-      // Step 1: Call POST /teams to ensure the team exists or create it (anonymous mode)
-      await apiRequest<{ success: boolean; team: any }>(`/velocity/teams`, {
-        method: "POST",
-        body: { name: teamName, password: teamPassword },
-        includeAuth: false, // Explicitly anonymous
-      });
-
-      // Step 2: If POST is successful (team exists or was created), load its data
-      toast({
-        title: "Team Ready",
-        description: "Team found or created successfully. Loading data...",
-        status: "info",
-        duration: 1500,
-      });
-      await loadTeamData(teamName, teamPassword); // Now load the actual velocity data
-    } catch (error) {
-      console.error("Error creating/loading team:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to create or load team";
-      // Check for specific backend errors if possible, e.g., 401 for password mismatch
-      // For now, show a generic error from the POST attempt
-      toast({
-        title: "Error Accessing Team",
-        description: errorMessage,
-        status: "error",
-        duration: 3000,
-      });
-      setIsTeamLoaded(false); // Ensure team is marked as not loaded on error
-      setIsLoadingData(false); // Hide loading indicator on error
-    }
-    // setIsLoadingData(false) is handled within loadTeamData's finally block if successful
+    createOrLoadTeamMutation.mutate({ name: teamName, password: teamPassword });
   };
 
   const handleChangeTeam = () => {
     setIsTeamLoaded(false);
     setTeamName("");
     setTeamPassword("");
-    setVelocityData([]);
-    setAverages(null);
     setFormErrors({});
+    // Clear local state for anonymous data
+    setAnonVelocityData([]);
+    setAnonAverages(null);
+    // Resetting query data is still good practice if switching back from workspace mode
+    queryClient.resetQueries({ queryKey: teamVelocityQueryKey });
   };
 
-  const handleAddSprint = async (data: {
+  // --- React Query Mutation for adding a sprint ---
+  interface AddSprintVariables {
     sprintName: string;
     startDate: string;
     endDate: string;
     committedPoints: string;
     completedPoints: string;
-  }) => {
-    if (!isTeamLoaded || !effectiveTeamName) {
-      toast({ title: "Error", description: "No team loaded", status: "error" });
-      return;
-    }
+  }
 
-    try {
+  const addSprintMutation = useMutation<void, Error, AddSprintVariables>({
+    mutationFn: async (variables) => {
+      if (!effectiveTeamName) {
+        throw new Error("Cannot add sprint without an effective team name.");
+      }
       const endpoint = `/velocity/teams/${effectiveTeamName}/sprints`;
       const body = {
-        sprintName: data.sprintName,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        workspaceId: currentWorkspace?.id, // Include workspaceId if available
+        sprintName: variables.sprintName,
+        startDate: variables.startDate,
+        endDate: variables.endDate,
+        workspaceId: currentWorkspace?.id,
       };
 
-      // Create sprint (API handles auth based on token/workspaceId)
       const sprintData = await apiRequest<{ id: string }>(endpoint, {
         method: "POST",
         body,
-        // Pass password in queryParams only if anonymous
         ...(!currentWorkspace &&
           teamPassword && { queryParams: { password: teamPassword } }),
       });
 
-      // Update velocity points for the newly created sprint
       await apiRequest(`/velocity/sprints/${sprintData.id}/velocity`, {
         method: "PUT",
         body: {
-          committedPoints: parseInt(data.committedPoints),
-          completedPoints: parseInt(data.completedPoints),
+          committedPoints: parseInt(variables.committedPoints),
+          completedPoints: parseInt(variables.completedPoints),
         },
+        ...(!currentWorkspace &&
+          teamPassword && { queryParams: { password: teamPassword } }),
       });
-
+    },
+    onSuccess: () => {
       toast({ title: "Sprint data added", status: "success", duration: 2000 });
-      loadTeamData(effectiveTeamName, teamPassword); // Reload data
+      // Invalidate the query to refetch data (important for workspace mode)
+      queryClient.invalidateQueries({ queryKey: teamVelocityQueryKey });
+      // Manually update local state for anonymous mode to avoid full page reload feel
+      if (!currentWorkspace) {
+        // Re-trigger the POST request to get updated data including the new sprint
+        // This isn't ideal, better would be optimistic updates or the server returning all data on PUT
+        createOrLoadTeamMutation.mutate({
+          name: teamName,
+          password: teamPassword,
+        });
+      }
       onAddSprintClose();
-
-      // Reset modal form state
       setSprintName("");
       setStartDate("");
       setEndDate("");
       setCommittedPoints("");
       setCompletedPoints("");
-    } catch (error) {
+    },
+    onError: (error) => {
       toast({
         title: "Error Adding Sprint",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: error.message || "Unknown error",
         status: "error",
         duration: 3000,
       });
+    },
+  });
+
+  const handleAddSprintSubmit = (data: AddSprintVariables) => {
+    if (!isTeamLoaded || !effectiveTeamName) {
+      toast({ title: "Error", description: "No team loaded", status: "error" });
+      return;
     }
+    addSprintMutation.mutate(data);
   };
+  // --- End React Query Mutation ---
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -395,27 +435,29 @@ const TeamVelocity: FC = () => {
             <WorkspaceTeamHeader
               currentWorkspace={currentWorkspace}
               workspaceMembers={workspaceMembers}
-              isTeamLoaded={isTeamLoaded}
+              isTeamLoaded={isTeamLoaded} // Still use isTeamLoaded for UI switch
               onAddSprintClick={onAddSprintOpen}
             />
           ) : (
             <TeamSetupForm
               teamName={teamName}
               teamPassword={teamPassword}
-              isTeamLoaded={isTeamLoaded}
+              isTeamLoaded={isTeamLoaded} // Use isTeamLoaded to hide form
               errors={formErrors}
               onNameChange={setTeamName}
               onPasswordChange={setTeamPassword}
               onSubmit={handleCreateOrLoadTeam}
               onChangeTeam={handleChangeTeam}
-              onAddSprintClick={onAddSprintOpen} // Pass the modal opener
+              onAddSprintClick={onAddSprintOpen}
+              isLoading={createOrLoadTeamMutation.isPending} // Pass loading state to form button
             />
           )}
 
           {/* Display Area (Stats, Chart, No Data Message) */}
           {isTeamLoaded && (
             <>
-              {isLoadingData ? (
+              {/* Use combined loading state */}
+              {isLoadingDisplayData ? (
                 <Center h="100px">
                   <Spinner />
                 </Center>
@@ -425,7 +467,8 @@ const TeamVelocity: FC = () => {
                   {velocityData.length > 0 && (
                     <VelocityChart velocityData={velocityData} />
                   )}
-                  {velocityData.length === 0 && !isLoadingData && (
+                  {/* Show no data message if not loading and no data */}
+                  {velocityData.length === 0 && !isLoadingDisplayData && (
                     <Alert status="info" borderRadius="md">
                       <AlertIcon />
                       <AlertDescription>
@@ -447,7 +490,8 @@ const TeamVelocity: FC = () => {
       <AddSprintModal
         isOpen={isAddSprintOpen}
         onClose={onAddSprintClose}
-        onSubmit={handleAddSprint}
+        onSubmit={handleAddSprintSubmit}
+        isSubmitting={addSprintMutation.isPending} // Pass mutation loading state
         sprintName={sprintName}
         startDate={startDate}
         endDate={endDate}

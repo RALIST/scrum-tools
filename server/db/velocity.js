@@ -1,8 +1,8 @@
-import { executeQuery } from './dbUtils.js'; // Use executeQuery
-import bcrypt from 'bcryptjs'; // Import bcrypt
+import { executeQuery } from './dbUtils.js';
+import bcrypt from 'bcryptjs';
 
-export const createTeam = async (id, name, password, workspaceId = null, createdBy = null) => {
-    // Hash password if provided
+// Add client as the last optional parameter
+export const createTeam = async (id, name, password, workspaceId = null, createdBy = null, client = null) => {
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
     // Use the correct column name 'password' from the schema
@@ -10,11 +10,11 @@ export const createTeam = async (id, name, password, workspaceId = null, created
         INSERT INTO teams (id, name, password, workspace_id, created_by) 
         VALUES ($1, $2, $3, $4, $5) 
         RETURNING id, name, workspace_id, created_by, created_at
-    `; // Don't return password hash
+    `;
     const params = [id, name, passwordHash, workspaceId, createdBy];
 
-    const result = await executeQuery(queryText, params);
-    // Return the created team data (without the hash)
+    // Pass the client (which might be null) to executeQuery
+    const result = await executeQuery(queryText, params, client);
     return result.rows[0];
 };
 

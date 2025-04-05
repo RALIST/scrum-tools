@@ -27,7 +27,8 @@ interface TeamSetupFormProps {
   onPasswordChange: (value: string) => void;
   onSubmit: () => void;
   onChangeTeam: () => void;
-  onAddSprintClick: () => void; // Add this prop
+  onAddSprintClick: () => void;
+  isLoading?: boolean; // Add optional loading state for the submit button
 }
 
 export const TeamSetupForm: FC<TeamSetupFormProps> = ({
@@ -39,7 +40,8 @@ export const TeamSetupForm: FC<TeamSetupFormProps> = ({
   onPasswordChange,
   onSubmit,
   onChangeTeam,
-  onAddSprintClick, // Receive the handler
+  onAddSprintClick,
+  isLoading = false, // Destructure with default
 }) => {
   return (
     <Card w="full">
@@ -78,7 +80,12 @@ export const TeamSetupForm: FC<TeamSetupFormProps> = ({
           </Grid>
           <HStack spacing={4}>
             {!isTeamLoaded ? (
-              <Button colorScheme="blue" onClick={onSubmit}>
+              <Button
+                colorScheme="blue"
+                onClick={onSubmit}
+                isLoading={isLoading} // Use the isLoading prop here
+                isDisabled={isLoading}
+              >
                 Create/Load Team
               </Button>
             ) : (

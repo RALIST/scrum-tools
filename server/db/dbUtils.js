@@ -8,10 +8,14 @@ import logger from '../logger.js'; // Import the logger
  * @param {string} queryText - The SQL query string.
  * @param {Array} [params=[]] - Optional array of query parameters.
  * @returns {Promise<QueryResult>} A promise that resolves with the query result.
+ * @param {pg.Client | null} [existingClient=null] - Optional existing client to use for the query (e.g., within a transaction).
+ * @returns {Promise<QueryResult>} A promise that resolves with the query result.
  * @throws {Error} Throws an error if the query fails.
  */
-export const executeQuery = async (queryText, params = []) => {
-    const client = await pool.connect();
+export const executeQuery = async (queryText, params = [], existingClient = null) => {
+    const client = existingClient || await pool.connect();
+    const releaseClient = !existingClient; // Flag to know if we need to release the client
+
     try {
         const result = await client.query(queryText, params);
         return result;
@@ -25,7 +29,10 @@ export const executeQuery = async (queryText, params = []) => {
         });
         throw error; // Re-throw the original error
     } finally {
-        client.release();
+        // Only release the client if it was acquired within this function
+        if (releaseClient && client) {
+            client.release();
+        }
     }
 };
 

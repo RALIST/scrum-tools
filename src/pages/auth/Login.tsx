@@ -65,7 +65,8 @@ const Login: FC = () => {
     setIsSubmitting(true);
 
     try {
-      await login(email, password); // Perform login
+      // Pass arguments as a single object matching LoginVariables type
+      await login({ email, password });
 
       // After successful login, check for pending invitation
       const pendingToken = sessionStorage.getItem("pendingInvitationToken");

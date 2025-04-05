@@ -1,5 +1,6 @@
-import { FC, useState, useEffect, useCallback } from "react"; // Added useCallback
+import { FC, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import mutation hooks
 import {
   Box,
   Heading,
@@ -36,10 +37,11 @@ interface CreateRoomSettings {
 
 const PlanningPoker: FC = () => {
   const [showRoomList, setShowRoomList] = useState(false);
-  // Combine rooms into a single state
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Use the existing isLoading state
-  const [isCreating, setIsCreating] = useState(false); // Loading state for creation
+  // Remove useState for rooms and isLoading, they will come from useQuery
+  // const [rooms, setRooms] = useState<Room[]>([]);
+  // const [isLoading, setIsLoading] = useState(false);
+  // Remove isCreating state, use state from useMutation
+  // const [isCreating, setIsCreating] = useState(false);
   const { colorMode } = useColorMode();
   const navigate = useNavigate();
   const toast = useToast();
@@ -68,6 +70,45 @@ const PlanningPoker: FC = () => {
     }));
   }, [currentWorkspace]);
 
+  // --- React Query for fetching rooms ---
+  const queryKey = ["pokerRooms", { workspaceId: currentWorkspace?.id }];
+
+  const fetchRooms = async (): Promise<Room[]> => {
+    const headers = currentWorkspace
+      ? { "workspace-id": currentWorkspace.id }
+      : undefined;
+    // Let apiRequest handle auth based on token presence
+    return await apiRequest<Room[]>("/poker/rooms", { headers });
+  };
+
+  const {
+    data: rooms = [], // Default to empty array
+    isLoading, // Use isLoading from useQuery
+    isError,
+    error,
+  } = useQuery<Room[], Error>({
+    // Specify types for data and error
+    queryKey: queryKey,
+    queryFn: fetchRooms,
+    // Optional: Add staleTime or cacheTime if needed
+    // staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Effect to show toast on error
+  useEffect(() => {
+    if (isError && error) {
+      console.error("Error loading rooms:", error);
+      toast({
+        title: "Error Loading Rooms",
+        description: error.message || "Failed to load poker rooms",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  }, [isError, error, toast]);
+  // --- End React Query ---
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -90,40 +131,7 @@ const PlanningPoker: FC = () => {
     ],
   };
 
-  // Load rooms function using useCallback
-  const loadRooms = useCallback(async () => {
-    setIsLoading(true);
-    setRooms([]); // Clear previous rooms
-    try {
-      // Prepare headers only if in workspace context
-      const headers = currentWorkspace
-        ? { "workspace-id": currentWorkspace.id }
-        : undefined; // Pass undefined if not in workspace
-
-      // Fetch rooms - API now handles filtering based on auth/header
-      const fetchedRooms = await apiRequest<Room[]>("/poker/rooms", {
-        // includeAuth: !!currentWorkspace, // Send token if in workspace context
-        // Let apiRequest handle auth based on token presence
-        headers,
-      });
-      setRooms(fetchedRooms);
-    } catch (error) {
-      console.error("Error loading rooms:", error);
-      toast({
-        title: "Error Loading Rooms",
-        description: "Failed to load poker rooms",
-        status: "error",
-        duration: 3000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isAuthenticated, currentWorkspace, toast]); // Dependencies for loadRooms
-
-  // Load rooms on mount and when auth/workspace changes
-  useEffect(() => {
-    loadRooms();
-  }, [loadRooms]); // useEffect depends on the memoized loadRooms
+  // Remove loadRooms and the useEffect that calls it
 
   const handleCreateSettingsChange = useCallback(
     (newSettings: Partial<CreateRoomSettings>) => {
@@ -132,7 +140,57 @@ const PlanningPoker: FC = () => {
     []
   );
 
-  const handleCreateRoom = async () => {
+  // --- React Query Mutation for creating a room ---
+  const queryClient = useQueryClient(); // Get query client instance
+
+  const createRoomMutation = useMutation<
+    void, // Type of the data returned by the mutation function (void in this case)
+    Error, // Type of the error
+    { newRoomId: string } // Type of the variables passed to the mutation function
+  >({
+    mutationFn: async ({ newRoomId }) => {
+      // Use authentication only if creating in a workspace
+      const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
+      await apiRequest("/poker/rooms", {
+        method: "POST",
+        body: {
+          roomId: newRoomId,
+          name: createSettings.roomName.trim() || `Room ${newRoomId}`,
+          workspaceId: createSettings.workspaceId,
+          sequence: createSettings.sequence,
+          password: createSettings.password,
+        },
+        includeAuth,
+      });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate the rooms query to refetch the list
+      queryClient.invalidateQueries({ queryKey: queryKey });
+
+      toast({
+        title: "Room Created",
+        description: `Room "${
+          createSettings.roomName.trim() || variables.newRoomId
+        }" created.`,
+        status: "success",
+        duration: 2000,
+      });
+      onCreateModalClose();
+      navigate(`/planning-poker/${variables.newRoomId}`); // Navigate after success
+    },
+    onError: (error) => {
+      toast({
+        title: "Error Creating Room",
+        description: error.message || "Failed to create new room",
+        status: "error",
+        duration: 3000,
+      });
+    },
+  });
+  // --- End React Query Mutation ---
+
+  const handleCreateRoomSubmit = () => {
+    // Renamed original function
     // Validate room name only if creating within a workspace
     if (
       isAuthenticated &&
@@ -147,48 +205,8 @@ const PlanningPoker: FC = () => {
       });
       return;
     }
-
     const newRoomId = Math.random().toString(36).substring(2, 8);
-    setIsCreating(true);
-    try {
-      // Use authentication only if creating in a workspace
-      const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
-
-      await apiRequest("/poker/rooms", {
-        method: "POST",
-        body: {
-          roomId: newRoomId,
-          // Use name from settings, default if public and empty
-          name: createSettings.roomName.trim() || `Room ${newRoomId}`,
-          workspaceId: createSettings.workspaceId,
-          sequence: createSettings.sequence,
-          password: createSettings.password,
-        },
-        includeAuth, // Send token only if workspaceId is set
-      });
-
-      toast({
-        title: "Room Created",
-        description: `Room "${
-          createSettings.roomName.trim() || newRoomId
-        }" created.`,
-        status: "success",
-        duration: 2000,
-      });
-
-      onCreateModalClose();
-      navigate(`/planning-poker/${newRoomId}`); // Navigate to the new room
-    } catch (error) {
-      toast({
-        title: "Error Creating Room",
-        description:
-          error instanceof Error ? error.message : "Failed to create new room",
-        status: "error",
-        duration: 3000,
-      });
-    } finally {
-      setIsCreating(false);
-    }
+    createRoomMutation.mutate({ newRoomId }); // Call the mutation
   };
 
   const handleJoinRoom = (roomId: string) => {
@@ -283,11 +301,11 @@ const PlanningPoker: FC = () => {
           <CreateRoomModal
             isOpen={isCreateModalOpen}
             onClose={onCreateModalClose}
-            onSubmit={handleCreateRoom}
+            onSubmit={handleCreateRoomSubmit} // Use the renamed submit handler
             settings={createSettings}
             onSettingsChange={handleCreateSettingsChange}
             workspaces={workspaces}
-            isLoading={isCreating}
+            isLoading={createRoomMutation.isPending} // Use loading state from mutation
           />
 
           <Divider my={8} />

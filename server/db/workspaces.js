@@ -24,10 +24,11 @@ export const createWorkspace = async (name, description, ownerId) => {
       [id, ownerId, 'admin']
     );
 
-    // Create the default "My team" for Velocity Tracker
+    // Create a default team with the same name as the workspace
     const defaultTeamId = uuidv4();
-    await createTeam(defaultTeamId, 'My team', null, id, null); // Pass workspaceId (id), no password, no specific creator
-    
+    // Pass the existing client and the workspace name to createTeam
+    await createTeam(defaultTeamId, name, null, id, null, client); // Use 'name' (workspace name) instead of 'My team'
+
     // Commit transaction
     await client.query('COMMIT');
     

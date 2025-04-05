@@ -77,7 +77,8 @@ const Register: FC = () => {
     setIsSubmitting(true);
 
     try {
-      await register(email, password, name);
+      // Pass arguments as a single object matching RegisterVariables type
+      await register({ email, password, name });
       toast({
         title: "Account created",
         description: "Your account has been created successfully",

@@ -1,4 +1,5 @@
-import React, { FC, useState, useCallback } from "react"; // Import React and useCallback
+import React, { FC, useState } from "react";
+import { useMutation } from "@tanstack/react-query"; // Import useMutation
 import {
   Box,
   Heading,
@@ -47,44 +48,57 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
   const toast = useToast();
   const { colorMode } = useColorMode();
   const [inviteToken, setInviteToken] = useState<string | null>(null);
-  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  // Remove isGeneratingInvite state, use mutation state
+  // const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
 
-  // Function to generate invite link (copied from previous attempt)
-  const handleGenerateInvite = useCallback(async () => {
-    if (!workspaceId) return;
-    setIsGeneratingInvite(true);
-    setInviteToken(null); // Clear previous token
-    try {
-      const result = await apiRequest<{ token: string }>(
+  // --- React Query Mutation for generating invite link ---
+  const generateInviteMutation = useMutation<
+    { token: string }, // Type of the data returned by the mutation function
+    Error, // Type of the error
+    void // Type of the variables passed to the mutation function (none needed)
+  >({
+    mutationFn: async () => {
+      if (!workspaceId) {
+        throw new Error("Workspace ID is required to generate an invite.");
+      }
+      return await apiRequest<{ token: string }>(
         `/workspaces/${workspaceId}/invitations`,
         {
           method: "POST",
-          // Optionally add roleToAssign or expiresInDays to body if needed
-          // body: { roleToAssign: 'member' }
+          // body: { roleToAssign: 'member' } // Optional body
         }
       );
-      setInviteToken(result.token);
+    },
+    onSuccess: (data) => {
+      setInviteToken(data.token);
       toast({
         title: "Invite Link Generated",
         description: "Copy the link below and share it.",
         status: "success",
         duration: 5000,
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error generating invite link:", error);
+      setInviteToken(null); // Clear any previous token on error
       toast({
         title: "Error Generating Link",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate invite link.",
+        description: error.message || "Failed to generate invite link.",
         status: "error",
         duration: 5000,
       });
-    } finally {
-      setIsGeneratingInvite(false);
-    }
-  }, [workspaceId, toast]); // Add dependencies
+    },
+    onMutate: () => {
+      // Clear previous token immediately when mutation starts
+      setInviteToken(null);
+    },
+  });
+  // --- End React Query Mutation ---
+
+  // Wrapper function to call the mutation
+  const handleGenerateInviteClick = () => {
+    generateInviteMutation.mutate();
+  };
 
   return (
     <VStack spacing={6} align="stretch">
@@ -99,8 +113,8 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
               leftIcon={<Icon as={FaUserPlus} />}
               colorScheme="teal"
               size="sm"
-              onClick={handleGenerateInvite}
-              isLoading={isGeneratingInvite}
+              onClick={handleGenerateInviteClick} // Use the wrapper function
+              isLoading={generateInviteMutation.isPending} // Use mutation loading state
             >
               Generate Invite Link
             </Button>
