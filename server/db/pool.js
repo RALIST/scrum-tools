@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import logger from '../logger.js'; // Import the logger
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
