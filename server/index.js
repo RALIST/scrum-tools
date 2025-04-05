@@ -14,6 +14,28 @@ import { optionalAuthenticateToken } from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js'; // Import the error handler
 import logger from './logger.js'; // Import the logger
 import { pathToFileURL } from 'url'; // Import pathToFileURL for ES Module check
+import dotenv from 'dotenv'; // Import dotenv for environment variable management
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+// Create proper __dirname equivalent for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const env = process.env.NODE_ENV || 'development';
+console.log(`Current environment: ${env}`);
+
+if (env == "development") {
+   dotenv.config({ path: join(__dirname, '.env.development') });
+   console.log('Development environment variables loaded from .env.development');
+} else if (env == "production") {
+   dotenv.config({ path: join(__dirname, '.env') });
+   console.log('Production environment variables loaded from .env');
+   console.log("Connecting to production database", process.env.DB_HOST);
+} else {
+   console.warn('No environment variables loaded. Using default environment variables if available.');
+}
+
 
 const app = express();
 app.use(cors());

@@ -1,26 +1,5 @@
 import pg from 'pg'
-import dotenv from 'dotenv'
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import logger from '../logger.js'; // Import the logger
-import path from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const env = process.env.NODE_ENV || 'development'; // Default to development if not set
-console.log(`Current environment: ${env}`);
-
-if (env == "development") {
-   dotenv.config({ path: path.join(__dirname, '.env.development') });
-   console.log('Development environment variables loaded from .env.development');
-} else if (env == "production") {
-   dotenv.config({ path: path.join(__dirname, '.env') });
-   console.log('Production environment variables loaded from .env');
-   console.log("Connecting to production database", process.env.DB_HOST);
-} else {
-   console.warn('No environment variables loaded. Using default environment variables if available.');
-}
 
 const { Pool } = pg;
 
