@@ -6,6 +6,7 @@ let pool;
 
 // Initialize function that you can call after environment variables are loaded
 function initializePool() {
+    logger.info("Connecting to production database", process.env.DB_HOST);
     pool = new Pool({
         user: process.env.DB_USER || '',
         host: process.env.DB_HOST || 'localhost',
