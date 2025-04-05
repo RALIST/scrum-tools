@@ -139,9 +139,13 @@ router.post('/:id/members', authenticateToken, async (req, res, next) => {
       message: 'Member added successfully',
     });
   } catch (error) {
-    // Handle potential specific errors like duplicate member?
+    // Handle specific DB errors
+    if (error.code === '23505') { // Unique violation (already a member)
+      logger.warn(`Attempt to add duplicate member: User ${req.body.email} to workspace ${req.params.id}`);
+      return res.status(409).json({ error: 'User is already a member of this workspace.' });
+    }
     logger.error('Add member error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, body: req.body });
-    // Pass error to the centralized handler
+    // Pass other errors to the centralized handler
     next(error);
   }
 });
@@ -161,6 +165,27 @@ router.delete('/:id/members/:memberId', authenticateToken, async (req, res, next
       return res.status(403).json({ error: 'You do not have permission to remove members' });
     }
     
+    // Check if trying to remove the owner
+    const workspace = await getWorkspaceById(workspaceId); // Fetch workspace to get owner ID
+    if (!workspace) {
+      // This case should ideally be caught by earlier checks or DB constraints, but handle defensively
+      logger.error(`Workspace ${workspaceId} not found during member removal check by user ${userId}`);
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+    if (workspace.owner_id === memberId) {
+      logger.warn(`User ${userId} attempted to remove owner ${memberId} from workspace ${workspaceId}`);
+      return res.status(403).json({ error: 'Cannot remove the workspace owner.' });
+    }
+
+    await removeWorkspaceMember(workspaceId, memberId);
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' }); // Should ideally not happen if admin check passed
+    }
+    if (workspace.owner_id === memberId) {
+      logger.warn(`User ${userId} attempted to remove owner ${memberId} from workspace ${workspaceId}`);
+      return res.status(403).json({ error: 'Cannot remove the workspace owner.' });
+    }
+
     await removeWorkspaceMember(workspaceId, memberId);
     
     res.json({

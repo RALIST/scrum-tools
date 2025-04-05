@@ -57,8 +57,30 @@ export const getRoom = async (roomId) => {
     const participantsQuery = 'SELECT * FROM participants WHERE room_id = $1';
     const participantsResult = await executeQuery(participantsQuery, [roomId]);
 
+    const roomData = roomResult.rows[0];
+    let parsedSequence = roomData.sequence; // Default to raw value
+
+    // Attempt to parse if it looks like a non-empty Postgres array string: "{...}"
+    if (typeof parsedSequence === 'string' && parsedSequence.startsWith('{') && parsedSequence.endsWith('}') && parsedSequence.length > 2) {
+        try {
+            // Remove braces, split by comma, and remove surrounding quotes from each element
+            parsedSequence = parsedSequence.substring(1, parsedSequence.length - 1)
+                .split(',')
+                .map(item => item.trim().replace(/^"|"$/g, '')); // Remove leading/trailing quotes
+        } catch (e) {
+            logger.error(`Failed to parse poker room sequence string: ${roomData.sequence}`, e);
+            parsedSequence = null; // Fallback on error
+        }
+    } else if (parsedSequence === '{}') { // Handle empty array string
+         parsedSequence = [];
+    } else if (parsedSequence === null || parsedSequence === undefined) {
+         parsedSequence = null; // Or default to an empty array: []
+    }
+    // If it's already an array (e.g., if DB driver handles it), or not a string, keep as is unless null/undefined
+
     return {
-        ...roomResult.rows[0],
+        ...roomData,
+        sequence: parsedSequence, // Use the parsed sequence
         participants: new Map(participantsResult.rows.map(p => [p.id, {
             id: p.id,
             name: p.name,

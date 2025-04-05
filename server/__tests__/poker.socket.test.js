@@ -11,6 +11,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
   let testRoomId = `poker-socket-test-${Date.now()}`;
   let testRoomPassword = 'socktestpassword';
   let publicRoomId = `public-poker-socket-${Date.now()}`;
+  let settingsTestRoomId = `settings-poker-socket-${Date.now()}`;
   let authToken; // For authenticated tests if needed later
   let userId;
   let testUserName = 'Poker Sock User Auth'; // Define username for auth tests
@@ -29,6 +30,12 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       .post('/api/poker/rooms')
       .send({ roomId: publicRoomId, name: 'Public Poker Socket Room' });
     expect(resPublic.statusCode).toEqual(200);
+
+    // Create a room specifically for the settings test
+    const resSettings = await request(app)
+      .post('/api/poker/rooms')
+      .send({ roomId: settingsTestRoomId, name: 'Settings Test Poker Room' });
+    expect(resSettings.statusCode).toEqual(200);
 
 
     // Create a password-protected room
@@ -110,6 +117,17 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         clientSocket1.on('roomJoined', () => done(new Error('Should not have joined non-existent room')));
       });
 
+
+    it('should allow joining a public room even if password provided (ignored)', (done) => {
+      const userName = 'AnonEve';
+      clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName, password: 'somepassword' });
+      clientSocket1.on('roomJoined', (data) => {
+        expect(data.participants.some(p => p.name === userName)).toBe(true);
+        done();
+      });
+      clientSocket1.on('error', (err) => done(new Error(`Should have joined public room, but got error: ${err.message}`)));
+    });
+
     it('should allow voting and update participants', (done) => {
         const userName = 'AnonAlice';
         const voteValue = '5';
@@ -173,6 +191,30 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
           });
            clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
+
+    it('should update room settings (sequence and password)', (done) => {
+      const userName = 'AnonSettingsUser';
+      const newSequence = ['1', '2', '3', '5', '8', '?'];
+      const newPassword = 'newPokerPassword';
+
+      clientSocket1.emit('joinRoom', { roomId: settingsTestRoomId, userName }); // Use dedicated room ID
+      clientSocket1.once('roomJoined', () => {
+        clientSocket1.emit('updateSettings', { // Use dedicated room ID
+          roomId: settingsTestRoomId,
+          settings: { sequence: newSequence, password: newPassword }
+        });
+
+        clientSocket1.on('settingsUpdated', (data) => {
+          expect(data.settings.sequence).toEqual(newSequence);
+          expect(data.settings.hasPassword).toBe(true);
+          // Optional: Try joining with the new password later if needed
+          done();
+        });
+        clientSocket1.on('error', (err) => done(new Error(`Update settings error: ${err.message}`)));
+      });
+      clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
+    });
+
     
       it('should remove participant on disconnect', (done) => {
           const userName1 = 'AnonAlice';

@@ -193,6 +193,10 @@ router.post('/teams/:name/sprints', async (req, res, next) => {
             try {
                 // Verify team and password for anonymous access
                 team = await getTeam(name, password); // This throws on invalid password/team
+                 if (!team) { // Add check for null team immediately after getTeam
+                     logger.warn(`Anonymous team '${name}' not found during sprint creation auth.`);
+                     return res.status(401).json({ error: 'Invalid team name or password' });
+                 }
                  logger.info(`Anonymous team '${name}' identified for sprint creation.`);
             } catch (dbError) {
                 // Consolidate password error checks
@@ -207,8 +211,9 @@ router.post('/teams/:name/sprints', async (req, res, next) => {
                     logger.warn(`Anonymous auth failed for team '${name}' during sprint creation: ${dbError.message}`);
                     return res.status(401).json({ error: 'Invalid team name or password' });
                 }
-                 logger.error(`Unexpected DB error during anonymous sprint creation auth for team '${name}': ${dbError.message}`, { stack: dbError.stack });
-                throw dbError; // Re-throw other errors
+                // If it's not a known auth error, assume team not found or other access issue
+                logger.warn(`Team '${name}' not found or other error during anonymous sprint creation auth: ${dbError.message}`);
+                return res.status(401).json({ error: 'Invalid team name or password' }); // Return 401 for team not found as well
             }
         }
 

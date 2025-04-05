@@ -24,12 +24,21 @@ const handlePokerSocketEvents = (io, socket) => {
                 return
             }
 
-            if (room.password) {
-                const isValid = await bcrypt.compare(password, room.password)
-                if (!isValid) {
-                    socket.emit('error', { message: 'Invalid password' })
-                    return
+            // Password validation logic
+            if (room.password) { // Room requires a password
+                if (!password) { // Client did not provide a password
+                    socket.emit('error', { message: 'Password required' });
+                    return;
                 }
+                // Both room has password and client provided one, now compare
+                const isValid = await bcrypt.compare(password, room.password);
+                if (!isValid) {
+                    socket.emit('error', { message: 'Invalid password' });
+                    return;
+                }
+            } else if (password) { // Room is public, but client sent a password (optional: treat as error or ignore)
+                 logger.warn(`Client ${socket.id} sent a password for public room ${roomId}. Ignoring.`);
+                 // Or: socket.emit('error', { message: 'Password not required for this room' }); return;
             }
 
             // Add participant to DB first

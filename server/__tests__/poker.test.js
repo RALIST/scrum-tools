@@ -7,7 +7,7 @@ describe('Poker Routes (/api/poker)', () => {
   let anonRoomId = `anon-poker-room-${Date.now()}`;
   let anonRoomPassword = 'anonPokerPassword';
   let publicRoomId = `public-poker-room-${Date.now()}`;
-  let createdAuthRoomId; // ID for room created in auth context
+  // let createdAuthRoomId; // Defined within Authenticated Access scope now
 
   // Setup common anonymous resources before all tests in this file
   beforeAll(async () => {
@@ -93,15 +93,33 @@ describe('Poker Routes (/api/poker)', () => {
         // Should contain public/anon rooms created in outer beforeAll
         expect(res.body.some(room => room.id === publicRoomId)).toBe(true);
         expect(res.body.some(room => room.id === anonRoomId)).toBe(true);
-        // Should NOT contain workspace rooms
-        if (createdAuthRoomId) { // Check if it was created in the other describe block
-             expect(res.body.some(room => room.id === createdAuthRoomId)).toBe(false);
-        }
+        // Should NOT contain workspace rooms (No need to check createdAuthRoomId here)
       });
+
+    it('GET /api/poker/rooms/:roomId/info - should get info for a public room', async () => {
+      const res = await request(app).get(`/api/poker/rooms/${publicRoomId}/info`);
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('id', publicRoomId);
+      expect(res.body).toHaveProperty('hasPassword', false);
+    });
+
+    it('GET /api/poker/rooms/:roomId/info - should get info for a password room', async () => {
+      const res = await request(app).get(`/api/poker/rooms/${anonRoomId}/info`);
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('id', anonRoomId);
+      expect(res.body).toHaveProperty('hasPassword', true);
+    });
+
+    it('GET /api/poker/rooms/:roomId/info - should return 404 for non-existent room', async () => {
+      const res = await request(app).get(`/api/poker/rooms/non-existent-info/info`);
+      expect(res.statusCode).toEqual(404);
+      expect(res.body).toHaveProperty('error', 'Room not found');
+    });
   });
 
   // --- Authenticated Access Tests ---
   describe('Authenticated Access', () => {
+    let createdAuthRoomId; // Define within this scope
     let authToken;
     let userId;
     let testWorkspaceId;
@@ -127,21 +145,33 @@ describe('Poker Routes (/api/poker)', () => {
         .send({ name: workspaceName });
       expect(resWorkspace.statusCode).toEqual(201);
       testWorkspaceId = resWorkspace.body.workspace.id;
-    });
-
-    it('POST /api/poker/rooms - should create a new poker room linked to a workspace', async () => {
-      const roomId = `ws-room-auth-${Date.now()}`;
-      createdAuthRoomId = roomId; // Use the variable declared in the outer scope
-      const res = await request(app)
-        .post('/api/poker/rooms') // Use correct prefix
+      // Create the authenticated room needed for subsequent tests in this block
+      const authRoomId = `ws-room-auth-${Date.now()}`;
+      createdAuthRoomId = authRoomId; // Assign to the outer scope variable
+      const resAuthRoom = await request(app)
+        .post('/api/poker/rooms')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          roomId: roomId,
+          roomId: authRoomId,
           name: 'Workspace Linked Room Auth',
           workspaceId: testWorkspaceId,
         });
+      expect(resAuthRoom.statusCode).toEqual(200);
+    });
+
+    // Keep a test for the creation endpoint itself, but maybe simplified
+    it('POST /api/poker/rooms - should allow creating another workspace room', async () => {
+      const anotherRoomId = `ws-room-auth-another-${Date.now()}`;
+      const res = await request(app)
+        .post('/api/poker/rooms')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          roomId: anotherRoomId,
+          name: 'Another Workspace Room',
+          workspaceId: testWorkspaceId,
+        });
       expect(res.statusCode).toEqual(200);
-      expect(res.body).toHaveProperty('roomId', roomId);
+      expect(res.body).toHaveProperty('roomId', anotherRoomId);
     });
 
     it('POST /api/poker/rooms - should fail to create room with existing ID (authenticated)', async () => {
@@ -180,6 +210,7 @@ describe('Poker Routes (/api/poker)', () => {
           .set('Authorization', `Bearer ${authToken}`)
           .set('workspace-id', testWorkspaceId); // Set workspace header
         expect(res.statusCode).toEqual(200);
+
         expect(Array.isArray(res.body)).toBe(true);
          // Should contain the workspace room
         expect(res.body.some(room => room.id === createdAuthRoomId)).toBe(true);
@@ -200,6 +231,24 @@ describe('Poker Routes (/api/poker)', () => {
         expect(res.body).toHaveProperty('valid', true);
      });
 
+
+     it('GET /api/poker/rooms/:roomId/info - should get info for a workspace room', async () => {
+        // createdAuthRoomId is assigned in beforeAll for this describe block
+        expect(createdAuthRoomId).toBeDefined(); // Ensure the ID exists from beforeAll
+        expect(authToken).toBeDefined(); // Ensure the token exists from beforeAll
+
+        const res = await request(app)
+          .get(`/api/poker/rooms/${createdAuthRoomId}/info`) // Use ID created in beforeAll
+          .set('Authorization', `Bearer ${authToken}`); // Use token from beforeAll
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('id', createdAuthRoomId);
+        expect(res.body).toHaveProperty('hasPassword', false); // Created without password in beforeAll
+     });
+
      // Add more authenticated tests here if needed
+
   });
 });
+
+
+
