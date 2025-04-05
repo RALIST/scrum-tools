@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [verifyToken]); // useEffect depends on verifyToken
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
       const response = await fetch(`${config.apiUrl}/auth/login`, {
@@ -129,39 +129,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // Add useCallback with empty dependency array
 
-  const register = async (email: string, password: string, name: string) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${config.apiUrl}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, name }),
-      });
+  const register = useCallback(
+    async (email: string, password: string, name: string) => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${config.apiUrl}/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password, name }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Registration failed");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Registration failed");
+        }
+
+        const data = await response.json();
+        setUser(data.user);
+        setToken(data.token);
+
+        // Save to localStorage
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
+      } catch (error) {
+        // No need to logout here, register component handles error display
+        console.error("Registration error:", error);
+        throw error;
+      } finally {
+        setIsLoading(false);
       }
-
-      const data = await response.json();
-      setUser(data.user);
-      setToken(data.token);
-
-      // Save to localStorage
-      localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("token", data.token);
-    } catch (error) {
-      // No need to logout here, register component handles error display
-      console.error("Registration error:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    []
+  ); // Add useCallback with empty dependency array
 
   // Logout function is now defined above verifyToken using useCallback
 

@@ -2,7 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { executeQuery } from '../db/dbUtils.js'; // Import executeQuery
 import logger from '../logger.js'; // Import the logger
-// Note: authenticateToken/optionalAuthenticateToken is applied in index.js
+
 import {
     createTeam,
     getTeam,

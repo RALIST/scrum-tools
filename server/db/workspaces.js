@@ -1,5 +1,6 @@
 import { pool } from './pool.js';
 import { v4 as uuidv4 } from 'uuid';
+import { createTeam } from './velocity.js'; // Import createTeam
 
 // Create a new workspace
 export const createWorkspace = async (name, description, ownerId) => {
@@ -22,6 +23,10 @@ export const createWorkspace = async (name, description, ownerId) => {
       'INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, $3)',
       [id, ownerId, 'admin']
     );
+
+    // Create the default "My team" for Velocity Tracker
+    const defaultTeamId = uuidv4();
+    await createTeam(defaultTeamId, 'My team', null, id, null); // Pass workspaceId (id), no password, no specific creator
     
     // Commit transaction
     await client.query('COMMIT');

@@ -5,6 +5,7 @@ import {
   useEffect,
   ReactNode,
   useCallback,
+  useMemo, // Import useMemo
 } from "react";
 import { useAuth } from "./AuthContext";
 import config from "../config";
@@ -144,166 +145,176 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   // refreshWorkspaces is now defined above the useEffects
 
-  const createWorkspace = async (name: string, description: string) => {
-    if (!token) throw new Error("Not authenticated");
+  const createWorkspace = useCallback(
+    async (name: string, description: string) => {
+      if (!token) throw new Error("Not authenticated");
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${config.apiUrl}/workspaces`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name, description }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create workspace");
-      }
-
-      const data = await response.json();
-      await refreshWorkspaces();
-      return data.workspace;
-    } catch (error) {
-      console.error("Error creating workspace:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updateWorkspace = async (
-    id: string,
-    name: string,
-    description: string
-  ) => {
-    if (!token) throw new Error("Not authenticated");
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${config.apiUrl}/workspaces/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name, description }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update workspace");
-      }
-
-      const data = await response.json();
-      await refreshWorkspaces();
-
-      // Update currentWorkspace if it's the one being edited
-      if (currentWorkspace && currentWorkspace.id === id) {
-        setCurrentWorkspace(data.workspace);
-      }
-
-      return data.workspace;
-    } catch (error) {
-      console.error("Error updating workspace:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addWorkspaceMember = async (
-    workspaceId: string,
-    email: string,
-    role?: string
-  ) => {
-    if (!token) throw new Error("Not authenticated");
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `${config.apiUrl}/workspaces/${workspaceId}/members`,
-        {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${config.apiUrl}/workspaces`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ email, role }),
+          body: JSON.stringify({ name, description }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to create workspace");
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add member");
+        const data = await response.json();
+        await refreshWorkspaces();
+        return data.workspace;
+      } catch (error) {
+        console.error("Error creating workspace:", error);
+        throw error;
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error adding member:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [token, refreshWorkspaces]
+  ); // Add dependencies
 
-  const removeWorkspaceMember = async (
-    workspaceId: string,
-    memberId: string
-  ) => {
-    if (!token) throw new Error("Not authenticated");
+  const updateWorkspace = useCallback(
+    async (id: string, name: string, description: string) => {
+      if (!token) throw new Error("Not authenticated");
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `${config.apiUrl}/workspaces/${workspaceId}/members/${memberId}`,
-        {
-          method: "DELETE",
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${config.apiUrl}/workspaces/${id}`, {
+          method: "PUT",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({ name, description }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to update workspace");
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to remove member");
-      }
-    } catch (error) {
-      console.error("Error removing member:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        const data = await response.json();
+        await refreshWorkspaces();
 
-  const getWorkspaceMembers = async (workspaceId: string) => {
-    if (!token) throw new Error("Not authenticated");
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `${config.apiUrl}/workspaces/${workspaceId}/members`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // Update currentWorkspace if it's the one being edited
+        if (currentWorkspace && currentWorkspace.id === id) {
+          setCurrentWorkspace(data.workspace);
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to get members");
+        return data.workspace;
+      } catch (error) {
+        console.error("Error updating workspace:", error);
+        throw error;
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [token, refreshWorkspaces, currentWorkspace, updateCurrentWorkspace]
+  ); // Add dependencies (updateCurrentWorkspace instead of setCurrentWorkspace)
 
-      return await response.json();
-    } catch (error) {
-      console.error("Error getting members:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const addWorkspaceMember = useCallback(
+    async (workspaceId: string, email: string, role?: string) => {
+      if (!token) throw new Error("Not authenticated");
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `${config.apiUrl}/workspaces/${workspaceId}/members`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ email, role }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to add member");
+        }
+      } catch (error) {
+        console.error("Error adding member:", error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [token]
+  ); // Add dependencies
+
+  const removeWorkspaceMember = useCallback(
+    async (workspaceId: string, memberId: string) => {
+      if (!token) throw new Error("Not authenticated");
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `${config.apiUrl}/workspaces/${workspaceId}/members/${memberId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to remove member");
+        }
+      } catch (error) {
+        console.error("Error removing member:", error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [token]
+  ); // Add dependencies
+
+  const getWorkspaceMembers = useCallback(
+    async (workspaceId: string) => {
+      if (!token) throw new Error("Not authenticated");
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `${config.apiUrl}/workspaces/${workspaceId}/members`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to get members");
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error("Error getting members:", error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [token]
+  ); // Add dependencies
+
+  // Memoize the combined loading state
+  const combinedIsLoading = useMemo(
+    () => isLoading || isAuthLoading,
+    [isLoading, isAuthLoading]
+  );
 
   return (
     <WorkspaceContext.Provider
@@ -316,7 +327,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         addWorkspaceMember,
         removeWorkspaceMember,
         getWorkspaceMembers,
-        isLoading: isLoading && isAuthLoading,
+        isLoading: combinedIsLoading, // Use memoized value
         refreshWorkspaces,
       }}
     >
