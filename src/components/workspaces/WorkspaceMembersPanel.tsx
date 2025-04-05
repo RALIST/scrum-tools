@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import React, { FC, useState, useCallback } from "react"; // Import React and useCallback
 import {
   Box,
   Heading,
@@ -50,7 +50,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
 
   // Function to generate invite link (copied from previous attempt)
-  const handleGenerateInvite = async () => {
+  const handleGenerateInvite = useCallback(async () => {
     if (!workspaceId) return;
     setIsGeneratingInvite(true);
     setInviteToken(null); // Clear previous token
@@ -84,7 +84,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
     } finally {
       setIsGeneratingInvite(false);
     }
-  };
+  }, [workspaceId, toast]); // Add dependencies
 
   return (
     <VStack spacing={6} align="stretch">
@@ -177,4 +177,5 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
   );
 };
 
-export default WorkspaceMembersPanel;
+// Memoize the component
+export default React.memo(WorkspaceMembersPanel);
