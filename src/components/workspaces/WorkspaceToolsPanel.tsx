@@ -9,11 +9,9 @@ import {
   SimpleGrid,
   Spinner,
   Center,
-  Icon,
   useColorMode,
 } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
-import { MdGridView, MdInsertChart, MdOutlineGames } from "react-icons/md";
 
 // Re-define or import interfaces if not shared globally
 interface WorkspacePokerRoom {

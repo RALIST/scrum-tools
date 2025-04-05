@@ -35,7 +35,7 @@ const JoinWorkspacePage: FC = () => {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [joinedWorkspaceId, setJoinedWorkspaceId] = useState<string | null>(
+  const [_joinedWorkspaceId, setJoinedWorkspaceId] = useState<string | null>(
     null
   );
 
