@@ -2,17 +2,14 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables - prioritize .env.local
-try {
-  dotenv.config({ path: path.join(__dirname, '.env.local') });
-  console.log('Knex config loaded environment variables from .env.local');
-} catch (e) {
-  try {
-    dotenv.config({ path: path.join(__dirname, '.env') });
-    console.log('Knex config loaded environment variables from .env');
-  } catch (e2) {
-    console.warn('Knex config could not load .env.local or .env file. Using default environment variables if available.');
-  }
+const env = process.env.NODE_ENV || 'development'; // Default to development if not set
+
+if (env == "development") {
+   dotenv.config({ path: path.join(__dirname, '.env.development') });
+} else if (env == "production") {
+   dotenv.config({ path: path.join(__dirname, '.env') });
+} else {
+   console.warn('No environment variables loaded. Using default environment variables if available.');
 }
 
 // Knex configuration object
@@ -25,6 +22,24 @@ module.exports = {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
+    },
+    migrations: {
+      directory: './data/migrations', // New directory for Knex migrations
+      tableName: 'knex_migrations' // Default Knex migrations table
+    },
+    // seeds: { // Optional: configure seeds if needed later
+    //   directory: './data/seeds'
+    // }
+  },
+  production: {
+    client: 'pg', // Specify the PostgreSQL client
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      ssl: { rejectUnauthorized: false }
     },
     migrations: {
       directory: './data/migrations', // New directory for Knex migrations
