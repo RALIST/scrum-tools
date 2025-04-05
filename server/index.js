@@ -32,6 +32,8 @@ if (env == "development") {
    dotenv.config({ path: join(__dirname, '.env') });
    console.log('Production environment variables loaded from .env');
    console.log("Connecting to production database", process.env.DB_HOST);
+   console.log("DATABSE USER", process.env.DB_USER);
+   console.log("DATABASE PASSWORD", process.env.DB_PASSWORD);
 } else {
    console.warn('No environment variables loaded. Using default environment variables if available.');
 }
