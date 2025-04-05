@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../index.js'; // Import only app
-import pool from '../db/pool.js'; 
+import { pool } from '../db/pool.js'; 
 
 describe('Poker Routes (/api/poker)', () => {
   // Variables needed across both contexts

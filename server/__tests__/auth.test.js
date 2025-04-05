@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app, server, io } from '../index.js'; // Import io as well
-import pool from '../db/pool.js'; 
+import { pool } from '../db/pool.js'; 
 
 // Basic test suite for authentication routes
 describe('Auth Routes', () => {

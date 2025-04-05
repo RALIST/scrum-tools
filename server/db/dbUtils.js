@@ -13,25 +13,31 @@ import logger from '../logger.js'; // Import the logger
  * @throws {Error} Throws an error if the query fails.
  */
 export const executeQuery = async (queryText, params = [], existingClient = null) => {
+    const isNewClient = !existingClient;
     const client = existingClient || await pool.connect();
-    const releaseClient = !existingClient; // Flag to know if we need to release the client
+    logger.info(`Executing query (new client: ${isNewClient}): ${queryText.substring(0, 100)}...`, { params: params }); // Log start
 
     try {
         const result = await client.query(queryText, params);
+        logger.info(`Query executed successfully. Row count: ${result?.rowCount}`); // Log success
         return result;
     } catch (error) {
         // Log the error internally using logger, but re-throw
+        // Log the full error object
         logger.error('Database query error:', {
             query: queryText,
-            params: params, // Be cautious logging parameters in production if they contain sensitive data
-            error: error.message,
-            // stack: error.stack // Optionally log stack trace
+            params: params,
+            error: error, // Log the full error object
+            stack: error.stack // Ensure stack trace is logged
         });
         throw error; // Re-throw the original error
     } finally {
         // Only release the client if it was acquired within this function
-        if (releaseClient && client) {
+        if (isNewClient && client) {
+            logger.info('Releasing acquired DB client.'); // Log release
             client.release();
+        } else if (client) {
+             logger.info('Not releasing DB client (was passed in).');
         }
     }
 };

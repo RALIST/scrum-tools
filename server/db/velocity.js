@@ -1,5 +1,6 @@
 import { executeQuery } from './dbUtils.js';
 import bcrypt from 'bcryptjs';
+import logger from '../logger.js'; // Import logger at the top
 
 // Add client as the last optional parameter
 export const createTeam = async (id, name, password, workspaceId = null, createdBy = null, client = null) => {
@@ -14,7 +15,17 @@ export const createTeam = async (id, name, password, workspaceId = null, created
     const params = [id, name, passwordHash, workspaceId, createdBy];
 
     // Pass the client (which might be null) to executeQuery
+    logger.info(`DEBUG: About to execute INSERT query for team '${name}' (id: ${id}).`); // DEBUG LOG
     const result = await executeQuery(queryText, params, client);
+
+    // Add check and logging
+    if (!result || !result.rows || result.rows.length === 0) {
+        // Use the logger imported at the top
+        logger.error(`Failed to create team '${name}' (id: ${id}). INSERT query did not return the created row. Result:`, result);
+        return null; // Return null
+    }
+    // Use the logger imported at the top
+    logger.info(`Successfully created team in DB: ${JSON.stringify(result.rows[0])}`);
     return result.rows[0];
 };
 

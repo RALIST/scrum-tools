@@ -53,14 +53,18 @@ router.post('/teams', async (req, res, next) => {
 
         } else {
             // --- Anonymous Mode ---
-            let teamFound = false;
+            // let teamFound = false; // Remove teamFound flag
             try {
                 // Try to get the team using name and password
                 team = await getTeam(name, password);
-                teamFound = true; // Mark as found if getTeam succeeds
-                logger.info(`Anonymous team '${name}' found. Fetching velocity data.`);
-                // If found and password is valid, fetch its data
-                velocityData = await getTeamVelocity(name, password);
+                // teamFound = true; // Remove teamFound flag
+                if (team) { // Check if team was actually found
+                    logger.info(`Anonymous team '${name}' found. Fetching velocity data.`);
+                    // If found and password is valid, fetch its data
+                    velocityData = await getTeamVelocity(name, password);
+                } else {
+                     logger.info(`Anonymous team '${name}' not found by getTeam.`);
+                }
                 averageData = await getTeamAverageVelocity(name, password);
 
             } catch (error) {
@@ -80,9 +84,11 @@ router.post('/teams', async (req, res, next) => {
                 // If error is not an auth error, assume the team doesn't exist yet.
                 logger.info(`Team '${name}' not found or other error during getTeam: ${error.message}. Attempting creation.`);
             }
+            logger.info('DEBUG: Exited catch block for getTeam.'); // DEBUG LOG - Keep for now
 
-            // If team was not found, create it
-            if (!teamFound) {
+            // If team was not found (is null), create it
+            if (!team) { // Check if team is null instead of !teamFound
+                logger.info('DEBUG: Entering createTeam block because team is null.'); // DEBUG LOG
                 logger.info(`Creating new anonymous team '${name}'.`);
                 const id = uuidv4();
                 // Ensure password is provided for new anonymous teams

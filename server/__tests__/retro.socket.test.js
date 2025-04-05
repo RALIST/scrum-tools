@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import { io as Client } from 'socket.io-client';
 import { server as httpServer, io, app } from '../index.js'; // Import app and io
-import pool from '../db/pool.js';
+import { pool } from '../db/pool.js';
 import request from 'supertest'; 
 import { v4 as uuidv4 } from 'uuid';
 
