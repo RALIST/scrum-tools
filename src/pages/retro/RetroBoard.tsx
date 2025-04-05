@@ -1,50 +1,18 @@
-import { FC, useCallback, useMemo } from "react";
+import { FC, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Box,
-  SimpleGrid,
-  VStack,
-  useColorMode,
-  useToast,
-  useDisclosure,
-  Spinner,
-  Center,
-  Text,
-  Flex,
-} from "@chakra-ui/react";
-import { Helmet } from "react-helmet-async";
-import {
-  RetroBoardSettingsModal,
-  JoinRetroBoardModal,
-  ChangeRetroBoardNameModal,
-} from "../../components/modals";
+import { VStack, useToast, Spinner, Center, Text } from "@chakra-ui/react";
+import { JoinRetroBoardModal } from "../../components/modals"; // Only need Join modal here
 import { useRetroSocket } from "../../hooks/useRetroSocket";
-import { useRetroUser } from "../../hooks/useRetroUser"; // Import the new hook
-import { RetroHeader, RetroColumn } from "../../components/retro";
-
-const COLUMNS = [
-  { id: "good", title: "What Went Well", color: "green.500" },
-  { id: "improve", title: "What Could Be Improved", color: "orange.500" },
-  { id: "actions", title: "Action Items", color: "blue.500" },
-];
+import { useRetroUser } from "../../hooks/useRetroUser";
+import RetroBoardView from "../../components/retro/RetroBoardView"; // Import the new view component
 
 const RetroBoard: FC = () => {
-  const { colorMode } = useColorMode();
   const { boardId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { userName, setUserNameAndStorage } = useRetroUser(); // Use the new hook
-  const {
-    isOpen: isSettingsOpen,
-    onOpen: onSettingsOpen,
-    onClose: onSettingsClose,
-  } = useDisclosure();
-  const {
-    isOpen: isChangeNameOpen,
-    onOpen: onChangeNameOpen,
-    onClose: onChangeNameClose,
-  } = useDisclosure();
+  const { userName, setUserNameAndStorage } = useRetroUser();
 
+  // Callback for when board is successfully joined
   const onBoardJoined = useCallback(() => {
     toast({
       title: "Joined Board",
@@ -53,12 +21,13 @@ const RetroBoard: FC = () => {
     });
   }, [toast]);
 
+  // Use the socket hook to manage board state and actions
   const {
     board,
     isTimerRunning,
     timeLeft,
     hideCards,
-    setHideCards,
+    setHideCards, // Note: This is now requestHideCards from the hook
     hasJoined,
     joinBoard,
     changeName,
@@ -73,49 +42,43 @@ const RetroBoard: FC = () => {
     onBoardJoined,
   });
 
+  // Handler for joining the board (passed to JoinRetroBoardModal)
   const handleJoinBoard = useCallback(
     (name: string, password?: string) => {
       if (!boardId) return;
-      setUserNameAndStorage(name); // Use the function from the hook
+      setUserNameAndStorage(name);
       joinBoard(name, password);
     },
-    [boardId, joinBoard, setUserNameAndStorage] // Add hook function to dependencies
+    [boardId, joinBoard, setUserNameAndStorage]
   );
 
-  const handleChangeName = useCallback(
+  // Handler for submitting name change (passed to RetroBoardView -> ChangeRetroBoardNameModal)
+  const handleChangeNameSubmit = useCallback(
     (newName: string) => {
       if (!boardId) return;
-      changeName(newName); // Send event via socket hook
-      setUserNameAndStorage(newName); // Update local state and storage via user hook
-      onChangeNameClose();
+      changeName(newName);
+      setUserNameAndStorage(newName);
+      // Closing the modal is handled within RetroBoardView now
     },
-    [boardId, changeName, onChangeNameClose, setUserNameAndStorage] // Add hook function
+    [boardId, changeName, setUserNameAndStorage]
   );
 
-  // Update handleAddCard to accept text and columnId
+  // Handler for adding a card (passed to RetroBoardView -> RetroColumn)
   const handleAddCard = useCallback(
     (columnId: string, text: string) => {
-      // No need to check newCardText state here
       if (!text.trim() || !isTimerRunning || !userName) return;
-
-      const cardId = Math.random().toString(36).substring(7);
-      addCard(cardId, columnId, text, userName); // Pass text directly
-      // No need to setNewCardText here
+      const cardId = Math.random().toString(36).substring(7); // Consider more robust ID generation
+      addCard(cardId, columnId, text, userName);
     },
-    [isTimerRunning, userName, addCard] // Removed newCardText dependency
+    [isTimerRunning, userName, addCard]
   );
 
-  const columnCards = useMemo(() => {
-    if (!board) return {};
-    return COLUMNS.reduce((acc, column) => {
-      acc[column.id] = board.cards.filter(
-        (card) => card.column_id === column.id
-      );
-      return acc;
-    }, {} as { [key: string]: typeof board.cards });
-  }, [board]);
+  // Memoized handler for toggling card visibility
+  const handleToggleCards = useCallback(() => {
+    setHideCards(!hideCards); // Call the function from the hook
+  }, [hideCards, setHideCards]); // Depend on current state and the setter function
 
-  // Show loading state
+  // Show loading state while board data is being fetched
   if (!board) {
     return (
       <Center minH="calc(100vh - 120px)">
@@ -127,94 +90,35 @@ const RetroBoard: FC = () => {
     );
   }
 
-  // Show join modal
+  // Show join modal if the user hasn't joined yet
   if (!hasJoined) {
     return (
       <JoinRetroBoardModal
         isOpen={true}
-        onClose={() => navigate("/retro")}
+        onClose={() => navigate("/retro")} // Navigate back if modal is closed
         onJoin={handleJoinBoard}
-        hasPassword={board?.hasPassword}
+        hasPassword={board?.hasPassword} // Pass password requirement info
       />
     );
   }
 
+  // Render the main board view component
   return (
-    <>
-      <Helmet>
-        <title>Retro Board</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <Box
-        bg={colorMode === "light" ? "gray.50" : "gray.900"}
-        borderRadius="lg"
-        display="flex"
-        flexDirection="column"
-        flex="1"
-      >
-        <VStack spacing={8} align="stretch" flex={1}>
-          <RetroHeader
-            boardName={board.name}
-            userName={userName}
-            boardId={board.id}
-            isTimerRunning={isTimerRunning}
-            timeLeft={timeLeft}
-            hideCards={hideCards}
-            onToggleCards={() => setHideCards(!hideCards)}
-            onToggleTimer={toggleTimer}
-            onOpenSettings={onSettingsOpen}
-            onChangeName={onChangeNameOpen}
-          />
-
-          <Flex flex={1} minH={0}>
-            <SimpleGrid
-              columns={{ base: 1, md: 3 }}
-              spacing={8}
-              w="full"
-              alignItems="stretch"
-            >
-              {COLUMNS.map((column) => (
-                <RetroColumn
-                  key={column.id}
-                  title={column.title}
-                  color={column.color}
-                  cards={columnCards[column.id] || []}
-                  hideCards={hideCards}
-                  hideAuthorNames={board.hide_author_names}
-                  userName={userName}
-                  isTimerRunning={isTimerRunning}
-                  // Remove inputValue and onInputChange props
-                  onAddCard={(text) => handleAddCard(column.id, text)} // Pass columnId and text
-                  onDeleteCard={deleteCard}
-                  onVoteCard={toggleVote}
-                  onEditCard={editCard}
-                />
-              ))}
-            </SimpleGrid>
-          </Flex>
-        </VStack>
-
-        {board && (
-          <RetroBoardSettingsModal
-            isOpen={isSettingsOpen}
-            onClose={onSettingsClose}
-            settings={{
-              defaultTimer: board.default_timer,
-              hideCardsByDefault: board.hide_cards_by_default,
-              hideAuthorNames: board.hide_author_names,
-            }}
-            onSave={updateSettings}
-          />
-        )}
-
-        <ChangeRetroBoardNameModal
-          isOpen={isChangeNameOpen}
-          onClose={onChangeNameClose}
-          currentName={userName}
-          onChangeName={handleChangeName}
-        />
-      </Box>
-    </>
+    <RetroBoardView
+      board={board}
+      userName={userName}
+      isTimerRunning={isTimerRunning}
+      timeLeft={timeLeft}
+      hideCards={hideCards}
+      onToggleCards={handleToggleCards} // Pass the memoized handler
+      onToggleTimer={toggleTimer}
+      onChangeNameSubmit={handleChangeNameSubmit}
+      onAddCard={handleAddCard}
+      onEditCard={editCard}
+      onDeleteCard={deleteCard}
+      onVoteCard={toggleVote}
+      onUpdateSettings={updateSettings}
+    />
   );
 };
 

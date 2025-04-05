@@ -70,6 +70,7 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
     const joinParamsRef = useRef<{ name: string; password?: string } | null>(null)
     const initRef = useRef(false)
     const toast = useToast()
+    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to store interval ID
 
     useEffect(() => {
         if (!boardId || initRef.current) return
@@ -194,11 +195,52 @@ export const useRetroSocket = ({ boardId, onBoardJoined }: UseRetroSocketProps):
                 socketRef.current.disconnect()
                 socketRef.current = null
             }
+            // Clear interval on cleanup
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
             initRef.current = false
             joinParamsRef.current = null
             setHasJoined(false)
         }
     }, [boardId, onBoardJoined, toast])
+
+    // Effect to manage the client-side timer interval
+    useEffect(() => {
+        // Clear previous interval if any
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+        }
+
+        // Start interval only if timer is running and time is left
+        if (isTimerRunning && timeLeft > 0) {
+            timerIntervalRef.current = setInterval(() => {
+                setTimeLeft((prevTime) => {
+                    if (prevTime <= 1) {
+                        // Timer finished, clear interval
+                        if (timerIntervalRef.current) {
+                            clearInterval(timerIntervalRef.current);
+                            timerIntervalRef.current = null;
+                        }
+                        setIsTimerRunning(false); // Optionally update local running state
+                        return 0;
+                    }
+                    return prevTime - 1; // Decrement time
+                });
+            }, 1000); // Run every second
+        }
+
+        // Cleanup function to clear interval when timer stops or component unmounts
+        return () => {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
+        };
+    }, [isTimerRunning, timeLeft]); // Rerun effect when isTimerRunning or timeLeft changes (timeLeft change needed to stop at 0)
+
 
     const joinBoard = useCallback((name: string, password?: string) => {
         if (!boardId || hasJoined) return
