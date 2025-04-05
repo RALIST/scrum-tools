@@ -1,7 +1,7 @@
 import pg from 'pg'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import logger from '../logger.js'; // Import the logger
 import path from 'path';
 
@@ -10,12 +10,14 @@ const __dirname = dirname(__filename);
 
 const env = process.env.NODE_ENV || 'development'; // Default to development if not set
 console.log(`Current environment: ${env}`);
+
 if (env == "development") {
    dotenv.config({ path: path.join(__dirname, '.env.development') });
    console.log('Development environment variables loaded from .env.development');
 } else if (env == "production") {
    dotenv.config({ path: path.join(__dirname, '.env') });
    console.log('Production environment variables loaded from .env');
+   console.log("Connecting to production database", process.env.DB_HOST);
 } else {
    console.warn('No environment variables loaded. Using default environment variables if available.');
 }
@@ -28,7 +30,6 @@ const pool = new Pool({
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
     port: parseInt(process.env.DB_PORT || '5432'),
-    // Add some reasonable defaults for production
     max: 20, // Maximum number of clients in the pool
     idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
     connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
