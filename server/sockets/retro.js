@@ -60,11 +60,24 @@ const handleRetroSocketEvents = (io, socket) => {
             // If timer is running, emit timerStarted event with current time
             if (board.timer_running) {
                 socket.emit('timerStarted', { timeLeft: board.time_left })
-            }
+             }
 
-            socket.emit('retroBoardJoined', board);
-        } catch (error) {
-            logger.error('Error joining retro board:', { boardId, name, socketId: socket.id, error: error.message, stack: error.stack });
+             // Send current timer state specifically to the joining socket
+             if (activeTimers.has(boardId)) {
+                 // Need a way to get the current timeLeft for the active timer
+                 // For now, let's assume the 'board' object fetched earlier has a recent enough value
+                 // A more robust solution might store timeLeft with the interval or fetch it again.
+                 debugLog('Timer is active for board, sending timerStarted to joining user', { boardId, timeLeft: board.time_left });
+                 socket.emit('timerStarted', { timeLeft: board.time_left });
+             } else {
+                 // Ensure client knows timer is stopped if it's not active
+                 socket.emit('timerStopped');
+             }
+
+
+             socket.emit('retroBoardJoined', board);
+         } catch (error) {
+             logger.error('Error joining retro board:', { boardId, name, socketId: socket.id, error: error.message, stack: error.stack });
             socket.emit('error', { message: 'Failed to join retro board' });
         }
     });
@@ -282,14 +295,10 @@ export const initializeRetroSocket = (io) => {
             // Clean up timers if the disconnected user was potentially the one running it
             if (boardId && activeTimers.has(boardId)) {
                 // More robust logic might be needed if multiple users can control the timer,
-                // but for now, let's assume disconnecting clears any timer associated with the board
-                // the user was on. A better approach might be to clear only if the room becomes empty.
-                logger.info(`Clearing active timer for board ${boardId} due to disconnect of socket ${socket.id}`);
-                clearInterval(activeTimers.get(boardId));
-                activeTimers.delete(boardId);
-                // Optionally, notify remaining users that the timer was stopped due to disconnect?
-                // const roomName = `retro:${boardId}`;
-                // io.to(roomName).emit('timerStopped'); 
+             // Timer should NOT be cleared on disconnect. It stops only via stopTimer event.
+             // logger.info(`Clearing active timer for board ${boardId} due to disconnect of socket ${socket.id}`);
+             // clearInterval(activeTimers.get(boardId));
+             // activeTimers.delete(boardId);
             }
         });
     });

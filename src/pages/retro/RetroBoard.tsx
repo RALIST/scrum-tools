@@ -11,14 +11,13 @@ import {
 import { JoinRetroBoardModal } from "../../components/modals";
 import {
   useRetroSocket,
-  RetroBoard as RetroBoardType,
-} from "../../hooks/useRetroSocket"; // Import type
+  RetroBoard as RetroBoardType, // Import type from hook
+} from "../../hooks/useRetroSocket";
 import { useRetroUser } from "../../hooks/useRetroUser";
 import { useAuth } from "../../contexts/AuthContext";
 import RetroBoardView from "../../components/retro/RetroBoardView";
 import { apiRequest, AuthError } from "../../utils/apiUtils"; // Import apiRequest
 
-// Add a separate debug log function for this component
 const componentDebugLog = (message: string, data?: any) => {
   console.log(`[RetroBoard Component] ${message}`, data || "");
 };
@@ -35,7 +34,7 @@ const RetroBoard: FC = () => {
     onClose: onJoinModalClose,
   } = useDisclosure();
 
-  // State for initial board data loading
+  // State for initial board data loading (now done in component)
   const [initialBoardData, setInitialBoardData] =
     useState<RetroBoardType | null>(null);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
@@ -70,7 +69,7 @@ const RetroBoard: FC = () => {
 
   // Use the socket hook - it now primarily manages socket state and events
   const {
-    board: socketBoard, // Rename to avoid conflict with initialBoardData
+    board: socketBoard, // Board state updated by socket events
     isTimerRunning,
     timeLeft,
     hideCards,
@@ -109,14 +108,13 @@ const RetroBoard: FC = () => {
       componentDebugLog("Fetching initial board data", { boardId });
       try {
         const data = await apiRequest<RetroBoardType>(`/retro/${boardId}`, {
-          includeAuth: false,
+          includeAuth: false, // Fetch public info first
         });
         if (!isActive) return;
         componentDebugLog("Initial board data loaded", data);
         setInitialBoardData(data);
       } catch (error) {
         if (!isActive) return;
-        // Use console.error for errors
         console.error(
           "[RetroBoard Component] Error fetching initial board data",
           error
@@ -145,10 +143,18 @@ const RetroBoard: FC = () => {
     return () => {
       isActive = false;
     };
-  }, [boardId, toast]); // Depend only on boardId and toast
+  }, [boardId, toast]);
 
   // Effect 2: Handle auto-join or modal display *after* initial data is loaded
   useEffect(() => {
+    componentDebugLog("Running Auto-Join/Modal Effect", {
+      isLoadingInitialData,
+      initialBoardDataExists: !!initialBoardData,
+      boardId,
+      hasJoined,
+      isConnectingOrJoining,
+      isAuthenticated,
+    });
     // Wait for initial data load and ensure boardId is valid
     if (isLoadingInitialData || !initialBoardData || !boardId) {
       return;
@@ -156,7 +162,12 @@ const RetroBoard: FC = () => {
 
     // If already joined (e.g., via socket reconnect), ensure modal is closed
     if (hasJoined) {
-      if (isJoinModalOpen) onJoinModalClose();
+      if (isJoinModalOpen) {
+        componentDebugLog(
+          "Auto-Join/Modal Effect: Already joined, closing modal."
+        );
+        onJoinModalClose();
+      }
       return;
     }
 
@@ -167,25 +178,39 @@ const RetroBoard: FC = () => {
     if (shouldAutoJoin) {
       // Attempt auto-join only if not already connecting/joining via socket
       if (!isConnectingOrJoining) {
-        componentDebugLog("Attempting auto-join from component effect", {
+        componentDebugLog("Auto-Join/Modal Effect: Attempting auto-join", {
           userName: user.name,
         });
         joinBoard(user.name); // Call the hook's join function
+      } else {
+        componentDebugLog(
+          "Auto-Join/Modal Effect: Skipping auto-join, already connecting/joining."
+        );
       }
       // Ensure modal is closed during auto-join attempt
-      if (isJoinModalOpen) onJoinModalClose();
+      if (isJoinModalOpen) {
+        componentDebugLog(
+          "Auto-Join/Modal Effect: Closing modal during auto-join attempt."
+        );
+        onJoinModalClose();
+      }
     } else {
       // If auto-join conditions not met, show modal (if not already joined/connecting)
       if (!isConnectingOrJoining && !hasJoined) {
         if (!isJoinModalOpen) {
           componentDebugLog(
-            "Conditions met for showing join modal (manual/password)"
+            "Auto-Join/Modal Effect: Conditions met for showing join modal (manual/password)"
           );
           onJoinModalOpen();
         }
       } else {
         // If connecting/joining or already joined, ensure modal is closed
-        if (isJoinModalOpen) onJoinModalClose();
+        if (isJoinModalOpen) {
+          componentDebugLog(
+            "Auto-Join/Modal Effect: Closing modal because connecting/joining or already joined."
+          );
+          onJoinModalClose();
+        }
       }
     }
   }, [
@@ -195,7 +220,7 @@ const RetroBoard: FC = () => {
     isConnectingOrJoining,
     isAuthenticated,
     user?.name,
-    boardId, // Include boardId to re-evaluate if it changes
+    boardId,
     joinBoard, // Include joinBoard as it's called
     onJoinModalOpen,
     onJoinModalClose,
@@ -243,7 +268,7 @@ const RetroBoard: FC = () => {
   // --- Render Logic ---
 
   componentDebugLog("Rendering Check", {
-    boardExists: !!socketBoard, // Check socketBoard for rendering board view
+    socketBoardExists: !!socketBoard, // Check socketBoard for rendering board view
     initialDataExists: !!initialBoardData, // Check initial data for modal password check
     hasJoined,
     isConnectingOrJoining,
