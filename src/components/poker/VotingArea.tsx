@@ -8,7 +8,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { SEQUENCES, SequenceType } from "../../constants/poker";
-import { Card } from "./Card.tsx"; // Explicitly add .tsx extension
+import { Card } from "./Card";
 
 interface VotingAreaProps {
   sequence: SequenceType;

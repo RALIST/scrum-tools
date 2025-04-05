@@ -11,7 +11,6 @@ const RetroBoard: FC = () => {
   const { boardId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  // Get isNameFixed from the updated hook
   const { userName, setUserNameAndStorage, isNameFixed } = useRetroUser();
   const { user, isAuthenticated } = useAuth(); // Get user and auth status
 

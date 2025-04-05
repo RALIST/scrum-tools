@@ -18,7 +18,6 @@ import Register from "./pages/auth/Register";
 import Workspaces from "./pages/workspaces/Workspaces";
 import WorkspaceDetail from "./pages/workspaces/WorkspaceDetail";
 import JoinWorkspacePage from "./pages/workspaces/JoinWorkspacePage"; // Import the new page
-// Component imports remain the same
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PageContainer from "./components/PageContainer";
@@ -97,8 +96,6 @@ const App: FC = () => {
                       </PrivateRoute>
                     }
                   />
-                  {/* Removed extra closing tags */}
-                  {/* Add other private routes if needed */}
                 </Routes>
               </PageContainer>
               <Footer />
