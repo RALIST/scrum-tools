@@ -194,8 +194,8 @@ const PlanningPokerRoom: FC = () => {
       return;
     }
 
-    // Conditions to show modal: Room exists, not joined, not connecting, AND (unauthenticated OR password needed)
-    if (!isAuthenticated || isPasswordProtected) {
+    // Conditions to show modal: Room exists, not joined, not currently connecting/joining, AND (unauthenticated OR password needed)
+    if (!isConnectingOrJoining && (!isAuthenticated || isPasswordProtected)) {
       console.log("[PlanningPokerRoom] Conditions met for showing join modal.");
       onJoinModalOpen();
     } else {
