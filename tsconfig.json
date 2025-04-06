@@ -30,6 +30,14 @@
     "include": [
         "src"
     ],
+    "exclude": [
+        "dist",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "src/setupTests.ts" // Assuming this is only for test setup
+    ],
     "references": [
         {
             "path": "./tsconfig.node.json"
