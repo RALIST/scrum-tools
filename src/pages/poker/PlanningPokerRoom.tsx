@@ -23,11 +23,7 @@ import {
   ChangeNameModal,
   RoomSettingsModal,
 } from "../../components/modals";
-import {
-  usePokerSocket,
-  Participant, // Import Participant type from hook
-  RoomSettings, // Import RoomSettings type from hook
-} from "../../hooks/usePokerSocket";
+import { usePokerSocket } from "../../hooks/usePokerSocket";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiRequest } from "../../utils/apiUtils"; // Keep apiRequest for original /info call
 import { SequenceType } from "../../constants/poker"; // Re-added SequenceType

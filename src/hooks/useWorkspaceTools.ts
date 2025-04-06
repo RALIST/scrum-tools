@@ -3,17 +3,7 @@ import { useToast } from "@chakra-ui/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query"; // Import useQuery and client
 import { apiRequest } from "../utils/apiUtils";
 
-// Interfaces for tool data (can be moved to a types file)
-interface WorkspacePokerRoom {
-  id: string;
-  name: string;
-  participantCount: number;
-  createdAt: string;
-  hasPassword?: boolean;
-  sequence?: string;
-}
-
-interface WorkspaceRetroBoard {
+export interface WorkspaceRetroBoard {
   id: string;
   name: string;
   cardCount: number;
@@ -21,14 +11,14 @@ interface WorkspaceRetroBoard {
   hasPassword?: boolean;
 }
 
-interface WorkspaceVelocityTeam {
+export interface WorkspaceVelocityTeam {
   id: string;
   name: string;
   createdAt: string;
   avgVelocityPreview?: number | null;
 }
 
-interface UseWorkspaceToolsResult {
+export interface UseWorkspaceToolsResult {
   pokerRooms: WorkspacePokerRoom[];
   retroBoards: WorkspaceRetroBoard[];
   velocityTeams: WorkspaceVelocityTeam[];
@@ -36,6 +26,35 @@ interface UseWorkspaceToolsResult {
   isError: boolean; // Combined error state
   error: Error | null; // Store the first error encountered
   refreshTools: () => void; // Function to manually refresh using queryClient
+}
+
+export interface WorkspacePokerRoom {
+  id: string;
+  name: string;
+  participantCount: number;
+  createdAt: string;
+  sequence: string; // Changed back to string (key)
+}
+
+export interface WorkspaceRetroBoard {
+  id: string;
+  name: string;
+  cardCount: number;
+  createdAt: string;
+}
+export interface WorkspaceVelocityTeam {
+  id: string;
+  name: string;
+  createdAt: string;
+  avgVelocityPreview?: number | null;
+}
+
+export interface WorkspaceToolsPanelProps {
+  pokerRooms: WorkspacePokerRoom[];
+  retroBoards: WorkspaceRetroBoard[];
+  velocityTeams: WorkspaceVelocityTeam[];
+  isLoadingTools: boolean;
+  // Add callbacks for create buttons later if needed
 }
 
 export const useWorkspaceTools = (

@@ -4,7 +4,6 @@ import { app as mainApp, server, io } from '../index.js'; // Import main app for
 import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
 import bcrypt from 'bcryptjs'; // Import bcrypt
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
-// Import necessary functions from Jest globals for ESM
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import setupVelocityRoutes from '../routes/velocity.js';
 
@@ -28,9 +27,6 @@ const mockWorkspaceDb = {
     isWorkspaceMember: jest.fn(),
 };
 // --- End Mock DB Objects ---
-
-// testApp setup moved inside describe block
-
 
 // Helper function to register/login a user and get token (uses mainApp)
 const registerAndLoginUser = async (emailSuffix) => {

@@ -12,38 +12,7 @@ import {
   useColorMode,
 } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
-// Removed poker constants import
-
-// Removed helper functions
-
-// Re-define or import interfaces if not shared globally
-interface WorkspacePokerRoom {
-  id: string;
-  name: string;
-  participantCount: number;
-  createdAt: string;
-  sequence: string; // Changed back to string (key)
-}
-interface WorkspaceRetroBoard {
-  id: string;
-  name: string;
-  cardCount: number;
-  createdAt: string;
-}
-interface WorkspaceVelocityTeam {
-  id: string;
-  name: string;
-  createdAt: string;
-  avgVelocityPreview?: number | null;
-}
-
-interface WorkspaceToolsPanelProps {
-  pokerRooms: WorkspacePokerRoom[];
-  retroBoards: WorkspaceRetroBoard[];
-  velocityTeams: WorkspaceVelocityTeam[];
-  isLoadingTools: boolean;
-  // Add callbacks for create buttons later if needed
-}
+import { WorkspaceToolsPanelProps } from "../../hooks/useWorkspaceTools";
 
 const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
   pokerRooms,
