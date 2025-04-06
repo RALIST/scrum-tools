@@ -25,45 +25,7 @@ const mockWorkspaceDb = {
 };
 // --- End Mock DB Objects ---
 
-// --- Test Express App Setup ---
-const testApp = express();
-testApp.use(express.json()); // Add middleware needed by routes
-
-// Mock the authentication middleware for testApp requests needing req.user
-testApp.use((req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
-        // Use the actual userId from the test setup based on the token
-        // This assumes authUserInfo is accessible in this scope (it is)
-        if (authUserInfo && token === authUserInfo.token) {
-             req.user = { userId: authUserInfo.userId };
-        } else {
-             // Handle cases where token might be for other test users if needed,
-             // or leave req.user undefined if token is unknown/invalid for mock purposes
-             // For now, only mocking the main authUserInfo
-             req.user = undefined; // Or set a generic ID if routes handle unknown users gracefully
-        }
-    }
-    // Add workspaceId to req if header is present
-    const workspaceIdHeader = req.headers['workspace-id'];
-    if (workspaceIdHeader) {
-        req.workspaceId = workspaceIdHeader;
-    } else {
-        req.user = undefined; // No token, no user
-    }
-    next();
-});
-
-// Mount the poker routes using the setup function and injecting the MOCK DBs
-testApp.use('/api/poker', setupPokerRoutes(mockPokerDb, mockWorkspaceDb));
-
-// Add a dummy error handler for testing 500 errors on testApp
-testApp.use((err, req, res, next) => {
-    console.error("Test App Error Handler:", err.message); // Log error in test context
-    res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
-});
-// --- End Test Express App Setup ---
+// testApp setup moved inside describe block
 
 
 // Helper function to register/login a user and get token (uses mainApp)
@@ -91,6 +53,7 @@ let authUserInfo; // To store token and userId for authenticated tests
 let testWorkspaceId;
 
 describe('Poker Routes (/api/poker) with DI', () => {
+  let testApp; // Declare testApp here
   // Variables needed across contexts
   let anonRoomId = 'test-anon-poker-room-id'; // Use fixed IDs for mocked tests
   let anonRoomPassword = 'anonPokerPasswordDI';
@@ -100,6 +63,43 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
   // Setup: Register user and create workspace using mainApp for context
   beforeAll(async () => {
+    // Setup test-specific Express app instance *inside* describe block
+    testApp = express();
+    testApp.use(express.json()); // Add middleware needed by routes
+
+    // Mock the authentication middleware for testApp requests needing req.user
+    testApp.use((req, res, next) => {
+        const authHeader = req.headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            // Use the actual userId from the test setup based on the token
+            // Now authUserInfo will be defined when this runs
+            if (authUserInfo && token === authUserInfo.token) {
+                 req.user = { userId: authUserInfo.userId };
+            } else {
+                 req.user = undefined; // Handle unknown/invalid token
+            }
+        }
+        // Add workspaceId to req if header is present
+        // Note: This differs slightly from retro.test.js mock; poker routes use req.headers['workspace-id'] directly
+        // No need to set req.workspaceId here, but ensure req.user isn't cleared if only workspace-id is present
+        // Let's refine the logic: req.user is set based on token, workspaceId is read from header in route
+        if (!req.headers['authorization']?.startsWith('Bearer ')) {
+             req.user = undefined; // Clear user if no valid token
+        }
+        next();
+    });
+
+    // Mount the poker routes using the setup function and injecting the MOCK DBs
+    testApp.use('/api/poker', setupPokerRoutes(mockPokerDb, mockWorkspaceDb));
+
+    // Add a dummy error handler for testing 500 errors on testApp
+    testApp.use((err, req, res, next) => {
+        console.error("Test App Error Handler:", err.message); // Log error in test context
+        res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
+    });
+
+    // --- Original beforeAll content starts here ---
     // Register authenticated user using the main app
     authUserInfo = await registerAndLoginUser('poker_di_test');
 
@@ -131,7 +131,8 @@ describe('Poker Routes (/api/poker) with DI', () => {
   // --- Anonymous Access Tests ---
   describe('Anonymous Access', () => {
     it('POST /api/poker/rooms - should create a new anonymous poker room', async () => {
-      mockPokerDb.createRoom.mockResolvedValueOnce(); // Mock success
+      mockPokerDb.getRoom.mockResolvedValueOnce(null); // Mock room doesn't exist
+      mockPokerDb.createRoom.mockResolvedValueOnce(); // Mock creation success
       const roomId = `anon-create-${Date.now()}`;
       const name = 'Anon Create Test DI';
       const sequence = 'tshirt';
@@ -156,8 +157,9 @@ describe('Poker Routes (/api/poker) with DI', () => {
     });
 
     it('POST /api/poker/rooms - should return 500 if createRoom fails', async () => {
+        mockPokerDb.getRoom.mockResolvedValueOnce(null); // Mock room doesn't exist
         const dbError = new Error('DB create failed');
-        mockPokerDb.createRoom.mockRejectedValueOnce(dbError);
+        mockPokerDb.createRoom.mockRejectedValueOnce(dbError); // Mock creation failure
         const roomId = `anon-create-fail-${Date.now()}`;
 
         const res = await request(testApp)
@@ -166,6 +168,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
         expect(res.statusCode).toEqual(500);
         expect(res.body).toHaveProperty('error', 'Internal Server Error');
+        expect(mockPokerDb.getRoom).toHaveBeenCalled(); // getRoom is called first
         expect(mockPokerDb.createRoom).toHaveBeenCalled();
     });
 
@@ -234,15 +237,19 @@ describe('Poker Routes (/api/poker) with DI', () => {
      });
 
      it('GET /api/poker/rooms - should get public rooms', async () => {
-        const mockRooms = [{ id: publicRoomId, name: 'Public Room 1', hasPassword: false, workspaceId: null }];
-        mockPokerDb.getRooms.mockResolvedValueOnce(mockRooms); // Corrected mock name
+        // Define the mock *database* structure returned by the mock function
+        const mockDbResult = [{ id: publicRoomId, name: 'Public Room 1', password: null, participant_count: 2, created_at: new Date().toISOString(), sequence: 'fibonacci', workspace_id: null }];
+        // Define the expected *mapped* structure for assertion
+        const expectedMappedRooms = [{ id: publicRoomId, name: 'Public Room 1', hasPassword: false, participantCount: 2, createdAt: expect.any(String), sequence: 'fibonacci', workspaceId: null }];
+        mockPokerDb.getRooms.mockResolvedValueOnce(mockDbResult); // Return raw DB structure
+
         const res = await request(testApp).get('/api/poker/rooms'); // Use testApp
         expect(res.statusCode).toEqual(200);
         expect(Array.isArray(res.body)).toBe(true);
-        // Route maps the response, check against mapped structure if necessary
-        // For simplicity, just check if it's an array for now
-        expect(Array.isArray(res.body)).toBe(true);
-        expect(mockPokerDb.getRooms).toHaveBeenCalled(); // Changed mock name
+        // Assert against expected mapped structure
+        expect(res.body).toHaveLength(1);
+        expect(res.body[0]).toMatchObject(expectedMappedRooms[0]);
+        expect(mockPokerDb.getRooms).toHaveBeenCalled();
         expect(mockPokerDb.getWorkspaceRooms).not.toHaveBeenCalled(); // Ensure workspace path not taken
       });
 
@@ -301,6 +308,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
     it('POST /api/poker/rooms - should allow creating a workspace room', async () => {
       mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true); // Mock user is member
+      mockPokerDb.getRoom.mockResolvedValueOnce(null); // Mock room doesn't exist
       mockPokerDb.createRoom.mockResolvedValueOnce(); // Mock room creation success
       const roomId = `ws-create-${Date.now()}`;
       const name = 'Workspace Create Test DI';
@@ -314,8 +322,8 @@ describe('Poker Routes (/api/poker) with DI', () => {
       expect(res.body).toHaveProperty('success', true);
       expect(res.body).toHaveProperty('roomId', roomId);
       expect(res.body).toHaveProperty('hasPassword', false); // Workspace rooms don't have passwords
-      // Route does not call isWorkspaceMember, remove assertion
-      // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+      // Check that membership was verified
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
       // Corrected argument order based on routes/poker.js
       expect(mockPokerDb.createRoom).toHaveBeenCalledWith(
           roomId,
@@ -336,27 +344,19 @@ describe('Poker Routes (/api/poker) with DI', () => {
             .set('Authorization', `Bearer ${authUserInfo.token}`)
             .send({ roomId, name: 'Fail Auth Create', workspaceId: testWorkspaceId });
 
-        // Route does not check membership before trying create, so it won't return 403 here.
-        // It will likely fail later if createRoom isn't mocked or throws an error.
-        // Adjusting expectation to reflect current route logic (likely 500 or unexpected success if createRoom mocked)
-        // For now, let's expect createRoom *not* to be called if isWorkspaceMember check *were* present.
-        // Since it's not, this test case needs re-evaluation based on desired behavior vs actual.
-        // Let's assume for now the test should verify the membership check *should* happen.
-        // We'll keep the assertion for isWorkspaceMember but expect the test to fail until route is fixed.
-        // Adjusting test to reflect current route behavior (no membership check)
-        // This test should ideally fail until the route implements the check.
-        mockPokerDb.createRoom.mockResolvedValueOnce(); // Need to mock createRoom success for 200
-        expect(res.statusCode).toEqual(200); // Route currently proceeds and succeeds
-        // expect(res.body).toHaveProperty('error', 'User is not a member of the specified workspace.'); // This won't be the error
-        // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Route doesn't call this, assertion removed
-        expect(mockPokerDb.createRoom).toHaveBeenCalled(); // createRoom *will* be called in current route logic
+        // Route now checks membership first
+        expect(res.statusCode).toEqual(403);
+        expect(res.body).toHaveProperty('error', 'User is not authorized to create a room in this workspace.');
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockPokerDb.getRoom).not.toHaveBeenCalled(); // Should not be called if not member
+        expect(mockPokerDb.createRoom).not.toHaveBeenCalled(); // Should not be called if not member
     });
 
-    it('POST /api/poker/rooms - should fail to create room with existing ID (authenticated)', async () => {
-        const dbError = new Error('Room already exists'); // Simulate DB constraint error
-        // Assuming the route checks existence before calling createRoom or catches constraint violation
+    it('POST /api/poker/rooms - should return 400 if room ID already exists (authenticated)', async () => {
+        // Mock isWorkspaceMember check (assuming user is member for this test)
         mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true);
-        mockPokerDb.createRoom.mockRejectedValueOnce(dbError); // Mock createRoom failing
+        // Mock getRoom finding an existing room
+        mockPokerDb.getRoom.mockResolvedValueOnce({ id: createdAuthRoomId, name: 'Existing Room' });
 
         const res = await request(testApp) // Use testApp
           .post('/api/poker/rooms')
@@ -364,25 +364,34 @@ describe('Poker Routes (/api/poker) with DI', () => {
           .send({
             roomId: createdAuthRoomId, // Use the predefined ID
             name: 'Duplicate WS Room Auth DI',
-            workspaceId: testWorkspaceId,
+            workspaceId: testWorkspaceId, // Include workspaceId if needed for membership check path
           });
 
-        // Expect 500 if constraint violation is caught generically, or 400/409 if handled specifically
-        expect(res.statusCode).toEqual(500); // Assuming generic catch for now
-        expect(res.body).toHaveProperty('error', 'Internal Server Error');
-        expect(mockPokerDb.createRoom).toHaveBeenCalled();
+        expect(res.statusCode).toEqual(400);
+        expect(res.body).toHaveProperty('error', 'Room already exists');
+        // Ensure membership was checked (if workspaceId provided)
+        if (testWorkspaceId) {
+            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        }
+        expect(mockPokerDb.getRoom).toHaveBeenCalledWith(createdAuthRoomId);
+        expect(mockPokerDb.createRoom).not.toHaveBeenCalled(); // createRoom should not be called
     });
 
     it('GET /api/poker/rooms - authenticated WITHOUT header should get only public rooms', async () => {
-        const mockRooms = [{ id: publicRoomId, name: 'Public Room 1', hasPassword: false, workspaceId: null }];
-        mockPokerDb.getRooms.mockResolvedValueOnce(mockRooms); // Corrected mock name
+        // Define the mock *database* structure returned by the mock function
+        const mockDbResult = [{ id: publicRoomId, name: 'Public Room 1', password: null, participant_count: 1, created_at: new Date().toISOString(), sequence: 'fibonacci', workspace_id: null }];
+        // Define the expected *mapped* structure for assertion
+        const expectedMappedRooms = [{ id: publicRoomId, name: 'Public Room 1', hasPassword: false, participantCount: 1, createdAt: expect.any(String), sequence: 'fibonacci', workspaceId: null }];
+        mockPokerDb.getRooms.mockResolvedValueOnce(mockDbResult); // Return raw DB structure
 
         const res = await request(testApp) // Use testApp
           .get('/api/poker/rooms')
           .set('Authorization', `Bearer ${authUserInfo.token}`); // Auth header present
 
         expect(res.statusCode).toEqual(200);
-        expect(Array.isArray(res.body)).toBe(true); // Check if it's an array
+        // Assert against expected mapped structure
+        expect(res.body).toHaveLength(1);
+        expect(res.body[0]).toMatchObject(expectedMappedRooms[0]);
         expect(mockPokerDb.getRooms).toHaveBeenCalled(); // Changed mock name
         expect(mockPokerDb.getWorkspaceRooms).not.toHaveBeenCalled();
     });
@@ -394,8 +403,8 @@ describe('Poker Routes (/api/poker) with DI', () => {
         const expectedMappedRooms = [{ id: createdAuthRoomId, name: 'WS Room 1', hasPassword: false, participantCount: 0, createdAt: expect.any(String), sequence: 'fibonacci', workspaceId: testWorkspaceId }];
         // Define the mock *database* structure returned by the mock function
         const mockDbResult = [{ id: createdAuthRoomId, name: 'WS Room 1', password: null, participant_count: 0, created_at: new Date().toISOString(), sequence: 'fibonacci', workspace_id: testWorkspaceId }];
-        // Route doesn't call isWorkspaceMember, remove mock setup
-        // mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true); // Mock user is member
+        // Route now calls isWorkspaceMember, mock it
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true); // Mock user is member
         mockPokerDb.getWorkspaceRooms.mockResolvedValueOnce(mockDbResult); // Return raw DB structure
 
         const res = await request(testApp) // Use testApp
@@ -406,28 +415,25 @@ describe('Poker Routes (/api/poker) with DI', () => {
         expect(res.statusCode).toEqual(200);
         // Route maps the response, compare relevant fields
         expect(res.body[0]).toMatchObject(expectedMappedRooms[0]); // Assert against expected mapped structure
-        // Route doesn't call isWorkspaceMember directly here, assertion removed
+        // Check membership was verified
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
         expect(mockPokerDb.getWorkspaceRooms).toHaveBeenCalledWith(testWorkspaceId);
         expect(mockPokerDb.getRooms).not.toHaveBeenCalled(); // Changed mock name
     });
 
     it('GET /api/poker/rooms - authenticated WITH header should fail if not workspace member', async () => {
-        // Adjusting test to reflect current route behavior (no membership check in route handler)
-        // This test should ideally fail until the route/middleware implements the check correctly.
-        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(false); // Mock is configured
-        const mockWsRoomsData = [{ id: 'some-room', name: 'Should Not See', participantCount: 1 }];
-        mockPokerDb.getWorkspaceRooms.mockResolvedValueOnce(mockWsRoomsData); // Mock DB call success
+        // Route now checks membership first
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(false); // Mock user is NOT member
 
         const res = await request(testApp)
           .get('/api/poker/rooms')
           .set('Authorization', `Bearer ${authUserInfo.token}`)
           .set('workspace-id', testWorkspaceId);
 
-        expect(res.statusCode).toEqual(200); // Route currently returns 200 as it doesn't check membership
-        // expect(res.body).toHaveProperty('error', 'User is not authorized to access rooms for this workspace.'); // Error not thrown
-        // Route doesn't call isWorkspaceMember directly here, remove assertion
-        // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Check mock was configured
-        expect(mockPokerDb.getWorkspaceRooms).toHaveBeenCalledWith(testWorkspaceId); // DB *is* called
+        expect(res.statusCode).toEqual(403);
+        expect(res.body).toHaveProperty('error', 'User is not authorized to access rooms for this workspace.');
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockPokerDb.getWorkspaceRooms).not.toHaveBeenCalled(); // Should not be called if not member
     });
 
      it('POST /api/poker/rooms/:roomId/verify-password - should work for workspace room (authenticated)', async () => {

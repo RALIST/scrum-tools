@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import logger from '../logger.js'; // Import logger
 
 // Wrap routes in a setup function that accepts db dependency
-export default function setupPokerRoutes(pokerDb) {
+export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspaceDb dependency
     const router = express.Router();
 
     // Get rooms - Filtered by workspace if authenticated and header provided, otherwise public rooms
@@ -20,6 +20,12 @@ export default function setupPokerRoutes(pokerDb) {
             // Workspace Mode
             if (userId && workspaceId) {
                 logger.info(`Fetching poker rooms for workspace: ${workspaceId}, user: ${userId}`);
+                // Check if user is a member of the workspace
+                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId);
+                if (!isMember) {
+                    logger.warn(`User ${userId} attempted to access poker rooms for workspace ${workspaceId} without membership.`);
+                    return res.status(403).json({ error: 'User is not authorized to access rooms for this workspace.' });
+                }
                 // Use injected dependency
                 rooms = await pokerDb.getWorkspaceRooms(workspaceId);
                 logger.info(`Found ${rooms.length} rooms for workspace ${workspaceId}`);
@@ -51,7 +57,21 @@ export default function setupPokerRoutes(pokerDb) {
     // Add 'next' to the parameters
     router.post('/rooms', async (req, res, next) => {
         const { roomId, name, password, sequence, workspaceId } = req.body;
+        const userId = req.user?.userId; // Get userId for workspace check
         try {
+            // If workspaceId is provided, ensure the user is authenticated and a member
+            if (workspaceId) {
+                if (!userId) {
+                    logger.warn(`Anonymous user attempted to create a poker room in workspace ${workspaceId}.`);
+                    return res.status(401).json({ error: 'Authentication required to create a workspace room.' });
+                }
+                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId);
+                if (!isMember) {
+                    logger.warn(`User ${userId} attempted to create a poker room in workspace ${workspaceId} without membership.`);
+                    return res.status(403).json({ error: 'User is not authorized to create a room in this workspace.' });
+                }
+            }
+
             // Use injected dependency
             const room = await pokerDb.getRoom(roomId);
             if (room) {

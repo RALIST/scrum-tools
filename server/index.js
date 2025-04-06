@@ -54,7 +54,7 @@ app.use('/api/auth', setupAuthRoutes(userDb));
 // Inject all required DB dependencies for workspaces
 app.use('/api/workspaces', authenticateToken, setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb));
 app.use('/api/poker', optionalAuthenticateToken, setupPokerRoutes(pokerDb)); // Inject pokerDb
-app.use('/api/retro', optionalAuthenticateToken, setupRetroRoutes(retroDb));
+app.use('/api/retro', optionalAuthenticateToken, setupRetroRoutes(retroDb, workspaceDb)); // Add workspaceDb injection
 // Inject velocityDb and workspaceDb
 app.use('/api/velocity', optionalAuthenticateToken, setupVelocityRoutes(velocityDb, workspaceDb));
 

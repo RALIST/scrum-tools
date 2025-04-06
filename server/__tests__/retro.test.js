@@ -34,20 +34,14 @@ const mockRetroDb = {
   verifyRetroBoardPassword: jest.fn(),
   updateRetroBoardSettings: jest.fn(),
 };
+const mockWorkspaceDb = {
+  isWorkspaceMember: jest.fn(),
+};
 
-// Setup test-specific Express app instance
-const testApp = express();
-testApp.use(express.json()); // Add middleware needed by routes
-// Mount the retro routes using the setup function and injecting the MOCK DB
-testApp.use('/api/retro', setupRetroRoutes(mockRetroDb));
-// Add a dummy error handler for testing 500 errors
-testApp.use((err, req, res, next) => {
-    console.error("Test App Error Handler:", err.message); // Log error in test context
-    res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
-});
-
+// testApp setup moved inside describe block
 
 describe('Retro Routes (/api/retro) with DI', () => {
+  let testApp; // Declare testApp here
   // Variables needed across contexts
   let anonBoardId = `anon-retro-di-${Date.now()}`;
   let anonBoardPassword = 'anonRetroPasswordDI';
@@ -58,6 +52,38 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
   // Setup: Only need auth user and workspace ID now, board creation is tested via API calls with mocks
   beforeAll(async () => {
+    // Setup test-specific Express app instance *inside* describe block
+    testApp = express();
+    testApp.use(express.json()); // Add middleware needed by routes
+
+    // Mock the authentication middleware for testApp requests needing req.user
+    testApp.use((req, res, next) => {
+        const authHeader = req.headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            // Use the actual userId from the test setup based on the token
+            // Now authUserInfo will be defined when this runs
+            if (authUserInfo && token === authUserInfo.token) {
+                 req.user = { userId: authUserInfo.userId };
+            } else {
+                 req.user = undefined; // Handle unknown/invalid token
+            }
+        } else {
+            req.user = undefined; // No token, no user
+        }
+        next();
+    });
+
+    // Mount the retro routes using the setup function and injecting the MOCK DBs
+    testApp.use('/api/retro', setupRetroRoutes(mockRetroDb, mockWorkspaceDb)); // Pass both mocks
+
+    // Add a dummy error handler for testing 500 errors
+    testApp.use((err, req, res, next) => {
+        console.error("Test App Error Handler:", err.message); // Log error in test context
+        res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
+    });
+
+    // --- Original beforeAll content starts here ---
     // Register authenticated user using the main app
     authUserInfo = await registerAndLoginUser('retro_di_test');
 
@@ -84,6 +110,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
     mockRetroDb.getRetroBoard.mockReset();
     mockRetroDb.verifyRetroBoardPassword.mockReset();
     mockRetroDb.updateRetroBoardSettings.mockReset();
+    mockWorkspaceDb.isWorkspaceMember.mockReset(); // Reset workspace mock too
   });
 
   // Close server, io, pool after all tests
@@ -265,13 +292,14 @@ describe('Retro Routes (/api/retro) with DI', () => {
       expect(mockRetroDb.updateRetroBoardSettings).not.toHaveBeenCalled();
     });
 
-    it('POST /api/retro - should create a new retro board linked to a workspace', async () => {
+    it('POST /api/retro - should create a new retro board linked to a workspace (authenticated member)', async () => {
       const boardName = 'Workspace Linked Retro Auth DI';
+      mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true); // Mock user is member
       mockRetroDb.createRetroBoard.mockResolvedValueOnce();
 
       const res = await request(testApp) // Use testApp
         .post('/api/retro')
-        // .set('Authorization', `Bearer ${authUserInfo.token}`) // Auth middleware not part of testApp
+        .set('Authorization', `Bearer ${authUserInfo.token}`) // Add auth header
         .send({
           name: boardName,
           workspaceId: testWorkspaceId,
@@ -280,7 +308,8 @@ describe('Retro Routes (/api/retro) with DI', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);
       expect(res.body).toHaveProperty('boardId');
-      // createdAuthBoardId = res.body.boardId; // ID is generated, store if needed for chained tests
+      createdAuthBoardId = res.body.boardId; // Store the generated ID for later tests
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
       expect(mockRetroDb.createRetroBoard).toHaveBeenCalledWith(
           expect.any(String),
           boardName,
@@ -289,40 +318,136 @@ describe('Retro Routes (/api/retro) with DI', () => {
       );
     });
 
-    it('GET /api/retro/:boardId - should get details of workspace board', async () => {
-        mockRetroDb.getRetroBoard.mockResolvedValueOnce({
-            id: createdAuthBoardId, // Use ID from setup or previous test
+    it('POST /api/retro - should fail to create workspace board if not authenticated', async () => {
+        const boardName = 'Fail No Auth WS Retro';
+        const res = await request(testApp)
+            .post('/api/retro')
+            // No Authorization header
+            .send({ name: boardName, workspaceId: testWorkspaceId });
+
+        expect(res.statusCode).toEqual(401);
+        expect(res.body).toHaveProperty('error', 'Authentication required to create a workspace retro board.');
+        expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled();
+        expect(mockRetroDb.createRetroBoard).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/retro - should fail to create workspace board if not workspace member', async () => {
+        const boardName = 'Fail Not Member WS Retro';
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(false); // Mock user is NOT member
+
+        const res = await request(testApp)
+            .post('/api/retro')
+            .set('Authorization', `Bearer ${authUserInfo.token}`) // Add auth header
+            .send({ name: boardName, workspaceId: testWorkspaceId });
+
+        expect(res.statusCode).toEqual(403);
+        expect(res.body).toHaveProperty('error', 'User is not authorized to create a retro board in this workspace.');
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockRetroDb.createRetroBoard).not.toHaveBeenCalled();
+    });
+
+    it('GET /api/retro/:boardId - should get details of workspace board (authenticated member)', async () => {
+        const mockBoard = {
+            id: createdAuthBoardId, // Use ID from previous test
             name: 'Workspace Linked Retro Auth',
             workspace_id: testWorkspaceId,
             default_timer: 600,
             hasPassword: false
-        });
+        };
+        mockRetroDb.getRetroBoard.mockResolvedValueOnce(mockBoard);
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true); // Mock user is member
 
         const res = await request(testApp) // Use testApp
           .get(`/api/retro/${createdAuthBoardId}`)
-          // .set('Authorization', `Bearer ${authUserInfo.token}`) // Auth middleware not part of testApp
+          .set('Authorization', `Bearer ${authUserInfo.token}`) // Add auth header
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('id', createdAuthBoardId);
         expect(res.body).toHaveProperty('name', 'Workspace Linked Retro Auth');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
     });
 
-    it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated)', async () => {
+    it('GET /api/retro/:boardId - should fail to get workspace board if not authenticated', async () => {
+        const mockBoard = { id: createdAuthBoardId, workspace_id: testWorkspaceId };
+        mockRetroDb.getRetroBoard.mockResolvedValueOnce(mockBoard); // Board exists
+
+        const res = await request(testApp)
+            .get(`/api/retro/${createdAuthBoardId}`)
+            // No Authorization header
+        expect(res.statusCode).toEqual(401);
+        expect(res.body).toHaveProperty('error', 'Authentication required to access this retro board.');
+        expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled();
+    });
+
+    it('GET /api/retro/:boardId - should fail to get workspace board if not workspace member', async () => {
+        const mockBoard = { id: createdAuthBoardId, workspace_id: testWorkspaceId };
+        mockRetroDb.getRetroBoard.mockResolvedValueOnce(mockBoard); // Board exists
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(false); // Mock user is NOT member
+
+        const res = await request(testApp)
+            .get(`/api/retro/${createdAuthBoardId}`)
+            .set('Authorization', `Bearer ${authUserInfo.token}`) // Add auth header
+        expect(res.statusCode).toEqual(403);
+        expect(res.body).toHaveProperty('error', 'User is not authorized to access this retro board.');
+        expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+    });
+
+    it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated member)', async () => {
         const newSettings = { defaultTimer: 900, hideAuthorNames: true };
+        const initialBoard = { id: createdAuthBoardId, name: 'Old Name', workspace_id: testWorkspaceId };
+        const updatedBoard = { ...initialBoard, default_timer: 900, hide_author_names: true };
+
         mockRetroDb.getRetroBoard
-            .mockResolvedValueOnce({ id: createdAuthBoardId, name: 'Old Name' }) // Initial check
-            .mockResolvedValueOnce({ id: createdAuthBoardId, name: 'Old Name', default_timer: 900, hide_author_names: true }); // After update
+            .mockResolvedValueOnce(initialBoard) // Initial check
+            .mockResolvedValueOnce(updatedBoard); // After update
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(true); // Mock user is member
         mockRetroDb.updateRetroBoardSettings.mockResolvedValueOnce();
 
         const res = await request(testApp) // Use testApp
           .put(`/api/retro/${createdAuthBoardId}/settings`)
-          // .set('Authorization', `Bearer ${authUserInfo.token}`) // Auth middleware not part of testApp
+          .set('Authorization', `Bearer ${authUserInfo.token}`) // Add auth header
           .send(newSettings);
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('default_timer', 900);
         expect(res.body).toHaveProperty('hide_author_names', true);
-        expect(mockRetroDb.updateRetroBoardSettings).toHaveBeenCalledWith(createdAuthBoardId, newSettings);
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledTimes(2);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockRetroDb.updateRetroBoardSettings).toHaveBeenCalledWith(createdAuthBoardId, newSettings);
+    });
+
+    it('PUT /api/retro/:boardId/settings - should fail to update workspace board if not authenticated', async () => {
+        const newSettings = { defaultTimer: 900 };
+        const initialBoard = { id: createdAuthBoardId, workspace_id: testWorkspaceId };
+        mockRetroDb.getRetroBoard.mockResolvedValueOnce(initialBoard); // Board exists
+
+        const res = await request(testApp)
+            .put(`/api/retro/${createdAuthBoardId}/settings`)
+            // No Authorization header
+            .send(newSettings);
+        expect(res.statusCode).toEqual(401);
+        expect(res.body).toHaveProperty('error', 'Authentication required to update settings for this retro board.');
+        expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled();
+        expect(mockRetroDb.updateRetroBoardSettings).not.toHaveBeenCalled();
+    });
+
+     it('PUT /api/retro/:boardId/settings - should fail to update workspace board if not workspace member', async () => {
+        const newSettings = { defaultTimer: 900 };
+        const initialBoard = { id: createdAuthBoardId, workspace_id: testWorkspaceId };
+        mockRetroDb.getRetroBoard.mockResolvedValueOnce(initialBoard); // Board exists
+        mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(false); // Mock user is NOT member
+
+        const res = await request(testApp)
+            .put(`/api/retro/${createdAuthBoardId}/settings`)
+            .set('Authorization', `Bearer ${authUserInfo.token}`) // Add auth header
+            .send(newSettings);
+        expect(res.statusCode).toEqual(403);
+        expect(res.body).toHaveProperty('error', 'User is not authorized to update settings for this retro board.');
+        expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockRetroDb.updateRetroBoardSettings).not.toHaveBeenCalled();
     });
 
     // Add more authenticated tests here if needed

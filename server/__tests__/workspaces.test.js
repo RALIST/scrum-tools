@@ -38,32 +38,7 @@ const mockVelocityDb = {
 };
 // --- End Mock DB Objects ---
 
-// --- Test Express App Setup ---
-const testApp = express();
-testApp.use(express.json()); // Add middleware needed by routes
-
-// Mock the authentication middleware for testApp requests needing req.user
-// This is a simplified mock; adjust if more complex user data is needed
-// Simplified mock authentication middleware for testApp
-testApp.use((req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        // If any Bearer token is present, mock a generic user ID.
-        // Specific user ID checks will happen in the mock function assertions.
-        req.user = { userId: 'mock-user-id-from-token' };
-    }
-    next();
-});
-
-// Mount the workspace routes using the setup function and injecting the MOCK DBs
-testApp.use('/api/workspaces', setupWorkspaceRoutes(mockWorkspaceDb, mockUserDb, mockPokerDb, mockRetroDb, mockVelocityDb));
-
-// Add a dummy error handler for testing 500 errors on testApp
-testApp.use((err, req, res, next) => {
-    console.error("Test App Error Handler:", err.message); // Log error in test context
-    res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
-});
-// --- End Test Express App Setup ---
+// testApp setup moved inside describe block
 
 
 // Helper function to register/login a user and get token (uses mainApp)
@@ -87,6 +62,7 @@ const registerAndLoginUser = async (emailSuffix) => {
 
 
 describe('Workspaces Routes', () => {
+  let testApp; // Declare testApp here
   // Use global variables defined outside describe if needed by the mock middleware above
   // let ownerInfo; // { token, userId, email } ... etc.
   // These are now defined globally for the mock middleware to access them
@@ -100,6 +76,35 @@ describe('Workspaces Routes', () => {
 
   // Register and login users before running workspace tests (uses mainApp)
   beforeAll(async () => {
+    // Setup test-specific Express app instance *inside* describe block
+    testApp = express();
+    testApp.use(express.json()); // Add middleware needed by routes
+
+    // Mock the authentication middleware for testApp requests needing req.user
+    testApp.use((req, res, next) => {
+        const authHeader = req.headers['authorization'];
+        req.user = undefined; // Start with no user
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            // Find the user info matching the token
+            const userInfo = [ownerInfo, memberInfo, nonAdminInfo, otherUserInfo].find(info => info && info.token === token);
+            if (userInfo) {
+                 req.user = { userId: userInfo.userId };
+            }
+        }
+        next();
+    });
+
+    // Mount the workspace routes using the setup function and injecting the MOCK DBs
+    testApp.use('/api/workspaces', setupWorkspaceRoutes(mockWorkspaceDb, mockUserDb, mockPokerDb, mockRetroDb, mockVelocityDb));
+
+    // Add a dummy error handler for testing 500 errors on testApp
+    testApp.use((err, req, res, next) => {
+        console.error("Test App Error Handler:", err.message); // Log error in test context
+        res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
+    });
+
+    // --- Original beforeAll content starts here ---
     ownerInfo = await registerAndLoginUser('owner');
     memberInfo = await registerAndLoginUser('member');
     nonAdminInfo = await registerAndLoginUser('non_admin');
@@ -566,7 +571,12 @@ describe('Workspaces Routes', () => {
   // Test getting workspace retros (Success path - uses mainApp)
   it('GET /api/workspaces/:id/retros - should get retro boards list', async () => {
     // Create a retro board via mainApp first
-    const retroRes = await request(mainApp).post('/api/retro').send({ name: 'Workspace Retro Test', workspaceId: testWorkspaceId });
+    // Authenticate the POST request and check its status
+    const retroRes = await request(mainApp)
+        .post('/api/retro')
+        .set('Authorization', `Bearer ${ownerInfo.token}`) // Add authentication
+        .send({ name: 'Workspace Retro Test', workspaceId: testWorkspaceId });
+    expect(retroRes.statusCode).toEqual(200); // Ensure board creation succeeded
     const createdAuthBoardId = retroRes.body.boardId; // Get the actual ID
 
     const res = await request(mainApp) // Use mainApp
@@ -575,7 +585,10 @@ describe('Workspaces Routes', () => {
     expect(res.statusCode).toEqual(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThanOrEqual(1); // Expecting at least 1
-    expect(res.body.some(b => b.id === createdAuthBoardId)).toBe(true);
+    // Check if the specific board created is present in the list
+    const foundBoard = res.body.find(b => b.id === createdAuthBoardId);
+    expect(foundBoard).toBeDefined();
+    expect(foundBoard).toHaveProperty('name', 'Workspace Retro Test');
   });
 
    // Test getting workspace retros (DB failure - uses testApp with mock)
