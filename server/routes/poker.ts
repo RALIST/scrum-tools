@@ -77,8 +77,11 @@ export default function setupPokerRoutes(
 
     // Add 'next' to the parameters
     router.post('/rooms', async (req: Request, res: Response, next: NextFunction) => {
+        // Get sequence key from body
         const { roomId, name, password, sequence, workspaceId } = req.body;
         const userId: string | undefined = req.user?.userId; // Get userId for workspace check
+        const safe_sequence = sequence || "fibonacci"; // Default sequence if not provided
+
         try {
             // If workspaceId is provided, ensure the user is authenticated and a member
             if (workspaceId) {
@@ -103,16 +106,15 @@ export default function setupPokerRoutes(
 
             const hashedPassword: string | null = password ? await bcrypt.hash(password, 10) : null;
             // Use injected dependency
-            // Ensure sequence is an array of strings
-            // Pass sequence directly, let DB handle validation/type or throw error
-            // Type 'sequence' from req.body as any for now, or add validation
-            await pokerDb.createRoom(roomId, name, sequence as string[], hashedPassword, workspaceId);
+            // Pass the looked-up sequenceArray (which is readonly string[])
+            // Cast to string[] for the DB function which expects mutable (driver handles it)
+            await pokerDb.createRoom(roomId, name, safe_sequence, hashedPassword, workspaceId);
 
             res.json({
                 success: true,
                 roomId,
                 hasPassword: !!hashedPassword,
-                sequence: sequence, // Return original sequence from request
+                sequence: sequence,
             });
         } catch (error: any) { // Type error
             next(error);
@@ -145,18 +147,29 @@ export default function setupPokerRoutes(
         }
     });
 
-    // New endpoint to get basic info for a specific room
+    // Modified endpoint to get FULL room details (except password)
     router.get('/rooms/:roomId/info', async (req: Request<{ roomId: string }>, res: Response, next: NextFunction) => {
         const { roomId } = req.params;
         try {
-            // Use injected dependency
-            // Define expected type for roomInfo
-            const roomInfo: { id: string; hasPassword: boolean } | null = await pokerDb.getPokerRoomInfo(roomId);
-            if (!roomInfo) {
+            // Use injected dependency to get full details
+            const roomDetails: PokerRoomDetails | null = await pokerDb.getRoom(roomId);
+
+            if (!roomDetails) {
                 res.status(404).json({ error: 'Room not found' });
                 return;
             }
-            res.json(roomInfo);
+
+            // Omit the password field before sending
+            const { password, ...roomInfoToSend } = roomDetails;
+
+            // Convert participants Map to Array for JSON response
+            const responsePayload = {
+                ...roomInfoToSend,
+                participants: Array.from(roomInfoToSend.participants.values())
+            };
+
+
+            res.json(responsePayload);
         } catch (error: any) { // Type error
             next(error);
         }

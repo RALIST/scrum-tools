@@ -21,7 +21,7 @@ export interface Room {
   participantCount: number;
   createdAt: string;
   hasPassword: boolean;
-  sequence: string;
+  sequence: string; // Changed back to string (key)
   workspace_id?: string;
   created_by?: string;
 }
@@ -84,6 +84,7 @@ export const RoomListTable: FC<RoomListTableProps> = ({
                   )}
                   <Td>{room.id}</Td>
                   <Td>{room.participantCount}</Td>
+                  {/* Display sequence key directly */}
                   <Td>{room.sequence}</Td>
                   <Td>{room.hasPassword ? "Yes" : "No"}</Td>
                   <Td>

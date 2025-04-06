@@ -1,5 +1,6 @@
 import { FC, useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+// Removed useQuery import
 import {
   Box,
   Heading,
@@ -16,18 +17,24 @@ import PageContainer from "../../components/PageContainer";
 import { Helmet } from "react-helmet-async";
 import { RoomHeader } from "../../components/poker/RoomHeader";
 import { VotingArea } from "../../components/poker/VotingArea";
-import { ParticipantsTable } from "../../components/poker/ParticipantsTable"; // Import the new table component
+import { ParticipantsTable } from "../../components/poker/ParticipantsTable";
 import {
   JoinRoomModal,
   ChangeNameModal,
   RoomSettingsModal,
 } from "../../components/modals";
-import { usePokerSocket } from "../../hooks/usePokerSocket";
-import { useAuth } from "../../contexts/AuthContext"; // Import useAuth
-import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
-import { SequenceType } from "../../constants/poker";
+import {
+  usePokerSocket,
+  Participant, // Import Participant type from hook
+  RoomSettings, // Import RoomSettings type from hook
+} from "../../hooks/usePokerSocket";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiRequest } from "../../utils/apiUtils"; // Keep apiRequest for original /info call
+import { SequenceType } from "../../constants/poker"; // Re-added SequenceType
 
 const LOCAL_STORAGE_USERNAME_KEY = "planningPokerUsername";
+
+// Removed PokerRoomDetailsFrontend interface
 
 const PlanningPokerRoom: FC = () => {
   const { colorMode } = useColorMode();
@@ -47,20 +54,17 @@ const PlanningPokerRoom: FC = () => {
     onOpen: onSettingsOpen,
     onClose: onSettingsClose,
   } = useDisclosure();
-  // Removed newUserName state
-  // Removed roomPassword and showPassword states
-  // Removed newSettings state
-  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
-  const [isLoadingRoomInfo, setIsLoadingRoomInfo] = useState(true);
-  const [roomExists, setRoomExists] = useState<boolean | null>(null);
-  // State to control modal visibility explicitly
   const {
     isOpen: isJoinModalOpen,
     onOpen: onJoinModalOpen,
     onClose: onJoinModalClose,
   } = useDisclosure();
+  // Re-added states for original /info fetch logic
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [isLoadingRoomInfo, setIsLoadingRoomInfo] = useState(true);
+  const [roomExists, setRoomExists] = useState<boolean | null>(null);
 
-  // --- Callbacks for the hook ---
+  // --- Callbacks for the socket hook ---
   const onRoomJoined = useCallback(() => {
     console.log("[PlanningPokerRoom] onRoomJoined callback triggered.");
     toast({ title: "Joined Room", status: "success", duration: 2000 });
@@ -88,44 +92,43 @@ const PlanningPokerRoom: FC = () => {
     [toast, onJoinModalOpen, isAuthenticated]
   );
 
-  // Determine initial username for auto-join attempt (only if applicable)
+  // Determine initial username for auto-join attempt using original states
   const initialJoinName = useMemo(() => {
-    // Auto-join only if authenticated, room exists, and is NOT password protected
     if (
       isAuthenticated &&
       user?.name &&
-      roomExists === true &&
-      !isPasswordProtected
+      roomExists === true && // Use state variable
+      !isPasswordProtected // Use state variable
     ) {
       return user.name;
     }
     return null;
-  }, [isAuthenticated, user?.name, roomExists, isPasswordProtected]);
+  }, [isAuthenticated, user?.name, roomExists, isPasswordProtected]); // Depend on state variables
 
   // --- Socket Hook ---
   const {
-    socket, // Destructure socket here
+    socket,
     participants,
-    settings,
+    settings, // Hook now manages settings state based on key
     isRevealed,
     isJoined,
-    joinRoom, // Function provided by the hook to initiate join
+    joinRoom,
     changeName,
     vote,
     revealVotes,
     resetVotes,
     updateSettings: updateRoomSettings,
-    isConnectingOrJoining, // Tracks connection OR join attempt
+    isConnectingOrJoining,
   } = usePokerSocket({
     roomId: roomExists === true ? roomId || "" : "", // Only connect if room exists
-    initialUserName: initialJoinName, // Pass name for potential auto-join
+    initialUserName: initialJoinName,
     onRoomJoined,
     onJoinError: handleJoinError,
   });
 
   // --- Effects ---
 
-  // Effect 1: Set initial user name state (for display or modal prefill)
+  // Effect 1: Set initial user name state
   useEffect(() => {
     if (isAuthenticated && user?.name) {
       setUserName(user.name);
@@ -135,7 +138,7 @@ const PlanningPokerRoom: FC = () => {
     }
   }, [isAuthenticated, user?.name]);
 
-  // Effect 2: Check room existence and password status
+  // Effect 2: Check room existence and password status (Reverted to original /info call)
   useEffect(() => {
     if (!roomId) {
       navigate("/planning-poker");
@@ -148,7 +151,7 @@ const PlanningPokerRoom: FC = () => {
     setRoomExists(null);
     setIsLoadingRoomInfo(true);
 
-    apiRequest<{ id: string; hasPassword: boolean }>(
+    apiRequest<{ id: string; hasPassword: boolean }>( // Expecting minimal info again
       `/poker/rooms/${roomId}/info`
     )
       .then((roomInfo) => {
@@ -180,26 +183,22 @@ const PlanningPokerRoom: FC = () => {
     };
   }, [roomId, navigate, toast]);
 
-  // Effect 3: Decide whether to show the join modal AFTER room check is done
-  // AND after initial connection attempt (isConnectingOrJoining becomes false)
+  // Effect 3: Decide whether to show the join modal (Reverted logic)
   useEffect(() => {
-    // Don't show modal while initial room info is loading, or connecting/joining, or already joined
     if (
       isLoadingRoomInfo ||
       isConnectingOrJoining ||
       isJoined ||
       roomExists !== true
     ) {
-      if (isJoinModalOpen) onJoinModalClose(); // Ensure closed if conditions not met
+      if (isJoinModalOpen) onJoinModalClose();
       return;
     }
 
-    // Conditions to show modal: Room exists, not joined, not currently connecting/joining, AND (unauthenticated OR password needed)
     if (!isConnectingOrJoining && (!isAuthenticated || isPasswordProtected)) {
       console.log("[PlanningPokerRoom] Conditions met for showing join modal.");
-      onJoinModalOpen();
+      if (!isJoinModalOpen) onJoinModalOpen();
     } else {
-      // Should have auto-joined via initialUserName in the hook, close modal if it was somehow open
       if (isJoinModalOpen) onJoinModalClose();
     }
   }, [
@@ -207,18 +206,18 @@ const PlanningPokerRoom: FC = () => {
     isJoined,
     isConnectingOrJoining,
     isAuthenticated,
-    isPasswordProtected,
+    isPasswordProtected, // Use state variable
     onJoinModalOpen,
     onJoinModalClose,
     isLoadingRoomInfo,
+    isJoinModalOpen,
   ]);
 
   // --- Callbacks ---
 
-  // Called when user clicks "Join" in the modal - updated signature
+  // Called when user clicks "Join" in the modal
   const handleManualJoin = useCallback(
     (name: string, password?: string) => {
-      // Name validation (already trimmed in modal)
       if (!name) {
         toast({
           title: "Error",
@@ -227,8 +226,8 @@ const PlanningPokerRoom: FC = () => {
         });
         return;
       }
-      // Password validation (only if needed)
       if (isPasswordProtected && !password) {
+        // Use state variable
         toast({
           title: "Error",
           description: "Please enter the room password",
@@ -236,20 +235,16 @@ const PlanningPokerRoom: FC = () => {
         });
         return;
       }
-      // Save name only if not authenticated
       if (!isAuthenticated) {
-        // Update local state userName as well, since it's used for display
         setUserName(name);
         localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, name);
       }
-      // Call the hook's joinRoom function with data from modal
       joinRoom(name, password);
-      // Don't close modal here, let onRoomJoined handle it on success
     },
-    [isPasswordProtected, joinRoom, toast, isAuthenticated] // Removed userName, roomPassword dependencies
+    [isPasswordProtected, joinRoom, toast, isAuthenticated] // Use state variable
   );
 
-  // Updated handleChangeName to accept newName argument
+  // Handle name change
   const handleChangeName = useCallback(
     (newName: string) => {
       if (isAuthenticated) return;
@@ -262,34 +257,31 @@ const PlanningPokerRoom: FC = () => {
         return;
       }
       localStorage.setItem(LOCAL_STORAGE_USERNAME_KEY, newName);
-      setUserName(newName); // Update local state as well
-      changeName(newName); // Call hook function
+      setUserName(newName);
+      changeName(newName);
       onChangeNameClose();
       toast({ title: "Name Updated", status: "success", duration: 2000 });
     },
-    [changeName, onChangeNameClose, toast, isAuthenticated] // Removed newUserName dependency
+    [changeName, onChangeNameClose, toast, isAuthenticated]
   );
 
-  // Updated handleUpdateSettings to accept settings argument
+  // Handle settings update (Reverted to expect SequenceType key)
   const handleUpdateSettings = useCallback(
     (settingsToSave: { sequence?: SequenceType; password?: string }) => {
       updateRoomSettings(settingsToSave);
       onSettingsClose();
-      // No need to reset newSettings state as it's removed
     },
-    [updateRoomSettings, onSettingsClose] // Removed newSettings dependency
+    [updateRoomSettings, onSettingsClose]
   );
 
+  // Handle card selection
   const handleCardSelect = useCallback(
     (value: string) => {
       setSelectedCard(value);
       vote(value);
-      // Toast is now handled inside VotingArea component
     },
-    [vote] // Removed toast dependency
+    [vote]
   );
-
-  // Removed calculateAverage and getVoteColor functions, they are now in ParticipantsTable
 
   // --- Render Logic ---
 
@@ -317,8 +309,12 @@ const PlanningPokerRoom: FC = () => {
     );
   }
 
+  // Handle other query errors (Removed as useQuery is removed)
+
+  // If query succeeded but data is somehow null/undefined (Removed)
+
   // At this point, roomExists === true
-  // Show connection/joining spinner overlay if applicable (but not initial room check)
+  // Show connection/joining spinner overlay if applicable
   const showConnectingSpinner = !isJoined && isConnectingOrJoining;
 
   return (
@@ -334,31 +330,31 @@ const PlanningPokerRoom: FC = () => {
         {/* Join Modal - controlled by isJoinModalOpen state */}
         <JoinRoomModal
           isOpen={isJoinModalOpen}
-          initialUserName={userName} // Pass current userName as initial value
-          isPasswordProtected={isPasswordProtected}
-          onClose={onJoinModalClose} // Pass the close handler
-          onJoin={handleManualJoin} // Pass the updated handler
-          isNameDisabled={isAuthenticated} // Disable name input if authenticated
+          initialUserName={userName}
+          isPasswordProtected={isPasswordProtected} // Use state variable
+          onClose={onJoinModalClose}
+          onJoin={handleManualJoin}
+          isNameDisabled={isAuthenticated}
         />
 
-        {/* Main Room Content - Render structure always if room exists */}
+        {/* Main Room Content */}
         <VStack spacing={{ base: 4, md: 8 }}>
-          {/* Use RoomHeader Component */}
+          {/* Use RoomHeader Component - Reverted roomName prop */}
           <RoomHeader
             roomId={roomId}
+            // roomName={roomData.name} // Removed, RoomHeader doesn't need it now
             isJoined={isJoined}
-            userName={userName} // Pass the state userName as fallback
+            userName={userName}
             isAuthenticated={isAuthenticated}
             onSettingsOpen={onSettingsOpen}
             onChangeNameOpen={() => {
-              // setNewUserName(userName); // No longer needed, modal handles its state
               onChangeNameOpen();
             }}
             participants={participants}
-            socketId={socket?.id} // Pass socket id from the hook
+            socketId={socket?.id}
           />
 
-          {/* Show spinner overlay if connecting/joining AFTER initial room check */}
+          {/* Show spinner overlay if connecting/joining */}
           {showConnectingSpinner && (
             <Center
               position="absolute"
@@ -381,21 +377,21 @@ const PlanningPokerRoom: FC = () => {
               shadow="md"
             >
               <VStack spacing={{ base: 4, md: 8 }}>
-                {/* Use VotingArea Component */}
+                {/* Use VotingArea Component - Pass sequence key */}
                 <VotingArea
-                  sequence={settings.sequence}
+                  sequence={settings.sequence} // Pass key from hook state
                   selectedCard={selectedCard}
                   isRevealed={isRevealed}
-                  onCardSelect={handleCardSelect} // Pass the updated handler (without toast)
+                  onCardSelect={handleCardSelect}
                   onRevealVotes={revealVotes}
                   onResetVotes={resetVotes}
                 />
 
-                {/* Use ParticipantsTable Component */}
+                {/* Use ParticipantsTable Component - Pass sequence key */}
                 <ParticipantsTable
                   participants={participants}
                   isRevealed={isRevealed}
-                  settings={settings}
+                  settings={settings} // Pass settings object (contains key)
                 />
               </VStack>
             </Box>
@@ -406,21 +402,19 @@ const PlanningPokerRoom: FC = () => {
         {!isAuthenticated && (
           <ChangeNameModal
             isOpen={isChangeNameOpen}
-            initialUserName={userName} // Pass current userName as initial value
+            initialUserName={userName}
             onClose={onChangeNameClose}
-            // Removed onNameChange prop
-            onSave={handleChangeName} // Pass the updated handler
+            onSave={handleChangeName}
           />
         )}
 
-        {/* Settings Modal */}
-        {settings && ( // Ensure settings exist before rendering
+        {/* Settings Modal - Pass sequence key */}
+        {settings && (
           <RoomSettingsModal
             isOpen={isSettingsOpen}
             onClose={onSettingsClose}
-            currentSequence={settings.sequence}
-            // Removed newSettings, showPassword, onTogglePassword, onSettingsChange props
-            onSave={handleUpdateSettings} // Pass the updated handler
+            currentSequence={settings.sequence} // Pass key from hook state
+            onSave={handleUpdateSettings} // Callback expects key
           />
         )}
       </Box>

@@ -11,7 +11,7 @@ import {
   TableContainer,
   Box,
 } from "@chakra-ui/react";
-import { SEQUENCES, SequenceType } from "../../constants/poker"; // Import necessary types/constants
+import { SEQUENCES, SequenceType } from "../../constants/poker"; // Re-added import
 
 // Define Participant type based on usage in PlanningPokerRoom
 interface Participant {
@@ -22,7 +22,7 @@ interface Participant {
 
 // Define Settings type based on usage
 interface RoomSettings {
-  sequence: SequenceType;
+  sequence: SequenceType; // Changed back to key type
   // Add other settings if needed by calculation logic
 }
 
@@ -49,10 +49,12 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = ({
 
   const getVoteColor = useCallback(
     (vote: string | null) => {
+      // Reverted logic to use sequence key
       if (!vote || vote === "?" || !isRevealed || !settings) return undefined;
       const voteNum = Number(vote);
       const average = calculateAverage();
       if (isNaN(voteNum)) return undefined;
+      // Use the key to look up the array
       const sequenceValues = SEQUENCES[settings.sequence] || [];
       const maxDiff = Math.max(
         ...sequenceValues
@@ -68,7 +70,7 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = ({
       if (percentage <= 0.8) return "orange.400";
       return "red.500";
     },
-    [isRevealed, settings, calculateAverage]
+    [isRevealed, settings, calculateAverage] // Keep settings dependency
   );
 
   if (!participants || !settings) {

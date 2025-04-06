@@ -5,11 +5,12 @@ import { PokerRoom, PokerParticipant, PokerRoomDetails } from '../types/db.js'; 
 export const createRoom = async (
     roomId: string,
     name: string | undefined,
-    sequence: string[],
+    sequence: string, // Changed back to string (key)
     password?: string | null,
     workspaceId?: string | null
 ): Promise<void> => {
     const queryText = 'INSERT INTO rooms (id, name, sequence, password, workspace_id) VALUES ($1, $2, $3, $4, $5)';
+    // Pass sequence string directly
     const params = [roomId, name || roomId, sequence, password, workspaceId || null];
     await executeQuery(queryText, params); // Use imported executeQuery
 };
@@ -24,6 +25,7 @@ export const getRooms = async (): Promise<PokerRoom[]> => {
         ORDER BY r.created_at DESC -- Optional: order public rooms
     `;
     const result: QueryResult<PokerRoom> = await executeQuery(queryText); // Use imported executeQuery
+    // Assuming PokerRoom type expects sequence as string from DB
     return result.rows;
 };
 
@@ -39,6 +41,7 @@ export const getWorkspaceRooms = async (workspaceId: string): Promise<PokerRoom[
     `;
     const params = [workspaceId];
     const result: QueryResult<PokerRoom> = await executeQuery(queryText, params); // Use imported executeQuery
+    // Assuming PokerRoom type expects sequence as string from DB
     return result.rows;
 };
 
@@ -65,33 +68,13 @@ export const getRoom = async (roomId: string): Promise<PokerRoomDetails | null> 
     const participantsResult: QueryResult<PokerParticipant> = await executeQuery(participantsQuery, [roomId]); // Use imported executeQuery
 
     const roomData: PokerRoom = roomResult.rows[0];
-    let parsedSequence: string[] | null; // Type for parsed sequence
 
-    // Attempt to parse if it looks like a non-empty Postgres array string: "{...}"
-    // Use roomData.sequence directly here
-    if (typeof roomData.sequence === 'string' && roomData.sequence.startsWith('{') && roomData.sequence.endsWith('}') && roomData.sequence.length > 2) {
-        try {
-            // Remove braces, split by comma, and remove surrounding quotes from each element
-            parsedSequence = roomData.sequence.substring(1, roomData.sequence.length - 1)
-                .split(',')
-                .map(item => item.trim().replace(/^"|"$/g, '')); // Remove leading/trailing quotes
-        } catch (e) {
-            parsedSequence = null; // Fallback on error - Type 'null' is not assignable to type 'string[]'. Consider using '[]' or another default. Let's use [] for now.
-            // parsedSequence = null; // Fallback on error
-            parsedSequence = []; // Use empty array as fallback
-        }
-    } else if (roomData.sequence === '{}') { // Handle empty array string
-         parsedSequence = [];
-    } else if (Array.isArray(roomData.sequence)) { // If it's already an array
-         parsedSequence = roomData.sequence;
-    } else { // Handle null, undefined, or other non-string/non-array cases
-         parsedSequence = null; // Default to null if not a parsable string or array
-    }
-    // If it's already an array (e.g., if DB driver handles it), or not a string, keep as is unless null/undefined
+    // Removed parsing logic. Assume roomData.sequence is the string key.
+    // The PokerRoomDetails type will need adjustment in types/db.ts
 
     return {
         ...roomData,
-        sequence: parsedSequence, // Use the parsed sequence
+        // sequence: roomData.sequence, // sequence is already part of roomData
         participants: new Map(participantsResult.rows.map((p: PokerParticipant) => [p.id, {
             id: p.id,
             name: p.name,
@@ -144,10 +127,9 @@ export const resetVotes = async (roomId: string): Promise<void> => {
 
 export const updateRoomSettings = async (
     roomId: string,
-    sequence?: string[], // Sequence is optional
+    sequence?: string, // Changed back to string (key)
     password?: string | null // Password is optional
 ): Promise<void> => {
-    // Removed the redundant validation from here
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -155,11 +137,7 @@ export const updateRoomSettings = async (
 
     if (sequence !== undefined) {
         updates.push(`sequence = $${paramCount}`);
-        // Ensure sequence is formatted correctly for PostgreSQL array literal if needed,
-        // but the validation above should prevent non-arrays.
-        // If your DB driver doesn't handle JS arrays automatically, you might need:
-        // values.push(`{${sequence.map(item => `"${item}"`).join(',')}}`);
-        values.push(sequence); // Assuming DB driver handles JS array -> TEXT[]
+        values.push(sequence); // Push the string key
         paramCount++;
     }
 

@@ -12,6 +12,9 @@ import {
   useColorMode,
 } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
+// Removed poker constants import
+
+// Removed helper functions
 
 // Re-define or import interfaces if not shared globally
 interface WorkspacePokerRoom {
@@ -19,6 +22,7 @@ interface WorkspacePokerRoom {
   name: string;
   participantCount: number;
   createdAt: string;
+  sequence: string; // Changed back to string (key)
 }
 interface WorkspaceRetroBoard {
   id: string;
@@ -83,7 +87,8 @@ const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
                 bg={colorMode === "light" ? "white" : "gray.700"}
               >
                 <HStack justify="space-between">
-                  <Text fontWeight="medium">{room.name}</Text>
+                  <Text fontWeight="medium">{room.name || room.id}</Text>{" "}
+                  {/* Fallback to ID if name is empty */}
                   <Button
                     as={RouterLink}
                     to={`/planning-poker/${room.id}`}
@@ -95,6 +100,10 @@ const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
                 </HStack>
                 <Text fontSize="sm" color="gray.500">
                   Participants: {room.participantCount}
+                </Text>
+                {/* Display sequence key directly */}
+                <Text fontSize="sm" color="gray.500">
+                  Sequence: {room.sequence}
                 </Text>
               </Box>
             ))}

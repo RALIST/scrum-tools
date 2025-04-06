@@ -17,6 +17,7 @@ import config from "../../config"; // Assuming config is accessible
 
 interface RoomHeaderProps {
   roomId: string | undefined;
+  // Removed roomName prop
   isJoined: boolean;
   userName: string; // Current user's name (from state or auth)
   isAuthenticated: boolean;
@@ -28,6 +29,7 @@ interface RoomHeaderProps {
 
 export const RoomHeader: FC<RoomHeaderProps> = ({
   roomId,
+  // Removed roomName destructuring
   isJoined,
   userName,
   isAuthenticated,
@@ -52,6 +54,9 @@ export const RoomHeader: FC<RoomHeaderProps> = ({
     return null; // Or some placeholder/error
   }
 
+  // Reverted displayTitle logic
+  // const displayTitle = roomName ? `${roomName} (${roomId})` : `Room ${roomId}`;
+
   return (
     <Box textAlign="center" w="full">
       <Heading size={{ base: "lg", md: "xl" }} mb={4} textAlign={"center"}>
@@ -61,6 +66,7 @@ export const RoomHeader: FC<RoomHeaderProps> = ({
           align="center"
           justify="center" // Center align items
         >
+          {/* Reverted display */}
           <Text>Room {roomId}</Text>
           <Stack direction={"row"} spacing={2}>
             <Tooltip label={"Copy link to room"}>

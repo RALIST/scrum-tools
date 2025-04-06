@@ -56,15 +56,15 @@ const handlePokerSocketEvents = (
 
             await socket.join(roomId);
 
+            // Emit sequence key (string)
             io.to(roomId).emit('roomJoined', {
                 participants: Array.from(room.participants.values()),
                 settings: {
-                    sequence: room.sequence,
+                    sequence: room.sequence, // Send string key
                     hasPassword: !!room.password
                 }
             });
         } catch (error: any) {
-            console.error(`Error joining room ${roomId} for ${userName}:`, error);
             socket.emit('error', { message: 'Failed to join room due to server error' } as SocketErrorPayload);
         }
     });
@@ -72,10 +72,7 @@ const handlePokerSocketEvents = (
     socket.on('updateSettings', async (payload: PokerUpdateSettingsPayload) => {
         const { roomId, settings } = payload;
         try {
-            if (settings.sequence !== undefined && !Array.isArray(settings.sequence)) {
-                socket.emit('error', { message: 'Invalid settings format: sequence must be an array.' } as SocketErrorPayload);
-                return;
-            }
+            // Removed incorrect validation check for sequence type
 
             let hashedPassword: string | null | undefined = undefined;
             if (settings.password !== undefined) {
@@ -87,6 +84,7 @@ const handlePokerSocketEvents = (
                 // Ignore if password is not string or null/empty
             }
 
+            // Pass sequence key (string) to DB function
             await pokerDb.updateRoomSettings(roomId, settings.sequence, hashedPassword);
             const updatedRoom: PokerRoomDetails | null = await pokerDb.getRoom(roomId);
 
@@ -95,6 +93,7 @@ const handlePokerSocketEvents = (
                  return;
             }
 
+            // Emit sequence key (string)
             io.to(roomId).emit('settingsUpdated', {
                 settings: {
                     sequence: updatedRoom.sequence,
@@ -102,7 +101,6 @@ const handlePokerSocketEvents = (
                 }
             });
         } catch (error: any) {
-            console.error(`Error updating settings for room ${roomId}:`, error);
             socket.emit('error', { message: error.message || 'Failed to update settings' } as SocketErrorPayload);
         }
     });
@@ -115,7 +113,6 @@ const handlePokerSocketEvents = (
             if (!room) {
                 // Error should have been thrown by updateParticipantName if participant/room not found
                 // But we check again just in case getRoom fails for other reasons
-                console.error(`Room ${roomId} not found after name change for ${socket.id}`);
                 socket.emit('error', { message: 'Room not found after name change.' } as SocketErrorPayload);
                 return;
             }
@@ -123,7 +120,6 @@ const handlePokerSocketEvents = (
                 participants: Array.from(room.participants.values()),
             });
         } catch (error: any) {
-            console.error(`Error changing name for ${socket.id} in room ${roomId}:`, error);
             // Send the specific error from the DB function if available, otherwise generic
             socket.emit('error', { message: 'Failed to change name' } as SocketErrorPayload);
         }
@@ -135,7 +131,6 @@ const handlePokerSocketEvents = (
             await pokerDb.updateParticipantVote(roomId, socket.id, vote);
             const room: PokerRoomDetails | null = await pokerDb.getRoom(roomId);
             if (!room) {
-                console.error(`Room ${roomId} not found after vote for ${socket.id}`);
                 socket.emit('error', { message: 'Room not found after vote.' } as SocketErrorPayload);
                 return;
             }
@@ -143,7 +138,6 @@ const handlePokerSocketEvents = (
                 participants: Array.from(room.participants.values()),
             });
         } catch (error: any) {
-            console.error(`Error recording vote for ${socket.id} in room ${roomId}:`, error);
             socket.emit('error', { message: 'Failed to record vote' } as SocketErrorPayload);
         }
     });
@@ -160,7 +154,6 @@ const handlePokerSocketEvents = (
             await pokerDb.resetVotes(roomId);
             const room: PokerRoomDetails | null = await pokerDb.getRoom(roomId);
             if (!room) {
-                console.error(`Room ${roomId} not found after vote reset.`);
                 // If resetVotes threw an error, the catch block handles it.
                 // If getRoom returns null after a successful reset (unlikely), emit this.
                 socket.emit('error', { message: 'Room not found after vote reset.' } as SocketErrorPayload);
@@ -171,7 +164,6 @@ const handlePokerSocketEvents = (
                 participants: Array.from(room.participants.values())
             });
         } catch (error: any) {
-            console.error(`Error resetting votes for room ${roomId}:`, error);
             socket.emit('error', { message: 'Failed to reset votes' } as SocketErrorPayload);
         }
     });
@@ -206,10 +198,8 @@ export const initializePokerSocket = (
                         // Optionally: Add logic here to delete the room if it's empty
                     }
                 } catch (error: any) {
-                    console.error(`Error removing participant ${socket.id} from room ${roomId} on disconnect:`, error);
                 }
             } else {
-                 console.warn(`Socket ${socket.id} disconnected without roomId in data.`);
                  // Fallback logic removed for simplicity, assuming socket.data.roomId is reliable
             }
         });

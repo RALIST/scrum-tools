@@ -20,7 +20,7 @@ export interface User {
 export interface PokerRoom {
   id: string; // Room ID (could be custom string)
   name: string;
-  sequence: string[] | string; // Can be array or raw string from DB
+  sequence: string; // Changed back to string (key)
   password?: string | null; // Optional password hash
   workspace_id?: string | null; // Optional workspace association
   created_at: Date | string;
@@ -48,7 +48,7 @@ export interface PokerRoomDetails {
   password?: string | null;
   workspace_id?: string | null;
   created_at: Date | string;
-  sequence: string[] | null; // Parsed sequence (overrides PokerRoom type)
+  sequence: string; // Changed back to string (key)
   participants: Map<string, Pick<PokerParticipant, 'id' | 'name' | 'vote'>>; // Added participants map
 }
 

@@ -11,20 +11,21 @@ import {
   VStack,
   FormControl,
   FormLabel,
-  Select,
+  Select, // Re-added
   InputGroup,
   InputRightElement,
   IconButton,
+  // Text, // Removed
 } from "@chakra-ui/react";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { SEQUENCE_LABELS, SequenceType } from "../../constants/poker";
+import { SEQUENCE_LABELS, SequenceType } from "../../constants/poker"; // Re-added
 
 interface RoomSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentSequence: SequenceType; // Keep current sequence for initial value
-  // Removed newSettings, showPassword, onTogglePassword, onSettingsChange
-  onSave: (settings: { sequence?: SequenceType; password?: string }) => void; // Updated signature
+  currentSequence: SequenceType; // Changed back to key type
+  // Reverted onSave signature
+  onSave: (settings: { sequence?: SequenceType; password?: string }) => void;
 }
 
 const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
@@ -33,6 +34,7 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
   currentSequence,
   onSave,
 }) => {
+  // Re-added internal state for sequence
   const [internalSettings, setInternalSettings] = useState<{
     sequence?: SequenceType;
     password?: string;
@@ -42,27 +44,35 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
   // Reset internal state when modal opens or currentSequence changes
   useEffect(() => {
     if (isOpen) {
-      setInternalSettings({ sequence: currentSequence, password: "" }); // Reset password field
+      // Reset internal state to current props
+      setInternalSettings({ sequence: currentSequence, password: "" });
       setInternalShowPassword(false);
     }
   }, [isOpen, currentSequence]);
 
+  // Reverted handleSettingsChange
   const handleSettingsChange = (
     key: "sequence" | "password",
     value: string | undefined
   ) => {
     setInternalSettings((prev) => ({
       ...prev,
-      [key]: value,
+      // Cast sequence value back to SequenceType if needed
+      [key]: key === "sequence" ? (value as SequenceType) : value,
     }));
   };
 
+  // Reverted handleSave
   const handleSave = () => {
     // Only include password if it's not empty
     const settingsToSave = { ...internalSettings };
-    if (!settingsToSave.password) {
-      delete settingsToSave.password;
+    // Adjust password handling: send undefined if empty to keep current, null to remove
+    if (settingsToSave.password === "") {
+      settingsToSave.password = undefined; // Treat empty as "no change" unless explicitly set to null elsewhere
     }
+    // If user wants to remove password, they should explicitly clear it and backend should handle null
+    // For now, empty string means no change from modal perspective
+
     onSave(settingsToSave);
   };
 
@@ -73,6 +83,7 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
         <ModalHeader>Room Settings</ModalHeader>
         <ModalBody>
           <VStack spacing={4}>
+            {/* Re-added Sequence Selection Dropdown */}
             <FormControl>
               <FormLabel>Estimation Sequence</FormLabel>
               <Select
@@ -80,7 +91,7 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
                 onChange={(e) =>
                   handleSettingsChange(
                     "sequence",
-                    e.target.value as SequenceType
+                    e.target.value as SequenceType // Cast is okay here
                   )
                 }
               >
@@ -95,13 +106,13 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
               <FormLabel>Change Room Password</FormLabel>
               <InputGroup>
                 <Input
-                  type={internalShowPassword ? "text" : "password"} // Use internal state
-                  placeholder="Leave empty to keep current or remove"
+                  type={internalShowPassword ? "text" : "password"}
+                  placeholder="Leave empty to keep current" // Changed placeholder
                   value={internalSettings.password || ""} // Use internal state
                   onChange={(e) =>
                     handleSettingsChange(
                       "password",
-                      e.target.value || undefined
+                      e.target.value // Send empty string if cleared
                     )
                   }
                 />
@@ -110,10 +121,10 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
                     aria-label={
                       internalShowPassword ? "Hide password" : "Show password"
                     }
-                    icon={internalShowPassword ? <ViewOffIcon /> : <ViewIcon />} // Use internal state
+                    icon={internalShowPassword ? <ViewOffIcon /> : <ViewIcon />}
                     onClick={() =>
                       setInternalShowPassword(!internalShowPassword)
-                    } // Update internal state
+                    }
                     size="sm"
                     variant="ghost"
                   />
@@ -127,8 +138,6 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
             Cancel
           </Button>
           <Button colorScheme="blue" onClick={handleSave}>
-            {" "}
-            {/* Call internal handler */}
             Save Changes
           </Button>
         </ModalFooter>

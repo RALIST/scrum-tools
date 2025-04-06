@@ -121,9 +121,6 @@ const handleRetroSocketEvents = (
             // debugLog('Emitting board update', { roomName });
             io.to(roomName).emit('retroBoardUpdated', board);
         } catch (error: any) {
-            // Log the error with the retrieved userName if available
-            const userName: string | undefined = userNames.get(socket.id);
-            console.error(`Error adding card for user ${userName || 'unknown'}:`, error); // Log error server-side
             socket.emit('error', { message: 'Failed to add card' } as SocketErrorPayload);
         }
     });

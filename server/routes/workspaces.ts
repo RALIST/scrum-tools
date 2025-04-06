@@ -17,6 +17,8 @@ type PokerDbModule = typeof pokerDbFunctions;
 type RetroDbModule = typeof retroDbFunctions;
 type VelocityDbModule = typeof velocityDbFunctions;
 
+// Removed parseSequenceString helper function
+
 // Wrap routes in a setup function that accepts db dependencies
 export default function setupWorkspaceRoutes(
     workspaceDb: WorkspaceDbModule,
@@ -238,11 +240,12 @@ export default function setupWorkspaceRoutes(
         // Use injected dependency from pokerDb
         const rooms: PokerRoom[] = await pokerDb.getWorkspaceRooms(workspaceId);
 
-        // Define type for mapped item
+        // Define type for mapped item (reverted sequence type)
         interface RoomListItem {
             id: string; name: string; participantCount: number; createdAt: Date | string;
-            hasPassword: boolean; sequence: string[] | string; workspaceId: string | null | undefined;
+            hasPassword: boolean; sequence: string[] | string; workspaceId: string | null | undefined; // Reverted sequence type
         }
+        // Reverted map logic - send sequence as received from DB
         const roomList: RoomListItem[] = rooms.map((room: PokerRoom) => ({
           id: room.id,
           name: room.name,
@@ -251,7 +254,7 @@ export default function setupWorkspaceRoutes(
               : (room.participant_count ?? 0),
           createdAt: room.created_at,
           hasPassword: !!room.password,
-          sequence: room.sequence,
+          sequence: room.sequence, // Send original sequence (string key)
           workspaceId: room.workspace_id
         }));
         res.json(roomList);

@@ -18,7 +18,7 @@ export interface PokerJoinRoomPayload {
 export interface PokerUpdateSettingsPayload {
   roomId: string;
   settings: {
-    sequence?: string[];
+    sequence?: string; // Changed back to string (key)
     password?: string | null; // Plain text password or null/empty to remove
   };
 }
@@ -45,7 +45,7 @@ export interface PokerResetVotesPayload {
 export type PokerParticipantInfo = Pick<PokerParticipant, 'id' | 'name' | 'vote'>;
 
 export interface PokerRoomSettingsInfo {
-  sequence: string[] | null;
+  sequence: string; // Changed back to string (key). Assume non-null from DB.
   hasPassword: boolean;
 }
 

@@ -226,12 +226,6 @@ export default function setupVelocityRoutes(
                     team = teamCheck; // Assign the checked team (without password hash)
 
                 } catch (dbError: any) {
-                    // Handle potential errors from getTeam or getTeamById if needed,
-                    // though getTeam should handle known auth errors internally now.
-                    // Re-throwing or calling next might be appropriate depending on error type.
-                    // For now, let's assume getTeam handles auth errors and other errors should bubble up.
-                     console.error("Error during anonymous team check:", dbError); // Log unexpected errors
-                     // Return a generic error for unexpected issues during the check
                      res.status(500).json({ error: 'Error verifying team access.' });
                      return;
                 }

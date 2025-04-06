@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Socket as ClientSocket } from 'socket.io-client'; // Keep type import
 import { useToast } from '@chakra-ui/react';
-// Removed: import { SequenceType } from '../constants/poker';
+import { SequenceType } from '../constants/poker'; // Re-added import
 import { useSocketManager } from './useSocketManager'; // Import the new hook
 
 // --- Interfaces ---
@@ -12,7 +12,7 @@ interface Participant {
 }
 
 interface RoomSettings {
-    sequence: string[] | null; // Changed from SequenceType
+    sequence: SequenceType; // Changed back to SequenceType (key)
     hasPassword: boolean;
 }
 
@@ -35,7 +35,7 @@ interface UsePokerSocketResult {
     revealVotes: () => void;
     resetVotes: () => void;
     updateSettings: (settings: {
-        sequence?: string[]; // Changed from SequenceType
+        sequence?: SequenceType; // Changed back to SequenceType (key)
         password?: string;
     }) => void;
     isConnected: boolean;
@@ -50,8 +50,8 @@ const debugLog = (message: string, data?: any) => {
 
 export const usePokerSocket = ({ roomId, initialUserName, onRoomJoined, onJoinError }: UsePokerSocketProps): UsePokerSocketResult => {
     const [participants, setParticipants] = useState<Participant[]>([]);
-    // Changed initial sequence to null
-    const [settings, setSettings] = useState<RoomSettings>({ sequence: null, hasPassword: false });
+    // Changed initial sequence back to 'fibonacci' key
+    const [settings, setSettings] = useState<RoomSettings>({ sequence: 'fibonacci', hasPassword: false });
     const [isRevealed, setIsRevealed] = useState(false);
     const [isJoined, setIsJoined] = useState(false);
     const [isJoining, setIsJoining] = useState(false);
@@ -139,11 +139,20 @@ export const usePokerSocket = ({ roomId, initialUserName, onRoomJoined, onJoinEr
 
 
     // --- Poker-Specific Event Handlers ---
-    // Type for incoming data should match backend structure (sequence is string[] | null)
-    const handleRoomJoined = useCallback((data: { participants: Participant[], settings: { sequence: string[] | null, hasPassword: boolean } }) => {
+    // Type for incoming data should match backend structure (sequence is string key)
+    const handleRoomJoined = useCallback((data: { participants: Participant[], settings: { sequence: string, hasPassword: boolean } }) => {
         debugLog('Received roomJoined:', data);
         setParticipants(data.participants);
-        setSettings(data.settings); // This should now work correctly
+        // Ensure received sequence is a valid key before setting
+        if (['fibonacci', 'tshirt', 'powers'].includes(data.settings.sequence)) {
+             setSettings({
+                 sequence: data.settings.sequence as SequenceType,
+                 hasPassword: data.settings.hasPassword
+             });
+        } else {
+            console.warn(`Received invalid sequence key from backend: ${data.settings.sequence}. Defaulting to fibonacci.`);
+            setSettings({ sequence: 'fibonacci', hasPassword: data.settings.hasPassword });
+        }
         setIsJoined(true);
         setIsJoining(false);
         pendingJoinRef.current = null;
@@ -155,10 +164,19 @@ export const usePokerSocket = ({ roomId, initialUserName, onRoomJoined, onJoinEr
         setParticipants(data.participants);
     }, []);
 
-    // Type for incoming data should match backend structure (sequence is string[] | null)
-    const handleSettingsUpdated = useCallback((data: { settings: { sequence: string[] | null, hasPassword: boolean } }) => {
+    // Type for incoming data should match backend structure (sequence is string key)
+    const handleSettingsUpdated = useCallback((data: { settings: { sequence: string, hasPassword: boolean } }) => {
         debugLog('Received settingsUpdated:', data);
-        setSettings(data.settings); // This should now work correctly
+         // Ensure received sequence is a valid key before setting
+         if (['fibonacci', 'tshirt', 'powers'].includes(data.settings.sequence)) {
+            setSettings({
+                sequence: data.settings.sequence as SequenceType,
+                hasPassword: data.settings.hasPassword
+            });
+       } else {
+           console.warn(`Received invalid sequence key from backend during update: ${data.settings.sequence}. Keeping previous settings.`);
+           // Optionally update only password if needed: setSettings(prev => ({ ...prev, hasPassword: data.settings.hasPassword }));
+       }
     }, []);
 
     const handleVotesRevealed = useCallback(() => {
@@ -270,11 +288,11 @@ export const usePokerSocket = ({ roomId, initialUserName, onRoomJoined, onJoinEr
         socket.emit('resetVotes', { roomId });
      }, [socket, roomId, isJoined]);
 
-    // Changed sequence type here to string[]
-    const updateSettings = useCallback((newSettings: { sequence?: string[]; password?: string; }) => {
+    // Changed sequence type back to SequenceType (key)
+    const updateSettings = useCallback((newSettings: { sequence?: SequenceType; password?: string; }) => {
         if (!socket || !roomId || !isJoined) return;
         debugLog('Updating settings:', newSettings);
-        // Ensure backend expects sequence as array here if we send it
+        // Send sequence key (string)
         socket.emit('updateSettings', { roomId, settings: newSettings });
      }, [socket, roomId, isJoined]);
 
