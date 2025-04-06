@@ -11,6 +11,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useRetroUser } from "../../hooks/useRetroUser";
 import { useRetroSocket } from "../../hooks/useRetroSocket";
 import { useQuery } from "@tanstack/react-query"; // Import hooks directly
+import React from "react";
 
 // --- Mock Components ---
 vi.mock("../../components/retro/RetroBoardView", () => ({

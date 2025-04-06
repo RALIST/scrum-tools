@@ -9,6 +9,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { WorkspaceContext } from "../../contexts/WorkspaceContext";
 import * as apiUtils from "../../utils/apiUtils";
 import { HelmetProvider } from "react-helmet-async";
+import React from "react";
 
 // --- Mocks ---
 const mockRegister = vi.fn(); // Mock register instead of login

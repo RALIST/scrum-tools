@@ -9,6 +9,7 @@ import { AuthContext } from "../../contexts/AuthContext"; // Assuming AuthProvid
 import { WorkspaceContext } from "../../contexts/WorkspaceContext"; // Assuming WorkspaceProvider exists
 import * as apiUtils from "../../utils/apiUtils"; // Import all exports to mock apiRequest
 import { HelmetProvider } from "react-helmet-async"; // Import HelmetProvider
+import React from "react";
 
 // --- Mocks ---
 const mockLogin = vi.fn();
