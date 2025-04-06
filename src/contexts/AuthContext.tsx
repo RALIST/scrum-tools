@@ -42,7 +42,9 @@ interface AuthContextType {
   isLoading: boolean; // Represents initial token check loading
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
 // Define the generic mutation hook helper function correctly
 function useAuthMutation<TVariables>(
