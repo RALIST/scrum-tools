@@ -27,7 +27,7 @@ export const initializePool = (): void => { // Add return type void
 };
 
 // Call initialize immediately
-initializePool();
+if (!pool) initializePool();
 
 // SIGINT handler removed - Jest global teardown handles pool closure for tests.
 // For regular application shutdown, a more robust mechanism might be needed
