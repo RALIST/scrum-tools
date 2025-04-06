@@ -1,6 +1,7 @@
 import request from 'supertest';
-import { app } from '../index.js'; // Import only app
-import { pool } from '../db/pool.js'; 
+import { app, server, io } from '../index.js'; // Import app, server, io
+import { pool } from '../db/pool.js';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals'; // Add afterAll
 
 describe('Poker Routes (/api/poker)', () => {
   // Variables needed across both contexts
@@ -65,11 +66,11 @@ describe('Poker Routes (/api/poker)', () => {
         expect(publicRoomId).toBeDefined();
         const res = await request(app)
           .post(`/api/poker/rooms/${publicRoomId}/verify-password`) // Use correct prefix
-          .send({ password: '' }); 
+          .send({ password: '' });
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('valid', true);
      });
-     
+
      it('POST /api/poker/rooms/:roomId/verify-password - should fail for non-existent room', async () => {
         const nonExistentRoomId = 'non-existent-room';
         const res = await request(app)
@@ -82,7 +83,7 @@ describe('Poker Routes (/api/poker)', () => {
      // GET /api/poker/rooms is public now
      it('GET /api/poker/rooms - should succeed without authentication', async () => {
         const res = await request(app).get('/api/poker/rooms'); // Use correct prefix
-        expect(res.statusCode).toEqual(200); 
+        expect(res.statusCode).toEqual(200);
         expect(Array.isArray(res.body)).toBe(true);
       });
 
@@ -180,15 +181,13 @@ describe('Poker Routes (/api/poker)', () => {
           .post('/api/poker/rooms') // Use correct prefix
           .set('Authorization', `Bearer ${authToken}`)
           .send({
-            roomId: createdAuthRoomId, 
+            roomId: createdAuthRoomId,
             name: 'Duplicate WS Room Auth',
             workspaceId: testWorkspaceId,
           });
         expect(res.statusCode).toEqual(400);
         expect(res.body).toHaveProperty('error', 'Room already exists');
     });
-
-    // Removed redundant test case that was covered by the next one
 
     it('GET /api/poker/rooms - authenticated WITHOUT header should get only public rooms', async () => {
         const res = await request(app)
@@ -257,7 +256,12 @@ describe('Poker Routes (/api/poker)', () => {
      // Add more authenticated tests here if needed
 
   });
+
+  // Teardown: Close server, io, pool
+  afterAll(async () => {
+    io.close();
+    await new Promise(resolve => server.close(resolve));
+    await pool.end();
+  });
+
 });
-
-
-

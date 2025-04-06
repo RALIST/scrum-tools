@@ -1,16 +1,8 @@
-import logger  from '../logger.js'; // Import the logger
-
-/**
- * Centralized Express error handling middleware.
- * 
- * @param {Error} err - The error object.
- * @param {import('express').Request} req - The Express request object.
- * @param {import('express').Response} res - The Express response object.
 import logger from '../logger.js'; // Import the logger
 
 /**
  * Centralized Express error handling middleware.
- * 
+ *
  * @param {Error} err - The error object.
  * @param {import('express').Request} req - The Express request object.
  * @param {import('express').Response} res - The Express response object.

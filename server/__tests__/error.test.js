@@ -1,6 +1,7 @@
 import request from 'supertest';
-import { app } from '../index.js'; // Import app
+import { app } from '../index.js'; // Import only app
 
+import { describe, it, expect } from '@jest/globals'; // Remove unused afterAll
 describe('Error Handler Middleware', () => {
 
   it('should return 500 and generic message for unexpected errors', async () => {
@@ -23,6 +24,7 @@ describe('Error Handler Middleware', () => {
     expect(res.body).toHaveProperty('message', 'Simulated bad request error');
     expect(res.body).not.toHaveProperty('stack');
   });
+
 
   // Note: Testing the NODE_ENV === 'development' stack trace requires setting the env var
   // You might need a separate test script or setup for that.

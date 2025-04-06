@@ -55,6 +55,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
     clientSocket2?.close();
     io.close();
     await new Promise(resolve => httpServer.close(resolve));
+    await pool.end(); // Close the database pool
   });
 
   // --- Anonymous Access Tests ---
@@ -269,8 +270,8 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       });
     });
 
-    // --- REVISED TEST ---
-    it('should handle error during updateSettings', async () => { // Made async for await request
+    // Test for invalid sequence type
+    it('should handle error during updateSettings (invalid sequence type)', async () => {
       const userName = 'AnonSettingsErrorUser';
       const invalidSettings = { sequence: 'invalid-sequence' };
       const testSpecificRoomId = `settings-error-test-${Date.now()}`; // Unique ID
@@ -338,7 +339,61 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
          });
       });
     });
-    // --- END REVISED TEST ---
+
+    // --- NEW TEST: Invalid password type ---
+    it('should ignore invalid password type during updateSettings', async () => {
+        const userName = 'AnonSettingsPwdTypeErrorUser';
+        const invalidSettings = { password: 12345 }; // Invalid type
+        const testSpecificRoomId = `settings-pwd-type-test-${Date.now()}`;
+
+        // Create the room via API
+        const resCreate = await request(app)
+            .post('/api/poker/rooms')
+            .send({ roomId: testSpecificRoomId, name: 'Isolated Pwd Type Test Room' });
+        expect(resCreate.statusCode).toEqual(200);
+
+        await new Promise((resolve, reject) => {
+            let errorTimeout;
+
+            const errorHandler = (err) => {
+                clearTimeout(errorTimeout);
+                clientSocket1.off('error', errorHandler);
+                clientSocket1.off('settingsUpdated', settingsUpdatedHandler);
+                reject(new Error(`Received unexpected error: ${err.message}`)); // Fail on any error
+            };
+
+            const settingsUpdatedHandler = (data) => {
+                clearTimeout(errorTimeout);
+                 clientSocket1.off('error', errorHandler);
+                 clientSocket1.off('settingsUpdated', settingsUpdatedHandler);
+                try {
+                    // Expect password status NOT to have changed (still false)
+                    expect(data.settings.hasPassword).toBe(false);
+                    resolve(); // Test passed
+                } catch (e) {
+                    reject(e);
+                }
+            };
+
+            clientSocket1.on('error', errorHandler);
+            clientSocket1.on('settingsUpdated', settingsUpdatedHandler);
+
+            clientSocket1.emit('joinRoom', { roomId: testSpecificRoomId, userName });
+            clientSocket1.once('roomJoined', () => {
+                clientSocket1.emit('updateSettings', {
+                    roomId: testSpecificRoomId,
+                    settings: invalidSettings
+                });
+                errorTimeout = setTimeout(() => {
+                    clientSocket1.off('error', errorHandler);
+                    clientSocket1.off('settingsUpdated', settingsUpdatedHandler);
+                    reject(new Error('Timeout waiting for settingsUpdated event after invalid password type'));
+                }, 1500);
+            });
+             clientSocket1.on('connect_error', (err) => reject(err));
+        });
+    });
+    // --- END NEW TEST ---
 
 
       it('should remove participant on disconnect', (done) => {

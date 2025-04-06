@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { app } from '../index.js'; // Import only app
+import { app, server, io } from '../index.js'; // Import app, server, io
 import { pool } from '../db/pool.js';
 
 describe('Velocity Routes (/api/velocity)', () => {
@@ -41,8 +41,10 @@ describe('Velocity Routes (/api/velocity)', () => {
     createdAnonSprintId = sprintRes.body.id;
   });
 
-  // Close DB pool after all tests
+  // Close server, io, pool after all tests
   afterAll(async () => {
+    io.close();
+    await new Promise(resolve => server.close(resolve));
     await pool.end();
   });
 

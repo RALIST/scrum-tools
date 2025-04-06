@@ -2,13 +2,12 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import pokerRoutes from './routes/poker.js';
-import retroRoutes from './routes/retro.js';
-import velocityRoutes from './routes/velocity.js';
-import authRoutes from './routes/auth.js';
-import workspaceRoutes from './routes/workspaces.js';
+import setupPokerRoutes from './routes/poker.js'; // Import setup function
+import setupRetroRoutes from './routes/retro.js'; // Import setup function
+import setupVelocityRoutes from './routes/velocity.js'; // Import setup function
+import setupAuthRoutes from './routes/auth.js'; // Import setup function
+import setupWorkspaceRoutes from './routes/workspaces.js'; // Import setup function
 import { authenticateToken } from './middleware/auth.js'; // Import auth middleware
-
 import { initializePokerSocket } from './sockets/poker.js';
 import { initializeRetroSocket } from './sockets/retro.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
@@ -19,6 +18,12 @@ import dotenv from 'dotenv'; // Import dotenv for environment variable managemen
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { initializePool } from './db/pool.js'; // Import the pool initialization function
+// Import the actual database functions to inject
+import * as retroDb from './db/retro.js';
+import * as userDb from './db/users.js';
+import * as pokerDb from './db/poker.js'; // Import poker DB functions
+import * as velocityDb from './db/velocity.js'; // Import velocity DB functions
+import * as workspaceDb from './db/workspaces.js'; // Import workspace DB functions
 
 // Create proper __dirname equivalent for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -44,12 +49,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/workspaces', workspaceRoutes);
-app.use('/api/poker', optionalAuthenticateToken, pokerRoutes);
-app.use('/api/retro', optionalAuthenticateToken, retroRoutes);
-app.use('/api/velocity', optionalAuthenticateToken, velocityRoutes);
+// Mount routes, injecting dependencies
+app.use('/api/auth', setupAuthRoutes(userDb));
+// Inject all required DB dependencies for workspaces
+app.use('/api/workspaces', authenticateToken, setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb));
+app.use('/api/poker', optionalAuthenticateToken, setupPokerRoutes(pokerDb)); // Inject pokerDb
+app.use('/api/retro', optionalAuthenticateToken, setupRetroRoutes(retroDb));
+// Inject velocityDb and workspaceDb
+app.use('/api/velocity', optionalAuthenticateToken, setupVelocityRoutes(velocityDb, workspaceDb));
 
 const server = createServer(app);
 const io = new Server(server, {
