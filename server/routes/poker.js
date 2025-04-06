@@ -1,9 +1,5 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-// import { pool } from '../db/pool.js'; // Removed pool import
-// Removed direct DB imports
-// import { createRoom, getRooms, getRoom, getWorkspaceRooms, getPokerRoomInfo } from '../db/poker.js';
-import logger from '../logger.js';
 
 // Wrap routes in a setup function that accepts db dependency
 export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspaceDb dependency
@@ -20,23 +16,18 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
 
             // Workspace Mode
             if (userId && workspaceId) {
-                logger.info(`Fetching poker rooms for workspace: ${workspaceId}, user: ${userId}`);
                 // Check if user is a member of the workspace
                 const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
                 if (!isMember) {
-                    logger.warn(`User ${userId} attempted to access poker rooms for workspace ${workspaceId} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to access rooms for this workspace.' });
                 }
                 // Use injected dependency
                 rooms = await pokerDb.getWorkspaceRooms(workspaceId);
-                logger.info(`Found ${rooms.length} rooms for workspace ${workspaceId}`);
             }
             // Public/Anonymous Mode
             else {
-                logger.info('Fetching public poker rooms');
                 // Use injected dependency
                 rooms = await pokerDb.getRooms();
-                logger.info(`Found ${rooms.length} public rooms`);
             }
 
             const roomList = rooms.map(room => ({
@@ -50,7 +41,6 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
             }));
             res.json(roomList);
         } catch (error) {
-            logger.error('Error getting rooms:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.headers['workspace-id'] });
             next(error);
         }
     });
@@ -63,12 +53,10 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
             // If workspaceId is provided, ensure the user is authenticated and a member
             if (workspaceId) {
                 if (!userId) {
-                    logger.warn(`Anonymous user attempted to create a poker room in workspace ${workspaceId}.`);
                     return res.status(401).json({ error: 'Authentication required to create a workspace room.' });
                 }
                 const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
                 if (!isMember) {
-                    logger.warn(`User ${userId} attempted to create a poker room in workspace ${workspaceId} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to create a room in this workspace.' });
                 }
             }
@@ -90,7 +78,6 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
                 sequence: sequence || 'fibonacci',
             });
         } catch (error) {
-            console.error('Error creating room:', error);
             next(error);
         }
     });
@@ -114,7 +101,6 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
             const isValid = await bcrypt.compare(password, room.password);
             res.json({ valid: isValid });
         } catch (error) {
-            console.error('Error verifying password:', error);
             next(error);
         }
     });
@@ -122,18 +108,14 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
     // New endpoint to get basic info for a specific room
     router.get('/rooms/:roomId/info', async (req, res, next) => {
         const { roomId } = req.params;
-        logger.info(`Fetching info for poker room: ${roomId}`);
         try {
             // Use injected dependency
             const roomInfo = await pokerDb.getPokerRoomInfo(roomId);
             if (!roomInfo) {
-                logger.warn(`Room info request failed: Room ${roomId} not found.`);
                 return res.status(404).json({ error: 'Room not found' });
             }
-            logger.info(`Found info for room ${roomId}:`, roomInfo);
             res.json(roomInfo);
         } catch (error) {
-            logger.error(`Error fetching info for room ${roomId}:`, { error: error.message, stack: error.stack });
             next(error);
         }
     });

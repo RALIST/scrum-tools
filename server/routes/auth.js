@@ -3,7 +3,6 @@ import jsonwebtoken from 'jsonwebtoken';
 // import { pool } from '../db/pool.js'; // Removed pool import
 // Removed direct DB imports
 // import { createUser, getUserByEmail, updateLastLogin, verifyPassword } from '../db/users.js';
-import logger from '../logger.js'; // Import the logger
 // Import the middleware we need
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -49,7 +48,6 @@ export default function setupAuthRoutes(userDb) {
         if (error.message === 'User already exists') {
           return res.status(409).json({ error: 'User already exists' });
         }
-        logger.error('Registration error:', { error: error.message, stack: error.stack, email: req.body.email });
         next(error);
       }
     });
@@ -97,7 +95,6 @@ export default function setupAuthRoutes(userDb) {
           token,
         });
       } catch (error) {
-        logger.error('Login error:', { error: error.message, stack: error.stack, email: req.body.email });
         next(error);
       }
     });

@@ -1,14 +1,10 @@
 import request from 'supertest';
-import express from 'express'; // Import express for test app setup
+import express from 'express';
 import { pool } from '../db/pool.js';
-// Import the setup function for the routes
 import setupAuthRoutes from '../routes/auth.js';
-// Import the actual db functions module
-import * as userDb from '../db/users.js';
-// Import necessary functions from Jest globals for ESM (if needed, often implicit)
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 // Import the main app's server/io for teardown if needed, and app for middleware tests
-import { app as mainApp, server as mainServer, io as mainIo } from '../index.js';
+import { app as mainApp, server, io } from '../index.js';
 // Import bcryptjs for hashing in tests
 import bcrypt from 'bcryptjs';
 
@@ -27,7 +23,6 @@ testApp.use(express.json()); // Add middleware needed by routes
 testApp.use('/api/auth', setupAuthRoutes(mockUserDb));
 // Add a dummy error handler for testing 500 errors
 testApp.use((err, req, res, next) => {
-    console.error("Test App Error Handler:", err.message); // Log error in test context
     res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
 });
 // Note: The dummy /api/test-auth route is NOT part of testApp, it remains on mainApp
@@ -48,12 +43,9 @@ describe('Auth Routes', () => {
     mockUserDb.verifyPassword.mockReset();
   });
 
-  // Close the main server and io instance after all tests are done
-  // Also close DB pool
   afterAll(async () => {
-    mainIo.close();
-    await new Promise(resolve => mainServer.close(resolve));
-    await pool.end();
+    await pool.end(); // Close the database pool
+    server.close(); // Close the server
   });
 
   // Test user registration

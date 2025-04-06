@@ -1,5 +1,3 @@
-import logger from '../logger.js'; // Import the logger
-
 /**
  * Centralized Express error handling middleware.
  *
@@ -9,14 +7,6 @@ import logger from '../logger.js'; // Import the logger
  * @param {import('express').NextFunction} next - The Express next middleware function.
  */
 const errorHandler = (err, req, res, next) => {
-    // Log the error using the logger
-    logger.error('Error caught by errorHandler:', {
-        message: err.message,
-        stack: err.stack, // Winston automatically handles stack traces for Error objects
-        path: req.path,
-        method: req.method,
-        // You might want to add more context like user ID if available
-    });
 
     // Determine the status code
     // Use err.statusCode if it's set (e.g., by custom error classes), otherwise default to 500

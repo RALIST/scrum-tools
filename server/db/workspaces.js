@@ -1,6 +1,6 @@
 import { pool as defaultPool } from './pool.js'; // Rename default import
 import { v4 as uuidv4 } from 'uuid';
-import { velocityUtils } from './velocity.js'; // Import the velocityUtils object
+import * as velocityDb from './velocity.js'; // Import velocityDb namespace
 import crypto from 'crypto'; // Import the full crypto module
 
 // Create a new workspace
@@ -30,7 +30,8 @@ export const createWorkspace = async (name, description, ownerId) => { // Remove
     // Pass the existing client and the workspace name to createTeam
     // Use injected _createTeam, passing the client and executeQuery from the client
     const dbExecutor = (queryText, params) => client.query(queryText, params);
-    await velocityUtils.createTeam(defaultTeamId, name, null, id, null, client, dbExecutor); // Use velocityUtils.createTeam
+    // createTeam now handles its own execution, just pass necessary args + client for transaction
+    await velocityDb.createTeam(defaultTeamId, name, null, id, null, client);
 
     // Commit transaction
     await client.query('COMMIT');

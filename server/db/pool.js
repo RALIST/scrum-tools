@@ -1,12 +1,10 @@
 import pg from 'pg'
 import logger from '../logger.js'; // Import the logger
-
 const { Pool } = pg;
 let pool;
 
-// Initialize function that you can call after environment variables are loaded
-function initializePool() {
-    logger.info("Connecting to production database", process.env.DB_HOST);
+// Initialize pool immediately when the module loads
+export const initializePool = () => {
     pool = new Pool({
         user: process.env.DB_USER || '',
         host: process.env.DB_HOST || 'localhost',
@@ -27,14 +25,14 @@ function initializePool() {
         .catch(err => {
             logger.error('Error connecting to the database:', { stack: err.stack });
         });
-}
+};
 
-// Add event listener for process termination
-process.on('SIGINT', async () => {
-    // Use logger.info
-    logger.info('Closing database pool...');
-    await pool.end();
-    process.exit(0);
-});
+// Call initialize immediately
+initializePool();
 
-export { pool, initializePool };
+// SIGINT handler removed - Jest global teardown handles pool closure for tests.
+// For regular application shutdown, a more robust mechanism might be needed
+// depending on the deployment strategy (e.g., in server shutdown logic).
+
+// Export only the initialized pool
+export { pool };

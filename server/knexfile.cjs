@@ -3,15 +3,11 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 const env = process.env.NODE_ENV || 'development'; // Default to development if not set
-console.log(`Current environment: ${env}`);
 if (env == "development") {
    dotenv.config({ path: path.join(__dirname, '.env.development') });
-   console.log('Development environment variables loaded from .env.development');
 } else if (env == "production") {
    dotenv.config({ path: path.join(__dirname, '.env') });
-   console.log('Production environment variables loaded from .env');
 } else {
-   console.warn('No environment variables loaded. Using default environment variables if available.');
 }
 
 // Knex configuration object

@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express'; // Import express for test app setup
 import { app as mainApp, server, io } from '../index.js'; // Import main app for setup, io/server for teardown
-import { pool } from '../db/pool.js';
+import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
@@ -32,6 +32,7 @@ const mockPokerDb = {
 const mockRetroDb = {
     getWorkspaceRetroBoards: jest.fn(),
 };
+// Revert mockVelocityDb to direct function mock
 const mockVelocityDb = {
     getWorkspaceVelocityTeams: jest.fn(),
 };
@@ -90,7 +91,6 @@ describe('Workspaces Routes (Unit/Mock Tests)', () => { // Renamed describe bloc
 
     // Add a dummy error handler
     testApp.use((err, req, res, next) => {
-        console.error("Test App Error Handler:", err.message);
         res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
     });
 
@@ -110,17 +110,11 @@ describe('Workspaces Routes (Unit/Mock Tests)', () => { // Renamed describe bloc
     Object.values(mockUserDb).forEach(mockFn => mockFn.mockReset());
     Object.values(mockPokerDb).forEach(mockFn => mockFn.mockReset());
     Object.values(mockRetroDb).forEach(mockFn => mockFn.mockReset());
-    Object.values(mockVelocityDb).forEach(mockFn => mockFn.mockReset());
+    Object.values(mockVelocityDb).forEach(mockFn => mockFn.mockReset()); // Reset direct mock
   });
 
-  // Close server/pool used by registerAndLoginUser
   afterAll(async () => {
-    if (server && server.listening) {
-      await new Promise(resolve => server.close(resolve));
-    }
-    if (io) {
-        io.close();
-    }
+    server.close(); // Close the server
     await pool.end();
   });
 
@@ -423,7 +417,7 @@ describe('Workspaces Routes (Unit/Mock Tests)', () => { // Renamed describe bloc
       expect(res.statusCode).toEqual(500);
       expect(res.body).toHaveProperty('error', 'Internal Server Error');
       expect(mockWorkspaceDb.getUserWorkspaceRole).toHaveBeenCalledWith(testWorkspaceId, ownerInfo.userId); // Removed pool expectation
-      expect(mockVelocityDb.getWorkspaceVelocityTeams).toHaveBeenCalledWith(testWorkspaceId);
+      expect(mockVelocityDb.getWorkspaceVelocityTeams).toHaveBeenCalledWith(testWorkspaceId); // Check direct mock call
   });
 
   it('GET /api/workspaces/:id/velocity-teams - should fail if user is not a member', async () => {

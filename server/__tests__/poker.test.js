@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express'; // Import express for test app setup
 import { app as mainApp, server, io } from '../index.js'; // Import main app for setup, io/server for teardown
-import { pool } from '../db/pool.js';
+import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
 import bcrypt from 'bcryptjs'; // Import bcrypt
 // Import necessary functions from Jest globals for ESM
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
@@ -96,7 +96,6 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
     // Add a dummy error handler for testing 500 errors on testApp
     testApp.use((err, req, res, next) => {
-        console.error("Test App Error Handler:", err.message); // Log error in test context
         res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
     });
 
@@ -124,16 +123,9 @@ describe('Poker Routes (/api/poker) with DI', () => {
     Object.values(mockWorkspaceDb).forEach(mockFn => mockFn.mockReset());
   });
 
-  // Close server, io, pool after all tests
   afterAll(async () => {
-    // Ensure server is closed before ending the pool
-    if (server && server.listening) {
-      await new Promise(resolve => server.close(resolve));
-    }
-    if (io) {
-        io.close();
-    }
-    await pool.end(); // Close DB pool
+    server.close(); // Close the server
+    await pool.end();
   });
 
   // --- Anonymous Access Tests ---

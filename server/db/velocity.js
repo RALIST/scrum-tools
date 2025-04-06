@@ -1,10 +1,8 @@
-import { dbUtils } from './dbUtils.js'; // Import the dbUtils object
-import { pool } from './pool.js'; // Import the pool
+import { executeQuery } from './dbUtils.js'; // Import executeQuery directly
 import bcrypt from 'bcryptjs';
-import logger from '../logger.js';
 
 // Add client as the last optional parameter
-const _createTeam = async (id, name, password, workspaceId = null, createdBy = null, client = null) => { // Renamed internally
+export const createTeam = async (id, name, password, workspaceId = null, createdBy = null, client = null) => { // Export directly, remove dbExecutor param
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
     // Use the correct column name 'password' from the schema
@@ -16,25 +14,20 @@ const _createTeam = async (id, name, password, workspaceId = null, createdBy = n
     const params = [id, name, passwordHash, workspaceId, createdBy];
 
     // Pass the client (which might be null) to executeQuery
-    logger.info(`DEBUG: About to execute INSERT query for team '${name}' (id: ${id}).`); // DEBUG LOG
-    const result = await dbUtils.executeQuery(queryText, params, client); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params, client); // Use imported executeQuery
 
     // Add check and logging
     if (!result || !result.rows || result.rows.length === 0) {
-        // Use the logger imported at the top
-        logger.error(`Failed to create team '${name}' (id: ${id}). INSERT query did not return the created row. Result:`, result);
         return null; // Return null
     }
-    // Use the logger imported at the top
-    logger.info(`Successfully created team in DB: ${JSON.stringify(result.rows[0])}`);
     return result.rows[0];
 };
 
-const _getTeam = async (name, password) => { // Renamed internally
+export const getTeam = async (name, password) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     const queryText = 'SELECT * FROM teams WHERE name = $1'; // Select hash to verify
     const params = [name];
-    const teamResult = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const teamResult = await executeQuery(queryText, params); // Use imported executeQuery
 
     if (teamResult.rows.length === 0) {
         return null; // Team not found
@@ -79,7 +72,7 @@ const _getTeam = async (name, password) => { // Renamed internally
     return teamData;
 };
 
-const _getTeamByWorkspace = async (name, workspaceId) => { // Renamed internally
+export const getTeamByWorkspace = async (name, workspaceId) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     const queryText = `
         SELECT id, name, workspace_id, created_by, created_at
@@ -87,29 +80,29 @@ const _getTeamByWorkspace = async (name, workspaceId) => { // Renamed internally
         WHERE name = $1 AND workspace_id = $2
     `; // Exclude password_hash
     const params = [name, workspaceId];
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
 
     // Return the found team or null
     return result.rows[0] || null; 
 };
 
-const _getTeamById = async (teamId) => { // Renamed internally
+export const getTeamById = async (teamId) => { // Export directly, remove dbExecutor param
     const queryText = 'SELECT * FROM teams WHERE id = $1'; // Fetch all columns including password hash
     const params = [teamId];
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows[0] || null;
 };
 
 
-const _getSprintById = async (sprintId) => { // Renamed internally
+export const getSprintById = async (sprintId) => { // Export directly, remove dbExecutor param
     const queryText = 'SELECT * FROM sprints WHERE id = $1';
     const params = [sprintId];
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows[0] || null;
 };
 
 
-const _createSprint = async (id, teamId, name, startDate, endDate) => { // Renamed internally
+export const createSprint = async (id, teamId, name, startDate, endDate) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     const queryText = `
         INSERT INTO sprints (id, team_id, name, start_date, end_date)
@@ -117,11 +110,11 @@ const _createSprint = async (id, teamId, name, startDate, endDate) => { // Renam
         RETURNING *
     `;
     const params = [id, teamId, name, startDate, endDate];
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows[0];
 };
 
-const _updateSprintVelocity = async (sprintId, committedPoints, completedPoints) => { // Renamed internally
+export const updateSprintVelocity = async (sprintId, committedPoints, completedPoints) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     const queryText = `
         INSERT INTO sprint_velocity (sprint_id, committed_points, completed_points)
@@ -131,15 +124,15 @@ const _updateSprintVelocity = async (sprintId, committedPoints, completedPoints)
         RETURNING sprint_id, committed_points, completed_points, created_at 
     `; // Return specific fields including sprint_id
     const params = [sprintId, committedPoints, completedPoints];
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows[0];
 };
 
-const _getTeamVelocity = async (name, password, __getTeam = _getTeam) => { // Renamed internally and dependency
+export const getTeamVelocity = async (name, password, _getTeam = getTeam) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     // First verify team and password using the updated getTeam function
     // Use the injected _getTeam function and pass the dbExecutor along
-    const team = await __getTeam(name, password); // Use renamed internal dependency
+    const team = await _getTeam(name, password); // Internal call doesn't need dbExecutor
     // No need to check if team is null here, getTeam handles it by throwing
 
     const queryText = `
@@ -153,15 +146,12 @@ const _getTeamVelocity = async (name, password, __getTeam = _getTeam) => { // Re
         LIMIT 10
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows;
 };
 
-const _getTeamVelocityByWorkspace = async (name, workspaceId, __getTeamByWorkspace = _getTeamByWorkspace) => { // Renamed internally and dependency
-    // Use executeQuery
-    // Verify team exists in this workspace
-    // Use the injected _getTeamByWorkspace function and pass the dbExecutor along
-    const team = await __getTeamByWorkspace(name, workspaceId); // Use renamed internal dependency
+export const getTeamVelocityByWorkspace = async (name, workspaceId, _getTeamByWorkspace = getTeamByWorkspace) => { // Export directly, remove dbExecutor param
+    const team = await _getTeamByWorkspace(name, workspaceId); // Internal call doesn't need dbExecutor
     if (!team) {
         return null; // Or throw an error if preferred
     }
@@ -177,25 +167,25 @@ const _getTeamVelocityByWorkspace = async (name, workspaceId, __getTeamByWorkspa
         LIMIT 10
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows;
 };
 
-const _getTeamAverageVelocity = async (name, password, __getTeam = _getTeam) => { // Renamed internally and dependency
+export const getTeamAverageVelocity = async (name, password, _getTeam = getTeam) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     // First verify team and password using the updated getTeam function
     // Use the injected _getTeam function and pass the dbExecutor along
-    const team = await __getTeam(name, password); // Use renamed internal dependency
+    const team = await _getTeam(name, password); // Internal call doesn't need dbExecutor
      // No need to check if team is null here
 
     const queryText = `
         SELECT
-            CAST(AVG(sv.completed_points) AS DECIMAL(10,2)) as average_velocity,
-            CAST(AVG(sv.committed_points) AS DECIMAL(10,2)) as average_commitment,
-            CAST(AVG(CASE 
-                       WHEN sv.committed_points IS NULL OR sv.committed_points = 0 THEN 0 -- Handle division by zero or null
-                       ELSE CAST(sv.completed_points AS FLOAT) / sv.committed_points * 100 
-                     END) AS DECIMAL(10,2)) as completion_rate
+            CAST(COALESCE(AVG(sv.completed_points), 0.00) AS DECIMAL(10,2)) as average_velocity,
+            CAST(COALESCE(AVG(sv.committed_points), 0.00) AS DECIMAL(10,2)) as average_commitment,
+            CAST(COALESCE(AVG(CASE
+                               WHEN sv.committed_points IS NULL OR sv.committed_points = 0 THEN 0 -- Handle division by zero or null
+                               ELSE CAST(sv.completed_points AS FLOAT) / sv.committed_points * 100
+                             END), 0.00) AS DECIMAL(10,2)) as completion_rate
         FROM sprints s
         LEFT JOIN sprint_velocity sv ON s.id = sv.sprint_id
         JOIN teams t ON s.team_id = t.id
@@ -203,28 +193,28 @@ const _getTeamAverageVelocity = async (name, password, __getTeam = _getTeam) => 
         AND sv.completed_points IS NOT NULL -- Only average completed sprints
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
 
-const _getTeamAverageVelocityByWorkspace = async (name, workspaceId, __getTeamByWorkspace = _getTeamByWorkspace) => { // Renamed internally and dependency
+export const getTeamAverageVelocityByWorkspace = async (name, workspaceId, _getTeamByWorkspace = getTeamByWorkspace) => { // Export directly, remove dbExecutor param
     // Use executeQuery
     // Verify team exists in this workspace
     // Use the injected _getTeamByWorkspace function and pass the dbExecutor along
-    const team = await __getTeamByWorkspace(name, workspaceId); // Use renamed internal dependency
+    const team = await _getTeamByWorkspace(name, workspaceId); // Internal call doesn't need dbExecutor
     if (!team) {
         return null; // Or throw an error
     }
 
     const queryText = `
         SELECT
-            CAST(AVG(sv.completed_points) AS DECIMAL(10,2)) as average_velocity,
-            CAST(AVG(sv.committed_points) AS DECIMAL(10,2)) as average_commitment,
-            CAST(AVG(CASE 
-                       WHEN sv.committed_points IS NULL OR sv.committed_points = 0 THEN 0 
-                       ELSE CAST(sv.completed_points AS FLOAT) / sv.committed_points * 100 
-                     END) AS DECIMAL(10,2)) as completion_rate
+            CAST(COALESCE(AVG(sv.completed_points), 0.00) AS DECIMAL(10,2)) as average_velocity,
+            CAST(COALESCE(AVG(sv.committed_points), 0.00) AS DECIMAL(10,2)) as average_commitment,
+            CAST(COALESCE(AVG(CASE
+                               WHEN sv.committed_points IS NULL OR sv.committed_points = 0 THEN 0
+                               ELSE CAST(sv.completed_points AS FLOAT) / sv.committed_points * 100
+                             END), 0.00) AS DECIMAL(10,2)) as completion_rate
         FROM sprints s
         LEFT JOIN sprint_velocity sv ON s.id = sv.sprint_id
         JOIN teams t ON s.team_id = t.id
@@ -232,13 +222,13 @@ const _getTeamAverageVelocityByWorkspace = async (name, workspaceId, __getTeamBy
         AND sv.completed_points IS NOT NULL
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
      // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
 
 // Get all velocity teams associated with a workspace
-const _getWorkspaceVelocityTeams = async (workspaceId) => { // Renamed internally
+export const getWorkspaceVelocityTeams = async (workspaceId) => { // Export directly, remove dbExecutor param
     const queryText = `
         SELECT 
             t.id, 
@@ -254,22 +244,8 @@ const _getWorkspaceVelocityTeams = async (workspaceId) => { // Renamed internall
         ORDER BY t.name ASC
     `;
     const params = [workspaceId];
-    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
+    const result = await executeQuery(queryText, params); // Use imported executeQuery
     return result.rows;
 };
 
-// Export an object containing all functions
-export const velocityUtils = {
-    createTeam: _createTeam,
-    getTeam: _getTeam,
-    getTeamByWorkspace: _getTeamByWorkspace,
-    getTeamById: _getTeamById,
-    getSprintById: _getSprintById,
-    createSprint: _createSprint,
-    updateSprintVelocity: _updateSprintVelocity,
-    getTeamVelocity: _getTeamVelocity,
-    getTeamVelocityByWorkspace: _getTeamVelocityByWorkspace,
-    getTeamAverageVelocity: _getTeamAverageVelocity,
-    getTeamAverageVelocityByWorkspace: _getTeamAverageVelocityByWorkspace,
-    getWorkspaceVelocityTeams: _getWorkspaceVelocityTeams,
-};
+// Removed object export

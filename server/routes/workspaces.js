@@ -1,18 +1,10 @@
 import express from 'express';
-// import { pool } from '../db/pool.js'; // Removed pool import
-// Removed direct DB imports
-// import { ... } from '../db/workspaces.js';
-// import { getUserByEmail } from '../db/users.js';
-// import { getWorkspaceRooms } from '../db/poker.js';
-// import { getWorkspaceRetroBoards } from '../db/retro.js';
-// import { getWorkspaceVelocityTeams } from '../db/velocity.js';
 import { authenticateToken } from '../middleware/auth.js';
-import logger from '../logger.js';
 
 // Wrap routes in a setup function that accepts db dependencies
-export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb) {
+export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb) { // Reverted injected dependency name
     const router = express.Router();
-    // Removed destructuring, will access directly
+    // No need to destructure or access via .velocityUtils anymore
 
     // Create a new workspace
     router.post('/', authenticateToken, async (req, res, next) => {
@@ -32,7 +24,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
           workspace,
         });
       } catch (error) {
-        logger.error('Create workspace error:', { error: error.message, stack: error.stack, userId: req.user?.userId, body: req.body });
         next(error);
       }
     });
@@ -46,7 +37,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
 
         res.json(workspaces);
       } catch (error) {
-        logger.error('Get workspaces error:', { error: error.message, stack: error.stack, userId: req.user?.userId });
         next(error);
       }
     });
@@ -63,7 +53,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }
         res.json(workspace);
       } catch (error) {
-        logger.error('Get workspace error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
         next(error);
       }
     });
@@ -94,7 +83,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
           workspace,
         });
       } catch (error) {
-        logger.error('Update workspace error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, body: req.body });
         next(error);
       }
     });
@@ -128,10 +116,8 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         });
       } catch (error) {
         if (error.code === '23505') {
-          logger.warn(`Attempt to add duplicate member: User ${req.body.email} to workspace ${req.params.id}`);
           return res.status(409).json({ error: 'User is already a member of this workspace.' });
         }
-        logger.error('Add member error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, body: req.body });
         next(error);
       }
     });
@@ -153,11 +139,9 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         // Use injected dependency
         const workspace = await workspaceDb.getWorkspaceById(workspaceId); // Removed pool
         if (!workspace) {
-          logger.error(`Workspace ${workspaceId} not found during member removal check by user ${userId}`);
           return res.status(404).json({ error: 'Workspace not found' });
         }
         if (workspace.owner_id === memberId) {
-          logger.warn(`User ${userId} attempted to remove owner ${memberId} from workspace ${workspaceId}`);
           return res.status(403).json({ error: 'Cannot remove the workspace owner.' });
         }
 
@@ -170,7 +154,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
           message: 'Member removed successfully',
         });
       } catch (error) {
-        logger.error('Remove member error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, memberId: req.params.memberId });
         next(error);
       }
     });
@@ -192,7 +175,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const members = await workspaceDb.getWorkspaceMembers(workspaceId); // Removed pool
         res.json(members);
       } catch (error) {
-        logger.error('Get members error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
         next(error);
       }
     });
@@ -224,7 +206,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }));
         res.json(roomList);
       } catch (error) {
-        logger.error('Get workspace rooms error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
         next(error);
       }
     });
@@ -255,7 +236,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }));
         res.json(boardList);
       } catch (error) {
-        logger.error('Get workspace retro boards error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
         next(error);
       }
     });
@@ -274,8 +254,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }
 
         // Use injected dependency from velocityDb
-        const teams = await velocityDb.velocityUtils.getWorkspaceVelocityTeams(workspaceId); // Access method via velocityDb.velocityUtils
-
+        const teams = await velocityDb.getWorkspaceVelocityTeams(workspaceId); // Use velocityDb namespace directly
         const teamList = teams.map(team => ({
           id: team.id,
           name: team.name,
@@ -284,7 +263,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }));
         res.json(teamList);
       } catch (error) {
-        logger.error('Get workspace velocity teams error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
         next(error);
       }
     });
@@ -301,19 +279,13 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         // Use injected dependency
         const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
         if (userRole !== 'admin') {
-          logger.warn(`User ${userId} attempted to create invite for workspace ${workspaceId} without admin rights.`);
           return res.status(403).json({ error: 'Forbidden: Only admins can create invitations.' });
         }
 
-        // Use injected dependency
-        // Pass pool, crypto is handled by default param in DB function
         const token = await workspaceDb.createInvitation(workspaceId, userId, roleToAssign, expiresInDays); // Removed pool
-
-        logger.info(`User ${userId} created invitation token for workspace ${workspaceId}`);
         res.status(201).json({ token });
 
       } catch (error) {
-        logger.error('Error creating workspace invitation:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id, body: req.body });
         next(error);
       }
     });
@@ -331,7 +303,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         // Use injected dependency
         const invitation = await workspaceDb.findValidInvitationByToken(token); // Removed pool
         if (!invitation) {
-          logger.warn(`User ${userId} attempted to use invalid/expired token: ${token}`);
           return res.status(400).json({ error: 'Invalid or expired invitation token.' });
         }
 
@@ -340,7 +311,6 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         // Use injected dependency
         const alreadyMember = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
         if (alreadyMember) {
-           logger.info(`User ${userId} tried to accept invite for workspace ${workspaceId} but is already a member.`);
            return res.status(200).json({ message: 'You are already a member of this workspace.', workspaceId });
         }
 
@@ -348,22 +318,15 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         await workspaceDb.addWorkspaceMember(workspaceId, userId, roleToAssign); // Removed pool
 
         // Use injected dependency
-        const marked = await workspaceDb.markInvitationAsUsed(invitationId, userId); // Removed pool
-        if (!marked) {
-            logger.warn(`Failed to mark invitation ${invitationId} as used for user ${userId}, possibly already used concurrently.`);
-        }
-
-        logger.info(`User ${userId} successfully joined workspace ${workspaceId} using token ${token}`);
+        await workspaceDb.markInvitationAsUsed(invitationId, userId); // Removed pool
         res.status(200).json({ message: 'Successfully joined workspace!', workspaceId });
 
       } catch (error) {
          if (error.code === '23505') {
-            logger.warn(`Error accepting invitation for user ${req.user?.userId} - likely already a member: ${error.message}`);
             // Need to re-fetch invitation to get workspaceId if add failed but find succeeded
             const invitation = await workspaceDb.findValidInvitationByToken(req.body.token).catch(() => null); // Removed pool
             return res.status(409).json({ message: 'You are already a member of this workspace.', workspaceId: invitation?.workspace_id });
          }
-        logger.error('Error accepting workspace invitation:', { error: error.message, stack: error.stack, userId: req.user?.userId, body: req.body });
         next(error);
       }
     });

@@ -1,14 +1,9 @@
 import request from 'supertest';
 import express from 'express'; // Import express for test app setup
-import { pool } from '../db/pool.js';
-// Import the setup function for the routes
 import setupRetroRoutes from '../routes/retro.js';
-// Import necessary functions from Jest globals for ESM
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
-
-// Helper function to register/login a user and get token
-// (Assuming this function exists and works as before, using the main app)
+import { pool } from '../db/pool.js';
 import { app as mainApp, server, io } from '../index.js'; // Import main app, server, io
 const registerAndLoginUser = async (emailSuffix) => {
     const email = `retro_di_user_${emailSuffix}_${Date.now()}@example.com`;
@@ -80,7 +75,6 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
     // Add a dummy error handler for testing 500 errors
     testApp.use((err, req, res, next) => {
-        console.error("Test App Error Handler:", err.message); // Log error in test context
         res.status(err.statusCode || 500).json({ error: err.statusCode ? err.message : 'Internal Server Error' });
     });
 
@@ -116,17 +110,11 @@ describe('Retro Routes (/api/retro) with DI', () => {
     mockWorkspaceDb.isWorkspaceMember.mockReset(); // Reset workspace mock too
   });
 
-  // Close server, io, pool after all tests
-  afterAll(async () => {
-    // Ensure server is closed before ending the pool
-    if (server && server.listening) {
-      await new Promise(resolve => server.close(resolve));
-    }
-    if (io) {
-        io.close();
-    }
-    await pool.end(); // Close DB pool
+ afterAll(async () => {
+    server.close(); // Close the server
+    await pool.end(); // Close the database pool
   });
+  // Note: If registerAndLoginUser uses the main server/pool, ensure global teardown handles it.
 
   // --- Anonymous Access Tests ---
   describe('Anonymous Access', () => {

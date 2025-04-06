@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app as mainApp, server, io } from '../index.js'; // Import main app for setup, io/server for teardown
-import { pool } from '../db/pool.js';
+import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
 import { jest, describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 // Import DB functions needed for direct setup/cleanup
 import { createWorkspace, addWorkspaceMember } from '../db/workspaces.js';
@@ -53,50 +53,12 @@ describe('Workspaces Routes (Integration Tests)', () => {
       // Add nonAdminInfo as a member directly
       await addWorkspaceMember(testWorkspaceId, nonAdminInfo.userId, 'member'); // addWorkspaceMember no longer takes pool
     } catch (err) {
-      console.error("Error during beforeAll setup:", err);
       throw err; // Fail fast if setup fails
     }
   });
 
   afterAll(async () => {
-    // Cleanup database before closing connections
-    if (testWorkspaceId) {
-      try {
-        // Delete members first (including owner, nonAdmin, and potentially others added)
-        await pool.query('DELETE FROM workspace_members WHERE workspace_id = $1', [testWorkspaceId]);
-        // Delete the default team (assuming name matches workspace name, adjust if needed)
-        // Delete the default team associated with the workspace created in beforeAll
-        const workspace = await pool.query('SELECT name FROM workspaces WHERE id = $1', [testWorkspaceId]); // Get name for default team
-        if (workspace.rows.length > 0) {
-            await pool.query('DELETE FROM teams WHERE workspace_id = $1 AND name = $2', [testWorkspaceId, workspace.rows[0].name]); // Correct table name
-        }
-         // Delete invitations linked to the workspace
-        await pool.query('DELETE FROM workspace_invitations WHERE workspace_id = $1', [testWorkspaceId]);
-         // Delete retro boards linked to the workspace
-        await pool.query('DELETE FROM retro_boards WHERE workspace_id = $1', [testWorkspaceId]);
-         // Delete poker rooms linked to the workspace
-        // Commented out because the table might not exist
-        // await pool.query('DELETE FROM poker_rooms WHERE workspace_id = $1', [testWorkspaceId]);
-        // Delete teams linked to the workspace
-        await pool.query('DELETE FROM teams WHERE workspace_id = $1', [testWorkspaceId]);
-        // Finally, delete the workspace
-        await pool.query('DELETE FROM workspaces WHERE id = $1', [testWorkspaceId]);
-      } catch (err) {
-        console.error("Error during afterAll cleanup:", err);
-      }
-    }
-
-    // Close server and io first
-    let serverClosePromise = Promise.resolve();
-    if (server && server.listening) {
-      serverClosePromise = new Promise(resolve => server.close(resolve));
-    }
-     if (io) {
-        io.close();
-    }
-    await serverClosePromise; // Wait for server to close
-
-    // End pool last
+    server.close(); // Close the server
     await pool.end();
   });
 

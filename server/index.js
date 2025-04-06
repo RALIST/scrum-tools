@@ -18,7 +18,6 @@ import dotenv from 'dotenv'; // Import dotenv for environment variable managemen
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { initializePool } from './db/pool.js'; // Import the pool initialization function
-// Import the actual database functions to inject
 import * as retroDb from './db/retro.js';
 import * as userDb from './db/users.js';
 import * as pokerDb from './db/poker.js'; // Import poker DB functions
@@ -30,18 +29,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const env = process.env.NODE_ENV || 'development';
-console.log(`Current environment: ${env}`);
 
 if (env == "development") {
    dotenv.config({ path: join(__dirname, '.env.development') });
-   console.log('Development environment variables loaded from .env.development');
 } else if (env == "production") {
    dotenv.config({ path: join(__dirname, '.env') });
-   console.log('Production environment variables loaded from .env');
 } else {
-   console.warn('No environment variables loaded. Using default environment variables if available.');
+   //console.warn('No environment variables loaded. Using default environment variables if available.');
 }
-
 
 initializePool(); // Initialize the database pool
 
@@ -52,11 +47,11 @@ app.use(express.json());
 // Mount routes, injecting dependencies
 app.use('/api/auth', setupAuthRoutes(userDb));
 // Inject all required DB dependencies for workspaces
-app.use('/api/workspaces', authenticateToken, setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb));
+app.use('/api/workspaces', authenticateToken, setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb)); // Pass velocityDb namespace
 app.use('/api/poker', optionalAuthenticateToken, setupPokerRoutes(pokerDb)); // Inject pokerDb
 app.use('/api/retro', optionalAuthenticateToken, setupRetroRoutes(retroDb, workspaceDb)); // Add workspaceDb injection
 // Inject velocityDb and workspaceDb
-app.use('/api/velocity', optionalAuthenticateToken, setupVelocityRoutes(velocityDb, workspaceDb));
+app.use('/api/velocity', optionalAuthenticateToken, setupVelocityRoutes(velocityDb, workspaceDb)); // Pass velocityDb namespace
 
 const server = createServer(app);
 const io = new Server(server, {

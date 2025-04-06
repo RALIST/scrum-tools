@@ -1,18 +1,4 @@
 import bcrypt from 'bcryptjs';
-// Removed direct DB imports, will use injected pokerDb
-// import {
-//     getRoom,
-//     addParticipant,
-//     updateParticipantName,
-//     updateParticipantVote,
-//     removeParticipant,
-//     getRooms,
-//     resetVotes,
-//     updateRoomSettings
-// } from '../db/poker.js';
-import logger from '../logger.js'; // Import the logger
-
-// This function handles events for an individual connected socket
 const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb dependency
     socket.on('joinRoom', async ({ roomId, userName, password }) => {
         try {
@@ -38,7 +24,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                     return;
                 }
             } else if (password) { // Room is public, but client sent a password (optional: treat as error or ignore)
-                 logger.warn(`Client ${socket.id} sent a password for public room ${roomId}. Ignoring.`);
                  // Or: socket.emit('error', { message: 'Password not required for this room' }); return;
             }
 
@@ -50,7 +35,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
             if (!(room.participants instanceof Map)) {
                  // If getRoom didn't return a Map (e.g., if it was null initially and logic changed), initialize it
                  // This case shouldn't happen based on current getRoom logic, but defensive check
-                 logger.warn(`Room ${roomId} participants was not a Map. Initializing.`);
                  room.participants = new Map();
             }
              room.participants.set(socket.id, { id: socket.id, name: userName, vote: null });
@@ -67,15 +51,8 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                 }
             });
 
-            logger.info(`${userName} (${socket.id}) joined poker room ${roomId}`);
 
         } catch (error) {
-            // Log the specific error encountered during the join process
-            logger.error(`Error during joinRoom for room ${roomId}, user ${userName}, socket ${socket.id}:`, {
-                message: error.message,
-                stack: error.stack,
-                // Optionally include more context if available, e.g., step where error occurred
-            });
             // Send a generic error message to the client
             socket.emit('error', { message: 'Failed to join room due to server error' });
         }
@@ -85,7 +62,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
         try {
             // Validate settings input
             if (settings.sequence !== undefined && !Array.isArray(settings.sequence)) {
-                logger.warn(`Invalid sequence type received for room ${roomId}: ${typeof settings.sequence}`);
                 // Emit the specific validation error and return
                 socket.emit('error', { message: 'Invalid settings format: sequence must be an array.' });
                 return;
@@ -98,10 +74,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                     hashedPassword = await bcrypt.hash(settings.password, 10);
                 } else if (settings.password === null || settings.password === '') {
                      hashedPassword = null; // Explicitly set to null to remove password
-                } else {
-                     // Handle invalid password type if necessary
-                     logger.warn(`Invalid password type received for room ${roomId}: ${typeof settings.password}`);
-                     // Decide if this should be an error or ignored
                 }
             }
 
@@ -111,7 +83,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
 
             // Check if room exists after update (might be redundant if updateRoomSettings ensures existence, but safe)
             if (!updatedRoom) {
-                 logger.error(`Room ${roomId} not found after attempting settings update.`);
                  // Handle case where room might have been deleted between update and get
                  socket.emit('error', { message: 'Room not found after update.' });
                  return;
@@ -125,9 +96,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                 }
             });
         } catch (error) {
-            // This catch block now handles errors from updateRoomSettings or getRoom
-            logger.error('Error during settings update process:', { roomId, settings, socketId: socket.id, error: error.message, stack: error.stack });
-            // Emit the actual error message caught from DB or other operations
             socket.emit('error', { message: error.message || 'Failed to update settings' });
         }
     });
@@ -141,9 +109,7 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                 participants: Array.from(room.participants.values()),
             });
 
-            logger.info(`User ${socket.id} changed name to ${newName} in poker room ${roomId}`);
         } catch (error) {
-            logger.error('Error changing poker participant name:', { roomId, newName, socketId: socket.id, error: error.message, stack: error.stack });
             socket.emit('error', { message: 'Failed to change name' });
         }
     });
@@ -157,7 +123,6 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                 participants: Array.from(room.participants.values()),
             });
         } catch (error) {
-            logger.error('Error recording poker vote:', { roomId, vote, socketId: socket.id, error: error.message, stack: error.stack });
             socket.emit('error', { message: 'Failed to record vote' });
         }
     });
@@ -176,26 +141,23 @@ const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb depend
                 participants: Array.from(room.participants.values())
             });
         } catch (error) {
-            logger.error('Error resetting poker votes:', { roomId, socketId: socket.id, error: error.message, stack: error.stack });
             socket.emit('error', { message: 'Failed to reset votes' });
         }
     });
 };
 
 // This function initializes the poker namespace and handles connections/disconnections
-export const initializePokerSocket = (pokerIo, pokerDb) => { // Add pokerDb dependency
-    pokerIo.on('connection', (socket) => {
+export const initializePokerSocket = (pokerIo, pokerDb) => { // Expecting the namespace instance (pokerIo)
+    pokerIo.on('connection', (socket) => { // Listen directly on the passed namespace instance
         // Log immediately upon connection to the /poker namespace
-        logger.info(`Socket connected to /poker namespace: ${socket.id}`);
 
         // Handle specific poker events for this socket
         // Pass pokerIo (the namespace object) to the event handler if it needs to emit globally within the namespace
-        handlePokerSocketEvents(pokerIo, socket, pokerDb); // Pass pokerDb
+        handlePokerSocketEvents(pokerIo, socket, pokerDb); // Pass the namespace instance (pokerIo)
         // Removed duplicate call: handlePokerSocketEvents(io, socket);
 
         // Handle disconnection
         socket.on('disconnect', async () => {
-            logger.info(`User disconnected from poker: ${socket.id}`);
             const roomId = socket.data.roomId; // Retrieve roomId stored during joinRoom
 
             if (roomId) {
@@ -206,19 +168,15 @@ export const initializePokerSocket = (pokerIo, pokerDb) => { // Add pokerDb depe
                     // Check if room still exists and has participants before emitting
                     if (updatedRoom && updatedRoom.participants) {
                          // Emit within the poker namespace
-                         pokerIo.to(roomId).emit('participantUpdate', {
+                         pokerIo.to(roomId).emit('participantUpdate', { // Emit via namespace instance (pokerIo)
                             participants: Array.from(updatedRoom.participants.values()),
                         });
-                        logger.info(`Removed participant ${socket.id} from poker room ${roomId}`);
                     } else {
-                        logger.info(`Poker room ${roomId} might be empty or deleted after participant ${socket.id} left.`);
                         // Optionally: Add logic here to delete the room if it's empty
                     }
                 } catch (error) {
-                    logger.error(`Error handling poker disconnect for socket ${socket.id} in room ${roomId}:`, { error: error.message, stack: error.stack });
                 }
             } else {
-                 logger.warn(`User ${socket.id} disconnected from poker without joining a specific room.`);
                  // Attempt to find the room if socket.data.roomId wasn't set (fallback, less efficient)
                  try {
                     const rooms = await pokerDb.getRooms(); // Use injected pokerDb
@@ -230,16 +188,14 @@ export const initializePokerSocket = (pokerIo, pokerDb) => { // Add pokerDb depe
                             const updatedFallbackRoom = await pokerDb.getRoom(room.id); // Use injected pokerDb
                              if (updatedFallbackRoom?.participants) {
                                  // Emit within the poker namespace
-                                pokerIo.to(room.id).emit('participantUpdate', {
+                                pokerIo.to(room.id).emit('participantUpdate', { // Emit via namespace instance (pokerIo)
                                     participants: Array.from(updatedFallbackRoom.participants.values()),
                                 });
-                                logger.info(`Fallback: Removed participant ${socket.id} from poker room ${room.id}`);
                             }
                             break;
                         }
                     }
                  } catch (error) {
-                     logger.error('Error during fallback disconnect handling for poker:', { socketId: socket.id, error: error.message, stack: error.stack });
                  }
             }
         });
