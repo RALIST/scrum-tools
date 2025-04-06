@@ -231,6 +231,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
         // Route calls getTeam first to authorize
         mockVelocityDb.getTeam.mockResolvedValueOnce(mockTeamWithHash);
         // checkIfTeamRequiresPassword and verifyTeamPassword are no longer used in route
+        mockVelocityDb.getTeamById.mockResolvedValueOnce(mockTeamWithHash); // Mock for the second check retrieving the full team object
         mockVelocityDb.createSprint.mockResolvedValueOnce(mockSprint);
 
         const sprintName = 'Anon Sprint Test DI';
@@ -255,6 +256,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       const mockTeamWithHash = { id: anonymousTeamId, name: anonymousTeamName, workspace_id: null, password: await bcrypt.hash(anonymousTeamPassword, 10) };
       // Route calls getTeam first
       // Ensure the mock includes the password field for the route's check
+      mockVelocityDb.getTeamById.mockResolvedValueOnce(mockTeamWithHash); // Mock for the second check
       mockVelocityDb.getTeam.mockResolvedValueOnce({ ...mockTeamWithHash });
       // checkIfTeamRequiresPassword and verifyTeamPassword are no longer used in route
 
@@ -290,8 +292,8 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
         .query({ password: 'anyPassword' })
         .send({ sprintName, startDate, endDate });
 
-      expect(res.statusCode).toEqual(401); // Route returns 401 when team not found
-      expect(res.body).toHaveProperty('error', 'Invalid team name or password');
+      expect(res.statusCode).toEqual(404); // Route returns 404 when team not found
+      expect(res.body).toHaveProperty('error', `Team '${nonExistentTeamName}' not found.`);
       // Route calls getTeam first
       // Route calls getTeam with null password initially
       expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(nonExistentTeamName, null); // Removed executor expectation

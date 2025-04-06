@@ -141,18 +141,15 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       const voteValue = '8';
       // Don't join a room first
       clientSocket1.emit('vote', { roomId: 'non-existent-room', vote: voteValue });
-      let errorReceived = false;
-      let errorTimeout; // Define timeout variable here
+      expect.assertions(1); // Expect the assertion in the listener to run
+      
       clientSocket1.on('error', (err) => {
-        clearTimeout(errorTimeout); // Clear timeout on error
+        
         expect(err.message).toEqual('Failed to record vote');
-        errorReceived = true;
+
         done();
       });
-      // Add a timeout in case the error event isn't emitted
-      errorTimeout = setTimeout(() => { // Assign timeout ID
-        if (!errorReceived) done(new Error('Timeout waiting for vote error'));
-      }, 1000);
+      // Rely on Jest's default timeout
     });
 
       it('should reveal votes', (done) => {
@@ -188,18 +185,15 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
     it('should handle error during resetVotes (e.g., invalid room)', (done) => {
       // Don't join a room first
       clientSocket1.emit('resetVotes', { roomId: 'non-existent-room' });
-      let errorReceived = false;
-      let errorTimeout; // Define timeout variable here
+      expect.assertions(1); // Expect the assertion in the listener to run
+      
       clientSocket1.on('error', (err) => {
-        clearTimeout(errorTimeout); // Clear timeout on error
+        
         expect(err.message).toEqual('Failed to reset votes'); // Reverted expectation
-        errorReceived = true;
+        
         done();
       });
-      // Add a timeout in case the error event isn't emitted
-      errorTimeout = setTimeout(() => { // Assign timeout ID
-         if (!errorReceived) done(new Error('Timeout waiting for resetVotes error'));
-      }, 1000);
+      // Rely on Jest's default timeout
     });
 
       it('should allow changing name', (done) => {
@@ -224,18 +218,16 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       const newName = 'AnonAliceFail B.';
       // Don't join a room first
       clientSocket1.emit('changeName', { roomId: 'non-existent-room', newName: newName });
-      let errorReceived = false;
-      let errorTimeout; // Define timeout variable here
+       // Expect the assertion in the listener to run
+      
       clientSocket1.on('error', (err) => {
-        clearTimeout(errorTimeout); // Clear timeout on error
+        
         expect(err.message).toEqual('Failed to change name');
-        errorReceived = true;
+        
+        done();
         // Removed duplicate done() call
       });
-      // Add a timeout in case the error event isn't emitted
-      errorTimeout = setTimeout(() => { // Assign timeout ID
-         if (!errorReceived) done(new Error('Timeout waiting for changeName error'));
-      }, 1000);
+      // Rely on Jest's default timeout
     });
 
     it('should update room settings (sequence and password)', async () => { // Made async for await request

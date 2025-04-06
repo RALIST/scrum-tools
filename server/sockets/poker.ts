@@ -125,7 +125,7 @@ const handlePokerSocketEvents = (
         } catch (error: any) {
             console.error(`Error changing name for ${socket.id} in room ${roomId}:`, error);
             // Send the specific error from the DB function if available, otherwise generic
-            socket.emit('error', { message: error.message || 'Failed to change name' } as SocketErrorPayload);
+            socket.emit('error', { message: 'Failed to change name' } as SocketErrorPayload);
         }
     });
 
@@ -144,7 +144,7 @@ const handlePokerSocketEvents = (
             });
         } catch (error: any) {
             console.error(`Error recording vote for ${socket.id} in room ${roomId}:`, error);
-            socket.emit('error', { message: error.message || 'Failed to record vote' } as SocketErrorPayload);
+            socket.emit('error', { message: 'Failed to record vote' } as SocketErrorPayload);
         }
     });
 
@@ -172,7 +172,7 @@ const handlePokerSocketEvents = (
             });
         } catch (error: any) {
             console.error(`Error resetting votes for room ${roomId}:`, error);
-            socket.emit('error', { message: error.message || 'Failed to reset votes' } as SocketErrorPayload);
+            socket.emit('error', { message: 'Failed to reset votes' } as SocketErrorPayload);
         }
     });
 
