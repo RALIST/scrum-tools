@@ -2,14 +2,11 @@ import { FC } from "react";
 import { Box } from "@chakra-ui/react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-// Keep Home, DailyStandup, Profile at top level for now
 import Home from "./pages/Home";
 import DailyStandup from "./pages/DailyStandup";
 import Profile from "./pages/Profile";
-// Update imports for moved pages
 import RetroBoard from "./pages/retro/RetroBoard";
 import RetroLanding from "./pages/retro/RetroLanding";
-import RetroBoardHistory from "./pages/retro/RetroBoardHistory";
 import PlanningPoker from "./pages/poker/PlanningPoker";
 import PlanningPokerRoom from "./pages/poker/PlanningPokerRoom";
 import TeamVelocity from "./pages/velocity/TeamVelocity";
@@ -85,14 +82,6 @@ const App: FC = () => {
                     element={
                       <PrivateRoute>
                         <WorkspaceDetail />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/retro/:boardId/history"
-                    element={
-                      <PrivateRoute>
-                        <RetroBoardHistory />
                       </PrivateRoute>
                     }
                   />

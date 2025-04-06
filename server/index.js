@@ -9,7 +9,6 @@ import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
 import { authenticateToken } from './middleware/auth.js'; // Import auth middleware
 
-import historyRoutes from './routes/history.js';
 import { initializePokerSocket } from './sockets/poker.js';
 import { initializeRetroSocket } from './sockets/retro.js';
 import { optionalAuthenticateToken } from './middleware/auth.js';
@@ -48,7 +47,6 @@ app.use(express.json());
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
-app.use('/api/history', historyRoutes);
 app.use('/api/poker', optionalAuthenticateToken, pokerRoutes);
 app.use('/api/retro', optionalAuthenticateToken, retroRoutes);
 app.use('/api/velocity', optionalAuthenticateToken, velocityRoutes);
