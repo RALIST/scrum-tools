@@ -82,12 +82,28 @@ const handlePokerSocketEvents = (io, socket) => {
 
     socket.on('updateSettings', async ({ roomId, settings }) => {
         try {
+            // Validate settings input
+            if (settings.sequence !== undefined && !Array.isArray(settings.sequence)) {
+                logger.warn(`Invalid sequence type received for room ${roomId}: ${typeof settings.sequence}`);
+                socket.emit('error', { message: 'Invalid settings format: sequence must be an array.' });
+                return;
+            }
+            // Add more validation if needed (e.g., check sequence elements)
+
             let hashedPassword = undefined
-            if (settings.password) {
-                hashedPassword = await bcrypt.hash(settings.password, 10)
+            if (settings.password !== undefined) { // Check if password key exists
+                if (typeof settings.password === 'string' && settings.password.length > 0) {
+                    hashedPassword = await bcrypt.hash(settings.password, 10);
+                } else if (settings.password === null || settings.password === '') {
+                     hashedPassword = null; // Explicitly set to null to remove password
+                } else {
+                     // Handle invalid password type if necessary
+                     logger.warn(`Invalid password type received for room ${roomId}: ${typeof settings.password}`);
+                     // Decide if this should be an error or ignored
+                }
             }
 
-            await updateRoomSettings(roomId, settings.sequence, hashedPassword)
+            await updateRoomSettings(roomId, settings.sequence, hashedPassword);
             const updatedRoom = await getRoom(roomId)
 
             io.to(roomId).emit('settingsUpdated', {

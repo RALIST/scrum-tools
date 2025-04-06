@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app, server, io } from '../index.js'; // Import io as well
-import { pool } from '../db/pool.js';
+import { pool } from '../db/pool.js'; 
 
 describe('Workspaces Routes', () => {
   let authToken;
@@ -235,10 +235,8 @@ describe('Workspaces Routes', () => {
       .send({ email: thirdUserEmail, role: 'editor' }); // Try adding again
 
     // Expecting a 409 Conflict based on the route handler's specific error check
-    expect(res.statusCode).toEqual(409);
+    expect(res.statusCode).toEqual(409); 
     expect(res.body).toHaveProperty('error', 'User is already a member of this workspace.');
-    // Check for a relevant error message if possible, e.g.:
-    // expect(res.body.error).toMatch(/already a member/i);
   });
 
   // Test getting members
@@ -256,7 +254,7 @@ describe('Workspaces Routes', () => {
     expect(owner).toBeDefined();
     expect(owner).toHaveProperty('role', 'admin');
     expect(member).toBeDefined();
-    expect(member).toHaveProperty('role', 'editor');
+    expect(member).toHaveProperty('role', 'editor'); // Role was 'editor' when added
   });
 
   it('GET /api/workspaces/:id/members - should fail if user is not a member', async () => {
@@ -304,10 +302,9 @@ describe('Workspaces Routes', () => {
       .delete(`/api/workspaces/${testWorkspaceId}/members/${userId}`)
       .set('Authorization', `Bearer ${authToken}`); // Admin token
 
-    // Expecting a failure, maybe 400 Bad Request or 403 Forbidden
-    expect(res.statusCode).toBeGreaterThanOrEqual(400);
-    // Add specific error message check if implemented
-    // expect(res.body.error).toMatch(/cannot remove owner/i);
+    // Expecting a failure, should be 403 Forbidden based on route logic
+    expect(res.statusCode).toEqual(403);
+    expect(res.body).toHaveProperty('error', 'Cannot remove the workspace owner.');
   });
 
   it('DELETE /api/workspaces/:id/members/:memberId - should fail for non-existent memberId', async () => {
@@ -316,10 +313,8 @@ describe('Workspaces Routes', () => {
       .delete(`/api/workspaces/${testWorkspaceId}/members/${nonExistentMemberId}`)
       .set('Authorization', `Bearer ${authToken}`); // Admin token
 
-    // The DB function might not throw an error, just affect 0 rows.
-    // The route doesn't explicitly check if rows were affected.
-    // So, it might return 200 OK even if no member was removed.
-    // For now, we'll expect 200, but this could be improved in the route.
+    // The route now checks owner, but not existence before calling DB.
+    // DB delete affects 0 rows, route returns 200. This is acceptable for now.
     expect(res.statusCode).toEqual(200);
     expect(res.body).toHaveProperty('message', 'Member removed successfully');
   });
@@ -362,14 +357,15 @@ describe('Workspaces Routes', () => {
     expect(res.body).toHaveProperty('error', 'You do not have access to this workspace');
   });
 
-  // Test getting velocity teams (should be empty initially)
-  it('GET /api/workspaces/:id/velocity-teams - should get empty velocity teams list', async () => {
+  // Test getting velocity teams (should have the default team)
+  it('GET /api/workspaces/:id/velocity-teams - should get default velocity team list', async () => {
     const res = await request(app)
       .get(`/api/workspaces/${testWorkspaceId}/velocity-teams`)
       .set('Authorization', `Bearer ${authToken}`);
     expect(res.statusCode).toEqual(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toEqual(1); // Expecting 1 because a default team is created with the workspace
+    expect(res.body.length).toEqual(1); // Expecting 1 because a default team is created
+    expect(res.body[0]).toHaveProperty('name'); // Check if the default team has a name
   });
 
   it('GET /api/workspaces/:id/velocity-teams - should fail if user is not a member', async () => {
@@ -396,13 +392,7 @@ describe('Workspaces Routes', () => {
   });
 
   it('POST /api/workspaces/:id/invitations - non-admin should not create an invitation token', async () => {
-     // First, add user 3 to the workspace as a non-admin member
-     await request(app)
-       .post(`/api/workspaces/${testWorkspaceId}/members`)
-       .set('Authorization', `Bearer ${authToken}`) // Admin adds user 3
-       .send({ email: thirdUserEmail, role: 'member' });
-
-     // Now user 3 tries to create an invite
+     // User 3 is already a member from a previous test
     const res = await request(app)
       .post(`/api/workspaces/${testWorkspaceId}/invitations`)
       .set('Authorization', `Bearer ${thirdAuthToken}`) // Use non-admin token
@@ -431,7 +421,7 @@ describe('Workspaces Routes', () => {
      expect(resVerify.statusCode).toEqual(200);
      const member = resVerify.body.find(m => m.id === secondUserId);
      expect(member).toBeDefined();
-     expect(member).toHaveProperty('role', 'member'); // Default role assigned
+     expect(member).toHaveProperty('role', 'member'); // Role assigned from invite
    });
 
    it('POST /api/workspaces/invitations/accept - should fail with invalid token', async () => {
@@ -456,20 +446,33 @@ describe('Workspaces Routes', () => {
     expect(res.body).toHaveProperty('error', 'Invalid or expired invitation token.');
   });
 
-  it('POST /api/workspaces/invitations/accept - should fail gracefully if user is already a member', async () => {
-    expect(generatedInviteToken).toBeDefined(); // Use the same token again
+  it('POST /api/workspaces/invitations/accept - should return OK if user is already a member (using valid token)', async () => {
+    // 1. Admin creates a new invite
+    const inviteRes = await request(app)
+      .post(`/api/workspaces/${testWorkspaceId}/invitations`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ roleToAssign: 'viewer' });
+    expect(inviteRes.statusCode).toEqual(201);
+    const newToken = inviteRes.body.token;
+    expect(newToken).toBeDefined();
 
-    // User 2 (already a member) tries to accept again
+    // 2. Ensure User 2 is a member (was added and accepted in previous tests)
+    const membersRes = await request(app)
+      .get(`/api/workspaces/${testWorkspaceId}/members`)
+      .set('Authorization', `Bearer ${authToken}`);
+    const user2IsMember = membersRes.body.some(m => m.id === secondUserId);
+    expect(user2IsMember).toBe(true);
+
+    // 3. User 2 tries to accept the *new* valid invite
     const res = await request(app)
       .post('/api/workspaces/invitations/accept')
-      .set('Authorization', `Bearer ${secondAuthToken}`)
-      .send({ token: generatedInviteToken });
+      .set('Authorization', `Bearer ${secondAuthToken}`) // User 2's token
+      .send({ token: newToken });
 
-    // API should return 400 because the token was already used in the previous successful accept test
-    expect(res.statusCode).toEqual(400);
-    expect(res.body).toHaveProperty('error', 'Invalid or expired invitation token.');
-    // expect(res.body).toHaveProperty('message', 'You are already a member of this workspace.'); // This message is returned if the token was VALID but user was member
-    // expect(res.body).toHaveProperty('workspaceId', testWorkspaceId);
+    // Expect success, but with a specific message indicating already a member
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('message', 'You are already a member of this workspace.');
+    expect(res.body).toHaveProperty('workspaceId', testWorkspaceId);
   });
 
    it('POST /api/workspaces/invitations/accept - should fail without authentication', async () => {
@@ -484,5 +487,14 @@ describe('Workspaces Routes', () => {
   });
 
 
-  // TODO: Add tests for permission checks (e.g., non-admin trying to update/remove)
+
+   it('POST /api/workspaces/invitations/accept - should fail without token in body', async () => {
+    const res = await request(app)
+      .post('/api/workspaces/invitations/accept')
+      .set('Authorization', `Bearer ${fourthAuthToken}`) // Any authenticated user
+      .send({}); // Empty body, no token
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body).toHaveProperty('error', 'Invitation token is required.');
+  });
 });

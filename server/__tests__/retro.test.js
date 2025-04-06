@@ -118,6 +118,17 @@ describe('Retro Routes (/api/retro)', () => {
       authToken = resRegister.body.token;
       userId = resRegister.body.user.id;
 
+
+
+    it('PUT /api/retro/:boardId/settings - should return 404 for non-existent board', async () => {
+      const nonExistentBoardId = 'non-existent-settings';
+      const res = await request(app)
+        .put(`/api/retro/${nonExistentBoardId}/settings`)
+        // No auth needed as it should 404 before auth check
+        .send({ defaultTimer: 500 });
+      expect(res.statusCode).toEqual(404);
+      expect(res.body).toHaveProperty('error', 'Board not found');
+    });
       // Create workspace
       const workspaceName = `Retro Auth Test Workspace ${Date.now()}`;
       const resWorkspace = await request(app)

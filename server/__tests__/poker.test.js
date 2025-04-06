@@ -245,6 +245,15 @@ describe('Poker Routes (/api/poker)', () => {
         expect(res.body).toHaveProperty('hasPassword', false); // Created without password in beforeAll
      });
 
+
+     it('GET /api/poker/rooms/:roomId/info - should return 404 for non-existent workspace room', async () => {
+        const res = await request(app)
+          .get(`/api/poker/rooms/non-existent-ws-room/info`)
+          .set('Authorization', `Bearer ${authToken}`);
+        expect(res.statusCode).toEqual(404);
+        expect(res.body).toHaveProperty('error', 'Room not found');
+     });
+
      // Add more authenticated tests here if needed
 
   });

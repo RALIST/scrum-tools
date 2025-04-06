@@ -7,6 +7,8 @@ import retroRoutes from './routes/retro.js';
 import velocityRoutes from './routes/velocity.js';
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
+import { authenticateToken } from './middleware/auth.js'; // Import auth middleware
+
 import historyRoutes from './routes/history.js';
 import { initializePokerSocket } from './sockets/poker.js';
 import { initializeRetroSocket } from './sockets/retro.js';
@@ -67,10 +69,30 @@ const retroIo = io.of('/retro');
 initializePokerSocket(pokerIo);
 initializeRetroSocket(retroIo);
 
+// --- Test Routes for Error Handling ---
+app.get('/api/test-error', (req, res, next) => {
+  // Simulate an unexpected error
+  next(new Error('Simulated unexpected error'));
+});
+
+app.get('/api/test-error-400', (req, res, next) => {
+  // Simulate an error with a specific status code
+  const err = new Error('Simulated bad request error');
+  err.statusCode = 400;
+  next(err);
+});
+// --- End Test Routes ---
+
 // Apply the centralized error handler *after* all routes
 app.use(errorHandler);
 
 // Use environment variable for port or default to 3001
+
+// Dummy route for testing authenticateToken middleware
+app.get('/api/test-auth', authenticateToken, (req, res) => {
+  res.json({ message: 'Authenticated!', userId: req.user.userId });
+});
+
 const PORT = process.env.PORT || 3001;
 
 // Start the server only if this file is run directly (ES Module way)

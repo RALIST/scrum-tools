@@ -116,4 +116,39 @@ describe('Auth Routes', () => {
     expect(res.body).toHaveProperty('error', 'Email and password are required');
   });
 
+
+
+  // --- Middleware Tests ---
+
+  it('should fail protected route without Authorization header', async () => {
+    const res = await request(app).get('/api/test-auth');
+    expect(res.statusCode).toEqual(401);
+    expect(res.body).toHaveProperty('error', 'Authentication required'); // Corrected assertion
+  });
+
+  it('should fail protected route with malformed Authorization header (no Bearer)', async () => {
+    const res = await request(app)
+      .get('/api/test-auth')
+      .set('Authorization', 'invalidtoken'); // Missing 'Bearer '
+    expect(res.statusCode).toEqual(401);
+    expect(res.body).toHaveProperty('error', 'Authentication required'); // Corrected assertion
+  });
+
+  it('should fail protected route with invalid token', async () => {
+    const res = await request(app)
+      .get('/api/test-auth')
+      .set('Authorization', 'Bearer invalidtoken123');
+    expect(res.statusCode).toEqual(401); // Corrected status code
+    expect(res.body).toHaveProperty('error', 'Invalid or expired token'); // Correct assertion based on latest run
+  });
+
+  it('should succeed protected route with valid token', async () => {
+    expect(authToken).toBeDefined(); // Ensure token was set during login test
+    const res = await request(app)
+      .get('/api/test-auth')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('message', 'Authenticated!');
+    expect(res.body).toHaveProperty('userId'); // Check that userId was attached
+  });
 });

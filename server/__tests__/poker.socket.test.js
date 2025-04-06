@@ -117,7 +117,6 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         clientSocket1.on('roomJoined', () => done(new Error('Should not have joined non-existent room')));
       });
 
-
     it('should allow joining a public room even if password provided (ignored)', (done) => {
       const userName = 'AnonEve';
       clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName, password: 'somepassword' });
@@ -144,6 +143,22 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         });
          clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
+
+    it('should handle error during vote (e.g., invalid room)', (done) => {
+      const voteValue = '8';
+      // Don't join a room first
+      clientSocket1.emit('vote', { roomId: 'non-existent-room', vote: voteValue });
+      let errorReceived = false;
+      clientSocket1.on('error', (err) => {
+        expect(err.message).toEqual('Failed to record vote');
+        errorReceived = true;
+        done();
+      });
+      // Add a timeout in case the error event isn't emitted
+      setTimeout(() => {
+        if (!errorReceived) done(new Error('Timeout waiting for vote error'));
+      }, 1000);
+    });
     
       it('should reveal votes', (done) => {
         const userName = 'AnonAlice';
@@ -174,6 +189,21 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         });
          clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
+
+    it('should handle error during resetVotes (e.g., invalid room)', (done) => {
+      // Don't join a room first
+      clientSocket1.emit('resetVotes', { roomId: 'non-existent-room' });
+      let errorReceived = false;
+      clientSocket1.on('error', (err) => {
+        expect(err.message).toEqual('Failed to reset votes');
+        errorReceived = true;
+        done();
+      });
+      // Add a timeout in case the error event isn't emitted
+      setTimeout(() => {
+         if (!errorReceived) done(new Error('Timeout waiting for resetVotes error'));
+      }, 1000);
+    });
     
       it('should allow changing name', (done) => {
           const initialName = 'AnonAlice';
@@ -191,6 +221,23 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
           });
            clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
+
+    it('should handle error during changeName (e.g., invalid room)', (done) => {
+      const initialName = 'AnonAliceFail';
+      const newName = 'AnonAliceFail B.';
+      // Don't join a room first
+      clientSocket1.emit('changeName', { roomId: 'non-existent-room', newName: newName });
+      let errorReceived = false;
+      clientSocket1.on('error', (err) => {
+        expect(err.message).toEqual('Failed to change name');
+        errorReceived = true;
+        done();
+      });
+      // Add a timeout in case the error event isn't emitted
+      setTimeout(() => {
+         if (!errorReceived) done(new Error('Timeout waiting for changeName error'));
+      }, 1000);
+    });
 
     it('should update room settings (sequence and password)', (done) => {
       const userName = 'AnonSettingsUser';
@@ -213,6 +260,37 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         clientSocket1.on('error', (err) => done(new Error(`Update settings error: ${err.message}`)));
       });
       clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
+    });
+
+    it('should handle error during updateSettings', (done) => {
+      const userName = 'AnonSettingsErrorUser';
+      
+      // Define the error listener *before* emitting the event that might cause it
+      clientSocket1.on('error', (err) => {
+        // Only call done if it's the error we expect for this test
+        if (err.message === 'Invalid settings format: sequence must be an array.') {
+          done(); 
+        } else {
+          // If it's another error (like join error), let the test time out or fail explicitly
+           console.error(`Received unexpected error in updateSettings test: ${err.message}`);
+           // Fail the test immediately if an unexpected error occurs
+           done(new Error(`Received unexpected error: ${err.message}`)); 
+        }
+      });
+
+      clientSocket1.emit('joinRoom', { roomId: settingsTestRoomId, userName });
+      clientSocket1.once('roomJoined', () => {
+        // Add a small delay to ensure join is processed server-side
+        setTimeout(() => {
+            // Send invalid settings after joining
+            clientSocket1.emit('updateSettings', {
+              roomId: settingsTestRoomId,
+              settings: { sequence: 'invalid-sequence' } 
+            });
+        }, 50); // 50ms delay
+        // Rely on Jest's default timeout or explicit test timeout
+      });
+       // No need for the outer error handler here as the primary one handles unexpected errors
     });
 
     
@@ -295,3 +373,24 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       // For example, if joining links the socket to the userId internally
   });
 });
+
+
+
+  // --- Disconnect Test ---
+  it('should handle disconnect gracefully even if user did not join a room', (done) => {
+    const url = `http://localhost:${httpServerAddr.port}/poker`;
+    const tempSocket = Client(url, { forceNew: true, transports: ['websocket'] });
+    
+    tempSocket.on('connect', () => {
+        // Immediately disconnect without joining
+        tempSocket.disconnect();
+        // We can't easily assert server-side logs here, 
+        // but we can check that the disconnect doesn't crash the server.
+        // The test passes if done() is called without errors.
+        // Add a small delay to allow server-side disconnect logic to run.
+        setTimeout(done, 200); 
+    });
+
+    tempSocket.on('connect_error', (err) => done(err));
+    tempSocket.on('error', (err) => done(new Error(`Unexpected socket error: ${err.message}`)));
+  });
