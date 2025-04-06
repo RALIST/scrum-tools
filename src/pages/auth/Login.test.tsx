@@ -5,11 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ChakraProvider } from "@chakra-ui/react";
 import Login from "./Login";
-import { AuthContext, AuthProvider } from "../../contexts/AuthContext"; // Assuming AuthProvider exists for context setup
-import {
-  WorkspaceContext,
-  WorkspaceProvider,
-} from "../../contexts/WorkspaceContext"; // Assuming WorkspaceProvider exists
+import { AuthContext } from "../../contexts/AuthContext"; // Assuming AuthProvider exists for context setup
+import { WorkspaceContext } from "../../contexts/WorkspaceContext"; // Assuming WorkspaceProvider exists
 import * as apiUtils from "../../utils/apiUtils"; // Import all exports to mock apiRequest
 import { HelmetProvider } from "react-helmet-async"; // Import HelmetProvider
 
@@ -45,8 +42,6 @@ vi.mock("../../utils/apiUtils", async (importOriginal) => {
     apiRequest: vi.fn(), // Mock apiRequest specifically
   };
 });
-const mockedApiRequest = vi.mocked(apiUtils.apiRequest); // Type assertion for mocked function
-
 // Helper function to render the component with providers
 const renderLoginComponent = (isAuthenticated = false) => {
   return render(
