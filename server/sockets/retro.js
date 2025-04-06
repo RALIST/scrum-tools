@@ -1,16 +1,17 @@
-import {
-    getRetroBoard,
-    addRetroCard,
-    deleteRetroCard,
-    startRetroTimer,
-    stopRetroTimer,
-    updateRetroTimer,
-    verifyRetroBoardPassword,
-    updateRetroBoardSettings,
-    updateRetroCardAuthor,
-    toggleRetroCardVote,
-    updateRetroCardText
-} from '../db/retro.js';
+// Removed direct DB imports, will use injected retroDb
+// import {
+//     getRetroBoard,
+//     addRetroCard,
+//     deleteRetroCard,
+//     startRetroTimer,
+//     stopRetroTimer,
+//     updateRetroTimer,
+//     verifyRetroBoardPassword,
+//     updateRetroBoardSettings,
+//     updateRetroCardAuthor,
+//     toggleRetroCardVote,
+//     updateRetroCardText
+// } from '../db/retro.js';
 import logger from '../logger.js'; // Import the logger
 
 // Store active timers and user names
@@ -25,13 +26,13 @@ const debugLog = (message, data) => {
 };
 
 // Handles events for an individual connected socket
-const handleRetroSocketEvents = (io, socket) => {
+const handleRetroSocketEvents = (io, socket, retroDb) => { // Add retroDb dependency
     socket.on('joinRetroBoard', async ({ boardId, name, password }) => {
         try {
             // debugLog('Joining retro board', { boardId, name });
             // Store boardId in socket data for disconnect cleanup
             socket.data.boardId = boardId; 
-            const board = await getRetroBoard(boardId)
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             if (!board) {
                 // debugLog('Board not found', boardId)
                 socket.emit('error', { message: 'Board not found' })
@@ -40,7 +41,7 @@ const handleRetroSocketEvents = (io, socket) => {
 
             // Verify password if board is password protected
             if (board.hasPassword) {
-                const isValid = await verifyRetroBoardPassword(boardId, password)
+                const isValid = await retroDb.verifyRetroBoardPassword(boardId, password); // Use injected retroDb
                 if (!isValid) {
                     socket.emit('error', { message: 'Invalid password' })
                     return
@@ -110,8 +111,8 @@ const handleRetroSocketEvents = (io, socket) => {
                 return;
             }
             // debugLog('Adding retro card', { boardId, cardId, columnId, authorName: userName }); // Log the correct name
-            await addRetroCard(boardId, cardId, columnId, text, userName); // Use server-verified name
-            const board = await getRetroBoard(boardId);
+            await retroDb.addRetroCard(boardId, cardId, columnId, text, userName); // Use injected retroDb
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName });
             io.to(roomName).emit('retroBoardUpdated', board);
@@ -126,8 +127,8 @@ const handleRetroSocketEvents = (io, socket) => {
     socket.on('editRetroCard', async ({ boardId, cardId, text }) => {
         try {
             // debugLog('Editing retro card', { boardId, cardId, text })
-            await updateRetroCardText(cardId, text)
-            const board = await getRetroBoard(boardId)
+            await retroDb.updateRetroCardText(cardId, text); // Use injected retroDb
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
@@ -140,8 +141,8 @@ const handleRetroSocketEvents = (io, socket) => {
     socket.on('deleteRetroCard', async ({ boardId, cardId }) => {
         try {
             // debugLog('Deleting retro card', { boardId, cardId })
-            await deleteRetroCard(cardId)
-            const board = await getRetroBoard(boardId)
+            await retroDb.deleteRetroCard(cardId); // Use injected retroDb
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
@@ -160,8 +161,8 @@ const handleRetroSocketEvents = (io, socket) => {
                 return
             }
 
-            await toggleRetroCardVote(cardId, userName)
-            const board = await getRetroBoard(boardId)
+            await retroDb.toggleRetroCardVote(cardId, userName); // Use injected retroDb
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
@@ -174,8 +175,8 @@ const handleRetroSocketEvents = (io, socket) => {
     socket.on('updateSettings', async ({ boardId, settings }) => {
         try {
             // debugLog('Updating retro board settings', { boardId, settings })
-            await updateRetroBoardSettings(boardId, settings)
-            const board = await getRetroBoard(boardId)
+            await retroDb.updateRetroBoardSettings(boardId, settings); // Use injected retroDb
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
             // debugLog('Emitting settings update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
@@ -188,7 +189,7 @@ const handleRetroSocketEvents = (io, socket) => {
     socket.on('changeRetroName', async ({ boardId, newName }) => {
         try {
             // debugLog('Changing name', { boardId, newName })
-            const board = await getRetroBoard(boardId)
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             if (!board) {
                 socket.emit('error', { message: 'Board not found' })
                 return
@@ -201,11 +202,11 @@ const handleRetroSocketEvents = (io, socket) => {
             if (oldName) {
                 const cards = board.cards.filter(card => card.author_name === oldName)
                 for (const card of cards) {
-                    await updateRetroCardAuthor(card.id, newName)
+                    await retroDb.updateRetroCardAuthor(card.id, newName); // Use injected retroDb
                 }
             }
 
-            const updatedBoard = await getRetroBoard(boardId)
+            const updatedBoard = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', updatedBoard);
@@ -218,8 +219,8 @@ const handleRetroSocketEvents = (io, socket) => {
     socket.on('startTimer', async ({ boardId }) => {
         try {
             // debugLog('Starting timer', { boardId })
-            await startRetroTimer(boardId)
-            const board = await getRetroBoard(boardId)
+            await retroDb.startRetroTimer(boardId); // Use injected retroDb
+            const board = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
 
             // Start a new timer interval
@@ -230,13 +231,13 @@ const handleRetroSocketEvents = (io, socket) => {
             let timeLeft = board.default_timer
             activeTimers.set(boardId, setInterval(async () => {
                 timeLeft--
-                await updateRetroTimer(boardId, timeLeft)
+                await retroDb.updateRetroTimer(boardId, timeLeft); // Use injected retroDb
                 io.to(roomName).emit('timerUpdate', { timeLeft })
 
                 if (timeLeft <= 0) {
                     clearInterval(activeTimers.get(boardId))
                     activeTimers.delete(boardId)
-                    await stopRetroTimer(boardId)
+                    await retroDb.stopRetroTimer(boardId); // Use injected retroDb
                     io.to(roomName).emit('timerStopped')
                 }
             }, 1000))
@@ -252,7 +253,7 @@ const handleRetroSocketEvents = (io, socket) => {
     socket.on('stopTimer', async ({ boardId }) => {
         try {
             // debugLog('Stopping timer', { boardId })
-            await stopRetroTimer(boardId)
+            await retroDb.stopRetroTimer(boardId); // Use injected retroDb
             const roomName = `retro:${boardId}`
 
             // Clear the timer interval
@@ -273,12 +274,12 @@ const handleRetroSocketEvents = (io, socket) => {
 };
 
 // Initializes the retro namespace and handles connections/disconnections
-export const initializeRetroSocket = (io) => {
+export const initializeRetroSocket = (io, retroDb) => { // Add retroDb dependency
     io.on('connection', (socket) => {
         logger.info(`User connected to retro: ${socket.id}`);
 
         // Handle specific retro events for this socket
-        handleRetroSocketEvents(io, socket);
+        handleRetroSocketEvents(io, socket, retroDb); // Pass retroDb
 
         // Handle disconnection
         socket.on('disconnect', () => {

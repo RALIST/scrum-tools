@@ -1,5 +1,6 @@
 import express from 'express';
 import jsonwebtoken from 'jsonwebtoken';
+// import { pool } from '../db/pool.js'; // Removed pool import
 // Removed direct DB imports
 // import { createUser, getUserByEmail, updateLastLogin, verifyPassword } from '../db/users.js';
 import logger from '../logger.js'; // Import the logger
@@ -23,7 +24,7 @@ export default function setupAuthRoutes(userDb) {
         }
 
         // Use injected dependency
-        const user = await userDb.createUser(email, password, name);
+        const user = await userDb.createUser(email, password, name); // Removed pool
 
         // Generate token
         const token = jwt.sign(
@@ -33,7 +34,7 @@ export default function setupAuthRoutes(userDb) {
         );
 
         // Use injected dependency
-        await userDb.updateLastLogin(user.id);
+        await userDb.updateLastLogin(user.id); // Removed pool
 
         res.status(201).json({
           message: 'User registered successfully',
@@ -63,7 +64,7 @@ export default function setupAuthRoutes(userDb) {
         }
 
         // Use injected dependency
-        const user = await userDb.getUserByEmail(email);
+        const user = await userDb.getUserByEmail(email); // Removed pool
 
         if (!user) {
           return res.status(401).json({ error: 'Invalid credentials' });
@@ -84,7 +85,7 @@ export default function setupAuthRoutes(userDb) {
         );
 
         // Use injected dependency
-        await userDb.updateLastLogin(user.id);
+        await userDb.updateLastLogin(user.id); // Removed pool
 
         res.json({
           message: 'Login successful',

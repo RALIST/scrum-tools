@@ -317,7 +317,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
       expect(res.body).toHaveProperty('success', true);
       expect(res.body).toHaveProperty('boardId');
       createdAuthBoardId = res.body.boardId; // Store the generated ID for later tests
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
       expect(mockRetroDb.createRetroBoard).toHaveBeenCalledWith(
           expect.any(String),
           boardName,
@@ -350,7 +350,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to create a retro board in this workspace.');
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         expect(mockRetroDb.createRetroBoard).not.toHaveBeenCalled();
     });
 
@@ -372,7 +372,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.body).toHaveProperty('id', createdAuthBoardId);
         expect(res.body).toHaveProperty('name', 'Workspace Linked Retro Auth');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
     });
 
     it('GET /api/retro/:boardId - should fail to get workspace board if not authenticated', async () => {
@@ -400,7 +400,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to access this retro board.');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
     });
 
     it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated member)', async () => {
@@ -422,7 +422,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.body).toHaveProperty('default_timer', 900);
         expect(res.body).toHaveProperty('hide_author_names', true);
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledTimes(2);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         expect(mockRetroDb.updateRetroBoardSettings).toHaveBeenCalledWith(createdAuthBoardId, newSettings);
     });
 
@@ -456,7 +456,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to update settings for this retro board.');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         expect(mockRetroDb.updateRetroBoardSettings).not.toHaveBeenCalled();
     });
 

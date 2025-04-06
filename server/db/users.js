@@ -1,9 +1,9 @@
-import { pool } from './pool.js';
+import { pool } from './pool.js'; // Import pool directly
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
 // Create a new user
-export const createUser = async (email, password, name) => {
+export const createUser = async (email, password, name) => { // Remove pool argument
   const client = await pool.connect();
   try {
     // Check if the user already exists
@@ -36,7 +36,7 @@ export const createUser = async (email, password, name) => {
 };
 
 // Get a user by email
-export const getUserByEmail = async (email) => {
+export const getUserByEmail = async (email) => { // Remove pool argument
   const client = await pool.connect();
   try {
     const result = await client.query(
@@ -51,7 +51,7 @@ export const getUserByEmail = async (email) => {
 };
 
 // Get a user by ID
-export const getUserById = async (id) => {
+export const getUserById = async (id) => { // Remove pool argument
   const client = await pool.connect();
   try {
     const result = await client.query(
@@ -66,7 +66,7 @@ export const getUserById = async (id) => {
 };
 
 // Update user last login time
-export const updateLastLogin = async (userId) => {
+export const updateLastLogin = async (userId) => { // Remove pool argument
   const client = await pool.connect();
   try {
     await client.query(

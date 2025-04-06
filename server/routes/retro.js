@@ -1,5 +1,5 @@
 import express from 'express';
-import { pool } from '../db/pool.js'; // Import the pool from db/index.js
+// import { pool } from '../db/pool.js'; // Removed pool import
 // Removed direct DB imports:
 // import {
 //     createRetroBoard,
@@ -34,7 +34,7 @@ export default function setupRetroRoutes(retroDb, workspaceDb) { // Add workspac
                     // console.error(`Anonymous user attempted to create a retro board in workspace ${workspaceId}.`);
                     return res.status(401).json({ error: 'Authentication required to create a workspace retro board.' });
                 }
-                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool); // Pass pool
+                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
                 if (!isMember) {
                     // console.error(`User ${userId} attempted to create a retro board in workspace ${workspaceId} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to create a retro board in this workspace.' });
@@ -67,7 +67,7 @@ export default function setupRetroRoutes(retroDb, workspaceDb) { // Add workspac
                     // console.error(`Anonymous user attempted to access retro board ${boardId} in workspace ${board.workspace_id}.`);
                     return res.status(401).json({ error: 'Authentication required to access this retro board.' });
                 }
-                const isMember = await workspaceDb.isWorkspaceMember(board.workspace_id, userId, pool); // Pass pool
+                const isMember = await workspaceDb.isWorkspaceMember(board.workspace_id, userId); // Removed pool
                 if (!isMember) {
                     // console.error(`User ${userId} attempted to access retro board ${boardId} in workspace ${board.workspace_id} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to access this retro board.' });
@@ -120,7 +120,7 @@ export default function setupRetroRoutes(retroDb, workspaceDb) { // Add workspac
                     // console.error(`Anonymous user attempted to update settings for retro board ${boardId} in workspace ${existingBoard.workspace_id}.`);
                     return res.status(401).json({ error: 'Authentication required to update settings for this retro board.' });
                 }
-                const isMember = await workspaceDb.isWorkspaceMember(existingBoard.workspace_id, userId, pool); // Pass pool
+                const isMember = await workspaceDb.isWorkspaceMember(existingBoard.workspace_id, userId); // Removed pool
                 if (!isMember) {
                     // console.error(`User ${userId} attempted to update settings for retro board ${boardId} in workspace ${existingBoard.workspace_id} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to update settings for this retro board.' });

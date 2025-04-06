@@ -6,10 +6,7 @@ import bcrypt from 'bcryptjs'; // Import bcrypt
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 // Import necessary functions from Jest globals for ESM
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-
-// Import the route setup function
 import setupVelocityRoutes from '../routes/velocity.js';
-// NOTE: We DO NOT import the actual DB functions here anymore
 
 // --- Mock DB Objects ---
 const mockVelocityDb = {
@@ -118,25 +115,6 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
     // Assign placeholder IDs instead of creating real workspaces in DB for route tests
     testWorkspaceId = uuidv4();
     otherTestWorkspaceId = uuidv4();
-    // // Create workspace for main authenticated user - REMOVED DB CALL
-    // const workspaceName = `Velocity DI Test Workspace ${Date.now()}`;
-    // const resWorkspace = await request(mainApp)
-    //   .post('/api/workspaces')
-    //   .set('Authorization', `Bearer ${authUserInfo.token}`)
-    //   .send({ name: workspaceName });
-    // expect(resWorkspace.statusCode).toEqual(201);
-    // testWorkspaceId = resWorkspace.body.workspace.id;
-
-    // // Create another workspace for access control tests - REMOVED DB CALL
-    // const otherWorkspaceName = `Other Velocity DI WS ${Date.now()}`;
-    // const resOtherWorkspace = await request(mainApp)
-    //   .post('/api/workspaces')
-    //   .set('Authorization', `Bearer ${authUserInfo.token}`) // Main user creates it
-    //   .send({ name: otherWorkspaceName });
-    // expect(resOtherWorkspace.statusCode).toEqual(201);
-    // otherTestWorkspaceId = resOtherWorkspace.body.workspace.id;
-
-    // No longer creating teams/sprints here; tests will use mocks
   });
 
   // Reset mocks before each test
@@ -174,9 +152,9 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       expect(res.body).toHaveProperty('success', true);
       expect(res.body.team).toEqual(mockTeam);
       // Route calls getTeam first
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(teamName, password, expect.any(Function)); // Keep executor check for getTeam
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(teamName, password); // Removed executor expectation
       // Check essential args for createTeam, ignore executor
-      expect(mockVelocityDb.createTeam).toHaveBeenCalledWith(expect.any(String), teamName, password, null, null, null, expect.any(Function));
+      expect(mockVelocityDb.createTeam).toHaveBeenCalledWith(expect.any(String), teamName, password, null, null, null); // Removed executor expectation
     });
 
     it('POST /api/velocity/teams - should find existing anonymous team with correct password', async () => {
@@ -194,10 +172,10 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
        expect(res.body).toHaveProperty('success', true);
        expect(res.body.team).toEqual(mockTeam);
        // Route calls getTeam, getTeamVelocity, getTeamAverageVelocity
-       expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword, expect.any(Function)); // Keep executor check
+       expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword); // Removed executor expectation
        // Assert with only the arguments passed by the route (name, password, dbExecutor)
-       expect(mockVelocityDb.getTeamVelocity).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword, expect.any(Function));
-       expect(mockVelocityDb.getTeamAverageVelocity).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword, expect.any(Function));
+       expect(mockVelocityDb.getTeamVelocity).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword); // Removed executor expectation
+       expect(mockVelocityDb.getTeamAverageVelocity).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword); // Removed executor expectation
        expect(res.body.averages).toHaveProperty('average_velocity', '10.00');
        expect(mockVelocityDb.createTeam).not.toHaveBeenCalled();
     });
@@ -213,7 +191,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       expect(res.statusCode).toEqual(400);
       expect(res.body).toHaveProperty('error', 'Password is required to create an anonymous team.');
       // Route calls getTeam first
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(teamName, undefined, expect.any(Function)); // Keep executor check
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(teamName, undefined); // Removed executor expectation
       expect(mockVelocityDb.createTeam).not.toHaveBeenCalled();
     });
 
@@ -231,7 +209,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       expect(res.statusCode).toEqual(401);
       expect(res.body).toHaveProperty('error', 'Invalid team name or password');
       // Route calls getTeam, then getTeamVelocity
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, 'wrongPassword', expect.any(Function)); // Keep executor check
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, 'wrongPassword'); // Removed executor expectation
       // getTeamVelocity should NOT have been called
       expect(mockVelocityDb.getTeamVelocity).not.toHaveBeenCalled();
     });
@@ -249,7 +227,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Route catches the error from getTeamVelocity and returns 401
       expect(res.statusCode).toEqual(401);
       expect(res.body).toHaveProperty('error', 'Invalid team name or password');
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, undefined, expect.any(Function)); // Keep executor check
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, undefined); // Removed executor expectation
       // getTeamVelocity should NOT have been called
       expect(mockVelocityDb.getTeamVelocity).not.toHaveBeenCalled();
     });
@@ -275,9 +253,9 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
         expect(res.statusCode).toEqual(201);
         expect(res.body).toEqual({ id: mockSprint.id }); // Check only id
         // Route calls getTeam first
-        expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, null, expect.any(Function)); // Keep executor check
+        expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, null); // Removed executor expectation
         // Check essential args, ignore executor placeholder
-        expect(mockVelocityDb.createSprint).toHaveBeenCalledWith(expect.any(String), anonymousTeamId, sprintName, startDate, endDate, expect.any(Function));
+        expect(mockVelocityDb.createSprint).toHaveBeenCalledWith(expect.any(String), anonymousTeamId, sprintName, startDate, endDate); // Removed executor expectation
     });
 
     it('POST /api/velocity/teams/:name/sprints - should fail with wrong password', async () => {
@@ -301,7 +279,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       expect(res.body).toHaveProperty('error', 'Invalid password.'); // Correct error message
       // Route calls getTeam first
       // Route calls getTeam with null password initially to check existence
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, null, expect.any(Function));
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, null); // Removed executor expectation
       expect(mockVelocityDb.createSprint).not.toHaveBeenCalled();
     });
 
@@ -324,7 +302,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       expect(res.body).toHaveProperty('error', 'Invalid team name or password');
       // Route calls getTeam first
       // Route calls getTeam with null password initially
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(nonExistentTeamName, null, expect.any(Function));
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(nonExistentTeamName, null); // Removed executor expectation
       expect(mockVelocityDb.createSprint).not.toHaveBeenCalled();
     });
 
@@ -352,9 +330,9 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdAnonSprintId, expect.any(Function));
-      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(anonymousTeamId, expect.any(Function));
-      expect(mockVelocityDb.updateSprintVelocity).toHaveBeenCalledWith(createdAnonSprintId, committedPoints, completedPoints, expect.any(Function));
+      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdAnonSprintId); // Removed executor expectation
+      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(anonymousTeamId); // Removed executor expectation
+      expect(mockVelocityDb.updateSprintVelocity).toHaveBeenCalledWith(createdAnonSprintId, committedPoints, completedPoints); // Removed executor expectation
     });
 
     it('PUT /api/velocity/sprints/:sprintId/velocity - should fail with wrong password', async () => {
@@ -376,8 +354,8 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdAnonSprintId, expect.any(Function));
-      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(anonymousTeamId, expect.any(Function));
+      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdAnonSprintId); // Removed executor expectation
+      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(anonymousTeamId); // Removed executor expectation
       expect(mockVelocityDb.updateSprintVelocity).not.toHaveBeenCalled();
     });
 
@@ -396,7 +374,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(nonExistentSprintId, expect.any(Function));
+      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(nonExistentSprintId); // Removed executor expectation
       expect(mockVelocityDb.getTeamById).not.toHaveBeenCalled();
       expect(mockVelocityDb.updateSprintVelocity).not.toHaveBeenCalled();
     });
@@ -437,7 +415,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Route logic fixed, should now correctly return 403
       expect(res.statusCode).toEqual(403);
       expect(res.body).toHaveProperty('error', 'Forbidden: Access denied to this workspace.');
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
     });
 
     it('POST /api/velocity/teams - should return 404 if workspace team does not exist', async () => {
@@ -453,11 +431,11 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Route logic fixed, should now correctly return 404
       expect(res.statusCode).toEqual(404);
       expect(res.body).toHaveProperty('error', `Team '${nonExistentTeamName}' not found in this workspace.`);
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(nonExistentTeamName, testWorkspaceId, expect.any(Function));
+      expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(nonExistentTeamName, testWorkspaceId); // Removed executor expectation
     });
 
     it('POST /api/velocity/teams - should return 404 if team exists but in different workspace', async () => {
@@ -472,11 +450,11 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Route logic fixed, should now correctly return 404
       expect(res.statusCode).toEqual(404);
       expect(res.body).toHaveProperty('error', `Team '${workspaceTeamName}' not found in this workspace.`);
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(otherTestWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(otherTestWorkspaceId, authUserInfo.userId); // Removed pool expectation
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, otherTestWorkspaceId, expect.any(Function));
+      expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, otherTestWorkspaceId); // Removed executor expectation
     });
 
     it('POST /api/velocity/teams - should find existing workspace team', async () => {
@@ -493,11 +471,11 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);
       expect(res.body.team).toEqual(mockTeam);
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId, expect.any(Function));
+      expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId); // Removed executor expectation
       expect(mockVelocityDb.createTeam).not.toHaveBeenCalled(); // Should not create if found
     });
 
@@ -520,12 +498,12 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
         // Route logic fixed, should now correctly return 201
         expect(res.statusCode).toEqual(201);
         expect(res.body).toEqual({ id: mockSprint.id }); // Route only returns { id: ... }
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         // Add expect.any(Function) for dbExecutor
         // Check essential args + executor placeholder
         // Check essential args, ignore executor placeholder
-        expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId, expect.any(Function));
-        expect(mockVelocityDb.createSprint).toHaveBeenCalledWith(expect.any(String), workspaceTeamId, sprintName, startDate, endDate, expect.any(Function));
+        expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId); // Removed executor expectation
+        expect(mockVelocityDb.createSprint).toHaveBeenCalledWith(expect.any(String), workspaceTeamId, sprintName, startDate, endDate); // Removed executor expectation
     });
 
     it('POST /api/velocity/teams/:name/sprints - should fail if user not workspace member', async () => {
@@ -543,7 +521,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Route logic fixed, should now correctly return 403
       expect(res.statusCode).toEqual(403);
       expect(res.body).toHaveProperty('error', 'Forbidden: Access denied to this workspace');
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, otherAuthUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, otherAuthUserInfo.userId); // Removed pool expectation
       expect(mockVelocityDb.getTeamByWorkspace).not.toHaveBeenCalled();
       expect(mockVelocityDb.createSprint).not.toHaveBeenCalled();
     });
@@ -573,10 +551,10 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
         // Add expect.any(Function) for dbExecutor
         // Check essential args + executor placeholder
         // Check essential args, ignore executor placeholder
-        expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdWsSprintId, expect.any(Function));
-        expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(workspaceTeamId, expect.any(Function));
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
-        expect(mockVelocityDb.updateSprintVelocity).toHaveBeenCalledWith(createdWsSprintId, committedPoints, completedPoints, expect.any(Function));
+        expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdWsSprintId); // Removed executor expectation
+        expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(workspaceTeamId); // Removed executor expectation
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
+        expect(mockVelocityDb.updateSprintVelocity).toHaveBeenCalledWith(createdWsSprintId, committedPoints, completedPoints); // Removed executor expectation
     });
 
     it('PUT /api/velocity/sprints/:sprintId/velocity - should fail if user not workspace member', async () => {
@@ -598,9 +576,9 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdWsSprintId, expect.any(Function));
-      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(workspaceTeamId, expect.any(Function));
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, otherAuthUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdWsSprintId); // Removed executor expectation
+      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(workspaceTeamId); // Removed executor expectation
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, otherAuthUserInfo.userId); // Removed pool expectation
       expect(mockVelocityDb.updateSprintVelocity).not.toHaveBeenCalled();
     });
 
@@ -623,8 +601,8 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       // Add expect.any(Function) for dbExecutor
       // Check essential args + executor placeholder
       // Check essential args, ignore executor placeholder
-      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdWsSprintId, expect.any(Function));
-      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(workspaceTeamId, expect.any(Function));
+      expect(mockVelocityDb.getSprintById).toHaveBeenCalledWith(createdWsSprintId); // Removed executor expectation
+      expect(mockVelocityDb.getTeamById).toHaveBeenCalledWith(workspaceTeamId); // Removed executor expectation
       // isWorkspaceMember is not called in this specific error path
       expect(mockVelocityDb.updateSprintVelocity).not.toHaveBeenCalled();
     });
@@ -648,14 +626,14 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
        // Route logic fixed, should now correctly return 200
        expect(res.statusCode).toEqual(200);
        expect(res.body).toEqual(mockVelocityData);
-       expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+       expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
        // Add expect.any(Function) for dbExecutor and internal function args
        // Check essential args + executor/internal func placeholders
        // Check essential args, ignore executor/internal func placeholders
-       expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId, expect.any(Function));
+       expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId); // Removed executor expectation
        // Assert with only the arguments passed by the route (name, workspaceId, dbExecutor)
-       expect(mockVelocityDb.getTeamVelocityByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId, expect.any(Function));
-       expect(mockVelocityDb.getTeamAverageVelocityByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId, expect.any(Function));
+       expect(mockVelocityDb.getTeamVelocityByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId); // Removed executor expectation
+       expect(mockVelocityDb.getTeamAverageVelocityByWorkspace).toHaveBeenCalledWith(workspaceTeamName, testWorkspaceId); // Removed executor expectation
        // getTeamVelocity is not called in this path
        // expect(mockVelocityDb.getTeamVelocity).toHaveBeenCalledWith(workspaceTeamId);
      });
@@ -673,11 +651,11 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
        // Route logic fixed, should now correctly return 404
        expect(res.statusCode).toEqual(404);
        expect(res.body).toHaveProperty('error', `Team '${newTeamName}' not found in this workspace.`);
-       expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+       expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
        // Add expect.any(Function) for dbExecutor
        // Check essential args + executor placeholder
        // Check essential args, ignore executor placeholder
-       expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(newTeamName, testWorkspaceId, expect.any(Function));
+       expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(newTeamName, testWorkspaceId); // Removed executor expectation
        expect(mockVelocityDb.getTeamVelocity).not.toHaveBeenCalled();
      });
 
@@ -705,7 +683,7 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
            // Route logic fixed, should now correctly return 403
            expect(res.statusCode).toEqual(403);
            expect(res.body).toHaveProperty('error', 'Forbidden: Access denied to this workspace');
-           expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, otherAuthUserInfo.userId, expect.any(Object)); // Add pool mock check
+           expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, otherAuthUserInfo.userId); // Removed pool expectation
            expect(mockVelocityDb.getTeamByWorkspace).not.toHaveBeenCalled();
          });
 
@@ -721,11 +699,11 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
             // Route logic fixed, should now correctly return 404
             expect(res.statusCode).toEqual(404);
             expect(res.body).toHaveProperty('error', `Team '${workspaceTeamName}' not found in this workspace.`);
-            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(otherTestWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(otherTestWorkspaceId, authUserInfo.userId); // Removed pool expectation
             // Add expect.any(Function) for dbExecutor
             // Check essential args + executor placeholder
             // Check essential args, ignore executor placeholder
-            expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, otherTestWorkspaceId, expect.any(Function));
+            expect(mockVelocityDb.getTeamByWorkspace).toHaveBeenCalledWith(workspaceTeamName, otherTestWorkspaceId); // Removed executor expectation
          });
      });
 

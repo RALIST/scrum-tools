@@ -1,4 +1,4 @@
-import { executeQuery } from './dbUtils.js';
+import { dbUtils } from './dbUtils.js'; // Import the dbUtils object
 import bcrypt from 'bcryptjs';
 import logger from '../logger.js'; // Import the logger
 
@@ -24,12 +24,12 @@ export const createRetroBoard = async (boardId, name, workspaceId, settings = {}
         boardId, name || boardId, timerValueToInsert, timerValueToInsert, 
         hideCardsByDefault, hideAuthorNames, hashedPassword, workspaceId || null
     ];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const getRetroBoard = async (boardId) => {
     const boardQuery = 'SELECT * FROM retro_boards WHERE id = $1';
-    const boardResult = await executeQuery(boardQuery, [boardId]);
+    const boardResult = await dbUtils.executeQuery(boardQuery, [boardId]); // Use dbUtils.executeQuery
 
     if (boardResult.rows.length === 0) {
         return null;
@@ -43,7 +43,7 @@ export const getRetroBoard = async (boardId) => {
         GROUP BY c.id
         ORDER BY c.created_at ASC
     `;
-    const cardsResult = await executeQuery(cardsQuery, [boardId]);
+    const cardsResult = await dbUtils.executeQuery(cardsQuery, [boardId]); // Use dbUtils.executeQuery
 
     const board = boardResult.rows[0];
     // Ensure hasPassword reflects the presence of a password hash
@@ -71,7 +71,7 @@ export const getWorkspaceRetroBoards = async (workspaceId) => {
         GROUP BY rb.id
         ORDER BY rb.created_at DESC
     `;
-    const boardsResult = await executeQuery(boardsQuery, [workspaceId]);
+    const boardsResult = await dbUtils.executeQuery(boardsQuery, [workspaceId]); // Use dbUtils.executeQuery
 
     return boardsResult.rows.map(board => ({
         ...board,
@@ -83,46 +83,46 @@ export const getWorkspaceRetroBoards = async (workspaceId) => {
 export const addRetroCard = async (boardId, cardId, columnId, text, authorName) => {
     const queryText = 'INSERT INTO retro_cards (id, board_id, column_id, text, author_name) VALUES ($1, $2, $3, $4, $5)';
     const params = [cardId, boardId, columnId, text, authorName];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const updateRetroCardText = async (cardId, text) => {
     const queryText = 'UPDATE retro_cards SET text = $2 WHERE id = $1';
     const params = [cardId, text];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const updateRetroCardAuthor = async (cardId, authorName) => {
     const queryText = 'UPDATE retro_cards SET author_name = $2 WHERE id = $1';
     const params = [cardId, authorName];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const deleteRetroCard = async (cardId) => {
     const queryText = 'DELETE FROM retro_cards WHERE id = $1';
     const params = [cardId];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const toggleRetroCardVote = async (cardId, userName) => {
     // Check if vote exists using the new primary key (card_id, user_name)
     const checkVoteQuery = 'SELECT 1 FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
-    const voteResult = await executeQuery(checkVoteQuery, [cardId, userName]);
+    const voteResult = await dbUtils.executeQuery(checkVoteQuery, [cardId, userName]); // Use dbUtils.executeQuery
 
     if (voteResult.rows.length > 0) {
         // Remove vote using the new primary key
         const deleteVoteQuery = 'DELETE FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
-        await executeQuery(deleteVoteQuery, [cardId, userName]);
+        await dbUtils.executeQuery(deleteVoteQuery, [cardId, userName]); // Use dbUtils.executeQuery
     } else {
         // Add vote using only card_id and user_name
         const addVoteQuery = 'INSERT INTO retro_card_votes (card_id, user_name) VALUES ($1, $2)';
-        await executeQuery(addVoteQuery, [cardId, userName]);
+        await dbUtils.executeQuery(addVoteQuery, [cardId, userName]); // Use dbUtils.executeQuery
     }
 };
 
 export const verifyRetroBoardPassword = async (boardId, password) => {
     const queryText = 'SELECT password FROM retro_boards WHERE id = $1';
-    const result = await executeQuery(queryText, [boardId]);
+    const result = await dbUtils.executeQuery(queryText, [boardId]); // Use dbUtils.executeQuery
 
     if (result.rows.length === 0) {
         return false; // Board not found
@@ -169,26 +169,26 @@ export const updateRetroBoardSettings = async (boardId, settings) => {
     if (updates.length > 0) {
         values.push(boardId);
         const queryText = `UPDATE retro_boards SET ${updates.join(', ')} WHERE id = $${paramCount}`;
-        await executeQuery(queryText, values);
+        await dbUtils.executeQuery(queryText, values); // Use dbUtils.executeQuery
     }
 };
 
 export const startRetroTimer = async (boardId) => {
     // Consider passing defaultTimer if already available in the calling context
     const getTimerQuery = 'SELECT default_timer FROM retro_boards WHERE id = $1';
-    const result = await executeQuery(getTimerQuery, [boardId]);
+    const result = await dbUtils.executeQuery(getTimerQuery, [boardId]); // Use dbUtils.executeQuery
     const defaultTimer = result.rows[0]?.default_timer || 300;
 
     const updateQuery = 'UPDATE retro_boards SET timer_running = true, time_left = $2 WHERE id = $1';
-    await executeQuery(updateQuery, [boardId, defaultTimer]);
+    await dbUtils.executeQuery(updateQuery, [boardId, defaultTimer]); // Use dbUtils.executeQuery
 };
 
 export const stopRetroTimer = async (boardId) => {
     const queryText = 'UPDATE retro_boards SET timer_running = false WHERE id = $1';
-    await executeQuery(queryText, [boardId]);
+    await dbUtils.executeQuery(queryText, [boardId]); // Use dbUtils.executeQuery
 };
 
 export const updateRetroTimer = async (boardId, timeLeft) => {
     const queryText = 'UPDATE retro_boards SET time_left = $2 WHERE id = $1';
-    await executeQuery(queryText, [boardId, timeLeft]);
+    await dbUtils.executeQuery(queryText, [boardId, timeLeft]); // Use dbUtils.executeQuery
 };

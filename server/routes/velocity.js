@@ -2,8 +2,8 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 
-import { executeQuery } from '../db/dbUtils.js';
-import { pool } from '../db/pool.js'; // Import pool
+// import { executeQuery } from '../db/dbUtils.js'; // Removed executeQuery import
+// import { pool } from '../db/pool.js'; // Removed pool import
 import logger from '../logger.js';
 // Removed direct DB imports
 // import { ... } from '../db/velocity.js';
@@ -29,12 +29,12 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
                     return res.status(401).json({ error: 'Authentication required for workspace teams.' });
                 }
                 // Use injected dependency
-                const hasAccess = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool); // Pass pool
+                const hasAccess = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
                 if (!hasAccess) {
                     return res.status(403).json({ error: 'Forbidden: Access denied to this workspace.' });
                 }
                 // Use injected dependency
-                team = await velocityDb.getTeamByWorkspace(name, workspaceId, executeQuery);
+                team = await velocityDb.getTeamByWorkspace(name, workspaceId); // Removed executeQuery
                 if (!team) {
                     return res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
                 }
@@ -46,15 +46,15 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
                 try {
                     // Use injected dependency
                     // Corrected to use getTeam and pass executeQuery
-                    team = await velocityDb.getTeam(name, password, executeQuery);
+                    team = await velocityDb.getTeam(name, password); // Removed executeQuery
                     if (team) {
                         logger.info(`Anonymous team '${name}' found. Fetching velocity data.`);
                         // Use injected dependency
                         // Pass executeQuery
-                        velocityData = await velocityDb.getTeamVelocity(name, password, executeQuery);
+                        velocityData = await velocityDb.getTeamVelocity(name, password); // Removed executeQuery
                         // Also fetch average data for existing anonymous team
                         // Pass executeQuery
-                        averageData = await velocityDb.getTeamAverageVelocity(name, password, executeQuery);
+                        averageData = await velocityDb.getTeamAverageVelocity(name, password); // Removed executeQuery
                     } else {
                          logger.info(`Anonymous team '${name}' not found by getTeam.`);
                     }
@@ -84,7 +84,7 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
                     }
                     // Use injected dependency
                     // Pass executeQuery (client is null by default in createTeam)
-                    team = await velocityDb.createTeam(id, name, password, null, null, null, executeQuery);
+                    team = await velocityDb.createTeam(id, name, password, null, null, null); // Removed executeQuery
                     velocityData = [];
                     averageData = { average_velocity: 0, average_commitment: 0, completion_rate: 0 };
                 }
@@ -119,14 +119,14 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
 
             logger.info(`Attempting workspace velocity fetch: user ${userId}, workspace ${workspaceId}, team ${name}`);
             // Use injected dependency
-            const hasAccess = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool); // Pass pool
+            const hasAccess = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
             if (!hasAccess) {
                 logger.warn(`Forbidden access attempt: User ${userId} to workspace ${workspaceId}`);
                 return res.status(403).json({ error: 'Forbidden: Access denied to this workspace' });
             }
 
             // Use injected dependency
-            const team = await velocityDb.getTeamByWorkspace(name, workspaceId, executeQuery);
+            const team = await velocityDb.getTeamByWorkspace(name, workspaceId); // Removed executeQuery
             if (!team) {
                  logger.warn(`Team '${name}' not found in workspace '${workspaceId}'.`);
                  return res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
@@ -134,8 +134,8 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
 
             logger.info(`Team '${name}' found in workspace '${workspaceId}'. Fetching velocity data.`);
             // Use injected dependencies
-            const velocityData = await velocityDb.getTeamVelocityByWorkspace(name, workspaceId, executeQuery);
-            const averageData = await velocityDb.getTeamAverageVelocityByWorkspace(name, workspaceId, executeQuery);
+            const velocityData = await velocityDb.getTeamVelocityByWorkspace(name, workspaceId); // Removed executeQuery
+            const averageData = await velocityDb.getTeamAverageVelocityByWorkspace(name, workspaceId); // Removed executeQuery
             logger.info(`Successfully fetched workspace velocity data for team '${name}' in workspace '${workspaceId}'.`);
 
             res.json({
@@ -163,13 +163,13 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
             if (userId && workspaceId) {
                  logger.info(`Attempting workspace sprint creation: user ${userId}, workspace ${workspaceId}, team ${name}`);
                  // Use injected dependency
-                const hasAccess = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool); // Pass pool
+                const hasAccess = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
                 if (!hasAccess) {
                      logger.warn(`Forbidden sprint creation attempt: User ${userId} to workspace ${workspaceId}`);
                     return res.status(403).json({ error: 'Forbidden: Access denied to this workspace' });
                 }
                 // Use injected dependency
-                team = await velocityDb.getTeamByWorkspace(name, workspaceId, executeQuery);
+                team = await velocityDb.getTeamByWorkspace(name, workspaceId); // Removed executeQuery
                 if (!team) {
                     logger.warn(`Team '${name}' not found in workspace '${workspaceId}' during sprint creation.`);
                     return res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
@@ -182,7 +182,7 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
                 try {
                     // Use injected dependency
                     // Corrected to use getTeam and pass executeQuery
-                    team = await velocityDb.getTeam(name, null, executeQuery); // Check if team exists without password first
+                    team = await velocityDb.getTeam(name, null); // Removed executeQuery
                      if (!team) {
                          logger.warn(`Anonymous team '${name}' not found during sprint creation auth.`);
                          return res.status(401).json({ error: 'Invalid team name or password' });
@@ -229,7 +229,7 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
             // --- Create Sprint ---
             const id = uuidv4();
             // Use injected dependency
-            const sprint = await velocityDb.createSprint(id, team.id, sprintName, startDate, endDate, executeQuery);
+            const sprint = await velocityDb.createSprint(id, team.id, sprintName, startDate, endDate); // Removed executeQuery
             logger.info(`Sprint '${sprint.id}' created successfully for team '${team.id}' ('${name}').`);
             res.status(201).json({ id: sprint.id });
         } catch (error) {
@@ -249,13 +249,13 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
 
             // --- Authorization Check ---
             // Use injected dependency to get sprint details
-            const sprint = await velocityDb.getSprintById(sprintId, executeQuery);
+            const sprint = await velocityDb.getSprintById(sprintId); // Removed executeQuery
             if (!sprint) {
                 return res.status(404).json({ error: 'Sprint not found' });
             }
 
             // Fetch the team associated with the sprint
-            const team = await velocityDb.getTeamById(sprint.team_id, executeQuery);
+            const team = await velocityDb.getTeamById(sprint.team_id); // Removed executeQuery
             if (!team) {
                 logger.error(`Team ${sprint.team_id} associated with sprint ${sprintId} not found.`);
                 // This indicates a data integrity issue, return 500
@@ -275,7 +275,7 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
                     logger.warn(`Workspace context mismatch for sprint ${sprintId}. Header: ${workspaceId}, Team WS: ${team.workspace_id}`);
                     return res.status(403).json({ error: 'Forbidden: Sprint does not belong to the specified workspace.' });
                 }
-                const hasAccess = await workspaceDb.isWorkspaceMember(team.workspace_id, userId, pool); // Pass pool
+                const hasAccess = await workspaceDb.isWorkspaceMember(team.workspace_id, userId); // Removed pool
                 if (!hasAccess) {
                     logger.warn(`User ${userId} forbidden from updating velocity for sprint ${sprintId} in workspace ${team.workspace_id}.`);
                     return res.status(403).json({ error: 'Forbidden: Access denied to this workspace.' });
@@ -313,7 +313,7 @@ export default function setupVelocityRoutes(velocityDb, workspaceDb) {
 
 
             // Use injected dependency
-            const velocity = await velocityDb.updateSprintVelocity(sprintId, committedPoints, completedPoints, executeQuery);
+            const velocity = await velocityDb.updateSprintVelocity(sprintId, committedPoints, completedPoints); // Removed executeQuery
             res.json(velocity);
         } catch (error) {
             logger.error('Error updating sprint velocity:', { error: error.message, stack: error.stack, sprintId: req.params.sprintId, body: req.body });

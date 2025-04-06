@@ -78,8 +78,8 @@ describe('Auth Routes', () => {
     expect(res.body.user).toHaveProperty('name', testUserName);
     expect(res.body).toHaveProperty('token');
     authToken = res.body.token; // Save token for later tests if needed
-    expect(mockUserDb.createUser).toHaveBeenCalledWith(testUserEmail, testUserPassword, testUserName);
-    expect(mockUserDb.updateLastLogin).toHaveBeenCalledWith(mockUserId);
+    expect(mockUserDb.createUser).toHaveBeenCalledWith(testUserEmail, testUserPassword, testUserName); // Removed pool expectation
+    expect(mockUserDb.updateLastLogin).toHaveBeenCalledWith(mockUserId); // Removed pool expectation
   });
 
   // Test registration with existing email
@@ -150,9 +150,9 @@ describe('Auth Routes', () => {
     expect(res.body).toHaveProperty('user');
     expect(res.body.user).toHaveProperty('id', mockUserId);
     expect(res.body).toHaveProperty('token');
-    expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(testUserEmail);
+    expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(testUserEmail); // Removed pool expectation
     expect(mockUserDb.verifyPassword).toHaveBeenCalledWith(testUserPassword, mockHashedPassword);
-    expect(mockUserDb.updateLastLogin).toHaveBeenCalledWith(mockUserId);
+    expect(mockUserDb.updateLastLogin).toHaveBeenCalledWith(mockUserId); // Removed pool expectation
   });
 
   // Test login with incorrect password
@@ -171,7 +171,7 @@ describe('Auth Routes', () => {
 
     expect(res.statusCode).toEqual(401);
     expect(res.body).toHaveProperty('error', 'Invalid credentials');
-    expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(testUserEmail);
+    expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(testUserEmail); // Removed pool expectation
     expect(mockUserDb.verifyPassword).toHaveBeenCalledWith('wrongpassword', mockHashedPassword);
     expect(mockUserDb.updateLastLogin).not.toHaveBeenCalled();
   });
@@ -190,7 +190,7 @@ describe('Auth Routes', () => {
 
     expect(res.statusCode).toEqual(401);
     expect(res.body).toHaveProperty('error', 'Invalid credentials');
-    expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(nonExistentEmail);
+    expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(nonExistentEmail); // Removed pool expectation
     expect(mockUserDb.verifyPassword).not.toHaveBeenCalled();
     expect(mockUserDb.updateLastLogin).not.toHaveBeenCalled();
   });
@@ -220,7 +220,7 @@ describe('Auth Routes', () => {
 
       expect(res.statusCode).toEqual(500);
       expect(res.body).toHaveProperty('error', 'Internal Server Error');
-      expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(testUserEmail);
+      expect(mockUserDb.getUserByEmail).toHaveBeenCalledWith(testUserEmail); // Removed pool expectation
   });
   // --- END NEW TEST ---
 
@@ -258,7 +258,7 @@ describe('Auth Routes', () => {
       // Corrected expectation: Error should be caught before response is sent
       expect(res.statusCode).toEqual(500);
       expect(res.body).toHaveProperty('error', 'Internal Server Error');
-      expect(mockUserDb.updateLastLogin).toHaveBeenCalledWith(mockUserId);
+      expect(mockUserDb.updateLastLogin).toHaveBeenCalledWith(mockUserId); // Removed pool expectation
   });
   // --- END NEW TEST ---
 

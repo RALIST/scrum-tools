@@ -1,10 +1,11 @@
-import { executeQuery } from './dbUtils.js';
+import { dbUtils } from './dbUtils.js'; // Import the dbUtils object
+import { pool } from './pool.js'; // Import the pool
 import logger from '../logger.js'; // Import the logger
 
 export const createRoom = async (roomId, name, sequence, password, workspaceId) => {
     const queryText = 'INSERT INTO rooms (id, name, sequence, password, workspace_id) VALUES ($1, $2, $3, $4, $5)';
     const params = [roomId, name || roomId, sequence, password, workspaceId || null];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const getRooms = async () => {
@@ -16,7 +17,7 @@ export const getRooms = async () => {
         GROUP BY r.id
         ORDER BY r.created_at DESC -- Optional: order public rooms
     `;
-    const result = await executeQuery(queryText);
+    const result = await dbUtils.executeQuery(queryText); // Use dbUtils.executeQuery
     return result.rows;
 };
 
@@ -31,7 +32,7 @@ export const getWorkspaceRooms = async (workspaceId) => {
         ORDER BY r.created_at DESC
     `;
     const params = [workspaceId];
-    const result = await executeQuery(queryText, params);
+    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
     return result.rows;
 };
 
@@ -40,7 +41,7 @@ export const getPokerRoomInfo = async (roomId) => {
     // Select only necessary fields: id and whether a password exists
     const queryText = 'SELECT id, password IS NOT NULL as "hasPassword" FROM rooms WHERE id = $1';
     const params = [roomId];
-    const result = await executeQuery(queryText, params);
+    const result = await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
     // Return the first row found, or null if no room matches the ID
     return result.rows.length > 0 ? result.rows[0] : null;
 };
@@ -48,14 +49,14 @@ export const getPokerRoomInfo = async (roomId) => {
 
 export const getRoom = async (roomId) => {
     const roomQuery = 'SELECT * FROM rooms WHERE id = $1';
-    const roomResult = await executeQuery(roomQuery, [roomId]);
+    const roomResult = await dbUtils.executeQuery(roomQuery, [roomId]); // Use dbUtils.executeQuery
 
     if (roomResult.rows.length === 0) {
         return null;
     }
 
     const participantsQuery = 'SELECT * FROM participants WHERE room_id = $1';
-    const participantsResult = await executeQuery(participantsQuery, [roomId]);
+    const participantsResult = await dbUtils.executeQuery(participantsQuery, [roomId]); // Use dbUtils.executeQuery
 
     const roomData = roomResult.rows[0];
     let parsedSequence = roomData.sequence; // Default to raw value
@@ -92,31 +93,31 @@ export const getRoom = async (roomId) => {
 export const addParticipant = async (roomId, participantId, name) => {
     const queryText = 'INSERT INTO participants (id, room_id, name) VALUES ($1, $2, $3)';
     const params = [participantId, roomId, name];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const updateParticipantName = async (roomId, participantId, name) => {
     const queryText = 'UPDATE participants SET name = $1 WHERE room_id = $2 AND id = $3';
     const params = [name, roomId, participantId];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const updateParticipantVote = async (roomId, participantId, vote) => {
     const queryText = 'UPDATE participants SET vote = $1 WHERE room_id = $2 AND id = $3';
     const params = [vote, roomId, participantId];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const removeParticipant = async (roomId, participantId) => {
     const queryText = 'DELETE FROM participants WHERE room_id = $1 AND id = $2';
     const params = [roomId, participantId];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const resetVotes = async (roomId) => {
     const queryText = 'UPDATE participants SET vote = NULL WHERE room_id = $1';
     const params = [roomId];
-    await executeQuery(queryText, params);
+    await dbUtils.executeQuery(queryText, params); // Use dbUtils.executeQuery
 };
 
 export const updateRoomSettings = async (roomId, sequence, password) => {
@@ -145,6 +146,6 @@ export const updateRoomSettings = async (roomId, sequence, password) => {
     if (updates.length > 0) {
         values.push(roomId);
         const queryText = `UPDATE rooms SET ${updates.join(', ')} WHERE id = $${paramCount}`;
-        await executeQuery(queryText, values);
+        await dbUtils.executeQuery(queryText, values); // Use dbUtils.executeQuery
     }
 };

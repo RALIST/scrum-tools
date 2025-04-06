@@ -1,24 +1,25 @@
 import bcrypt from 'bcryptjs';
-import {
-    getRoom,
-    addParticipant,
-    updateParticipantName,
-    updateParticipantVote,
-    removeParticipant,
-    getRooms,
-    resetVotes,
-    updateRoomSettings
-} from '../db/poker.js';
+// Removed direct DB imports, will use injected pokerDb
+// import {
+//     getRoom,
+//     addParticipant,
+//     updateParticipantName,
+//     updateParticipantVote,
+//     removeParticipant,
+//     getRooms,
+//     resetVotes,
+//     updateRoomSettings
+// } from '../db/poker.js';
 import logger from '../logger.js'; // Import the logger
 
 // This function handles events for an individual connected socket
-const handlePokerSocketEvents = (io, socket) => {
+const handlePokerSocketEvents = (io, socket, pokerDb) => { // Add pokerDb dependency
     socket.on('joinRoom', async ({ roomId, userName, password }) => {
         try {
             // Keep track of the room the socket joins for disconnect cleanup
             socket.data.roomId = roomId; // Store roomId in socket data
 
-            const room = await getRoom(roomId);
+            const room = await pokerDb.getRoom(roomId); // Use injected pokerDb
             if (!room) {
                 socket.emit('error', { message: 'Room not found' })
                 return
@@ -42,7 +43,7 @@ const handlePokerSocketEvents = (io, socket) => {
             }
 
             // Add participant to DB first
-            await addParticipant(roomId, socket.id, userName);
+            await pokerDb.addParticipant(roomId, socket.id, userName); // Use injected pokerDb
 
             // Add the new participant to the existing room data in memory
             // Ensure room.participants is a Map before setting
@@ -105,8 +106,8 @@ const handlePokerSocketEvents = (io, socket) => {
             }
 
             // Call the DB function only if validation passes
-            await updateRoomSettings(roomId, settings.sequence, hashedPassword);
-            const updatedRoom = await getRoom(roomId); // Fetch updated room after successful settings update
+            await pokerDb.updateRoomSettings(roomId, settings.sequence, hashedPassword); // Use injected pokerDb
+            const updatedRoom = await pokerDb.getRoom(roomId); // Use injected pokerDb
 
             // Check if room exists after update (might be redundant if updateRoomSettings ensures existence, but safe)
             if (!updatedRoom) {
@@ -133,8 +134,8 @@ const handlePokerSocketEvents = (io, socket) => {
 
     socket.on('changeName', async ({ roomId, newName }) => {
         try {
-            await updateParticipantName(roomId, socket.id, newName)
-            const room = await getRoom(roomId)
+            await pokerDb.updateParticipantName(roomId, socket.id, newName); // Use injected pokerDb
+            const room = await pokerDb.getRoom(roomId); // Use injected pokerDb
 
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.participants.values()),
@@ -149,8 +150,8 @@ const handlePokerSocketEvents = (io, socket) => {
 
     socket.on('vote', async ({ roomId, vote }) => {
         try {
-            await updateParticipantVote(roomId, socket.id, vote)
-            const room = await getRoom(roomId)
+            await pokerDb.updateParticipantVote(roomId, socket.id, vote); // Use injected pokerDb
+            const room = await pokerDb.getRoom(roomId); // Use injected pokerDb
 
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.participants.values()),
@@ -167,8 +168,8 @@ const handlePokerSocketEvents = (io, socket) => {
 
     socket.on('resetVotes', async ({ roomId }) => {
         try {
-            await resetVotes(roomId)
-            const room = await getRoom(roomId)
+            await pokerDb.resetVotes(roomId); // Use injected pokerDb
+            const room = await pokerDb.getRoom(roomId); // Use injected pokerDb
 
             io.to(roomId).emit('votesReset')
             io.to(roomId).emit('participantUpdate', {
@@ -182,14 +183,14 @@ const handlePokerSocketEvents = (io, socket) => {
 };
 
 // This function initializes the poker namespace and handles connections/disconnections
-export const initializePokerSocket = (pokerIo) => { // Rename 'io' to 'pokerIo' for clarity
+export const initializePokerSocket = (pokerIo, pokerDb) => { // Add pokerDb dependency
     pokerIo.on('connection', (socket) => {
         // Log immediately upon connection to the /poker namespace
         logger.info(`Socket connected to /poker namespace: ${socket.id}`);
 
         // Handle specific poker events for this socket
         // Pass pokerIo (the namespace object) to the event handler if it needs to emit globally within the namespace
-        handlePokerSocketEvents(pokerIo, socket);
+        handlePokerSocketEvents(pokerIo, socket, pokerDb); // Pass pokerDb
         // Removed duplicate call: handlePokerSocketEvents(io, socket);
 
         // Handle disconnection
@@ -199,8 +200,8 @@ export const initializePokerSocket = (pokerIo) => { // Rename 'io' to 'pokerIo' 
 
             if (roomId) {
                 try {
-                    await removeParticipant(roomId, socket.id);
-                    const updatedRoom = await getRoom(roomId);
+                    await pokerDb.removeParticipant(roomId, socket.id); // Use injected pokerDb
+                    const updatedRoom = await pokerDb.getRoom(roomId); // Use injected pokerDb
 
                     // Check if room still exists and has participants before emitting
                     if (updatedRoom && updatedRoom.participants) {
@@ -220,13 +221,13 @@ export const initializePokerSocket = (pokerIo) => { // Rename 'io' to 'pokerIo' 
                  logger.warn(`User ${socket.id} disconnected from poker without joining a specific room.`);
                  // Attempt to find the room if socket.data.roomId wasn't set (fallback, less efficient)
                  try {
-                    const rooms = await getRooms();
+                    const rooms = await pokerDb.getRooms(); // Use injected pokerDb
                     for (const room of rooms) {
-                        const fullRoom = await getRoom(room.id);
+                        const fullRoom = await pokerDb.getRoom(room.id); // Use injected pokerDb
                         // Check participants map directly if it exists
                         if (fullRoom?.participants?.has(socket.id)) {
-                            await removeParticipant(room.id, socket.id);
-                            const updatedFallbackRoom = await getRoom(room.id);
+                            await pokerDb.removeParticipant(room.id, socket.id); // Use injected pokerDb
+                            const updatedFallbackRoom = await pokerDb.getRoom(room.id); // Use injected pokerDb
                              if (updatedFallbackRoom?.participants) {
                                  // Emit within the poker namespace
                                 pokerIo.to(room.id).emit('participantUpdate', {

@@ -1,11 +1,11 @@
 import { pool as defaultPool } from './pool.js'; // Rename default import
 import { v4 as uuidv4 } from 'uuid';
-import { createTeam as defaultCreateTeam } from './velocity.js'; // Rename default import
-import { randomBytes as defaultRandomBytes } from 'crypto'; // Import crypto for default param
+import { velocityUtils } from './velocity.js'; // Import the velocityUtils object
+import crypto from 'crypto'; // Import the full crypto module
 
 // Create a new workspace
-export const createWorkspace = async (name, description, ownerId, pool = defaultPool, _createTeam = defaultCreateTeam) => {
-  const client = await pool.connect(); // Use injected pool
+export const createWorkspace = async (name, description, ownerId) => { // Removed pool and _createTeam params
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     // Generate a unique ID
     const id = uuidv4();
@@ -30,7 +30,7 @@ export const createWorkspace = async (name, description, ownerId, pool = default
     // Pass the existing client and the workspace name to createTeam
     // Use injected _createTeam, passing the client and executeQuery from the client
     const dbExecutor = (queryText, params) => client.query(queryText, params);
-    await _createTeam(defaultTeamId, name, null, id, null, client, dbExecutor);
+    await velocityUtils.createTeam(defaultTeamId, name, null, id, null, client, dbExecutor); // Use velocityUtils.createTeam
 
     // Commit transaction
     await client.query('COMMIT');
@@ -45,8 +45,8 @@ export const createWorkspace = async (name, description, ownerId, pool = default
 };
 
 // Get workspaces for a user
-export const getUserWorkspaces = async (userId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const getUserWorkspaces = async (userId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const result = await client.query(`
       SELECT w.*, wm.role 
@@ -63,8 +63,8 @@ export const getUserWorkspaces = async (userId, pool = defaultPool) => {
 };
 
 // Get workspace by ID
-export const getWorkspaceById = async (workspaceId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const getWorkspaceById = async (workspaceId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const result = await client.query(
       'SELECT * FROM workspaces WHERE id = $1',
@@ -78,8 +78,8 @@ export const getWorkspaceById = async (workspaceId, pool = defaultPool) => {
 };
 
 // Add a member to a workspace
-export const addWorkspaceMember = async (workspaceId, userId, role = 'member', pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const addWorkspaceMember = async (workspaceId, userId, role = 'member') => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     await client.query(
       'INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, $3)',
@@ -91,8 +91,8 @@ export const addWorkspaceMember = async (workspaceId, userId, role = 'member', p
 };
 
 // Remove a member from a workspace
-export const removeWorkspaceMember = async (workspaceId, userId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const removeWorkspaceMember = async (workspaceId, userId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     await client.query(
       'DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
@@ -104,8 +104,8 @@ export const removeWorkspaceMember = async (workspaceId, userId, pool = defaultP
 };
 
 // Get workspace members
-export const getWorkspaceMembers = async (workspaceId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const getWorkspaceMembers = async (workspaceId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const result = await client.query(`
       SELECT u.id, u.name, u.email, wm.role, wm.joined_at
@@ -122,8 +122,8 @@ export const getWorkspaceMembers = async (workspaceId, pool = defaultPool) => {
 };
 
 // Update workspace info
-export const updateWorkspace = async (workspaceId, name, description, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const updateWorkspace = async (workspaceId, name, description) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const result = await client.query(
       'UPDATE workspaces SET name = $1, description = $2 WHERE id = $3 RETURNING *',
@@ -137,8 +137,8 @@ export const updateWorkspace = async (workspaceId, name, description, pool = def
 };
 
 // Check if user is a member of workspace
-export const isWorkspaceMember = async (workspaceId, userId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const isWorkspaceMember = async (workspaceId, userId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const result = await client.query(
       'SELECT * FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
@@ -152,8 +152,8 @@ export const isWorkspaceMember = async (workspaceId, userId, pool = defaultPool)
 };
 
 // Get user role in workspace
-export const getUserWorkspaceRole = async (workspaceId, userId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const getUserWorkspaceRole = async (workspaceId, userId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const result = await client.query(
       'SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
@@ -169,11 +169,11 @@ export const getUserWorkspaceRole = async (workspaceId, userId, pool = defaultPo
 // --- Workspace Invitations ---
 
 // Create a new invitation token
-export const createInvitation = async (workspaceId, createdBy, roleToAssign, expiresInDays = 7, pool = defaultPool, _randomBytes = defaultRandomBytes) => {
-  const client = await pool.connect(); // Use injected pool
+export const createInvitation = async (workspaceId, createdBy, roleToAssign, expiresInDays = 7) => { // Removed pool and _randomBytes params
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
-    // Use injected _randomBytes
-    const token = _randomBytes(16).toString('hex');
+    // Use the globally imported crypto module (which is spied on in tests)
+    const token = crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
@@ -191,8 +191,8 @@ export const createInvitation = async (workspaceId, createdBy, roleToAssign, exp
 };
 
 // Find a valid invitation by token
-export const findValidInvitationByToken = async (token, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const findValidInvitationByToken = async (token) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const queryText = `
       SELECT id, workspace_id, role_to_assign
@@ -208,8 +208,8 @@ export const findValidInvitationByToken = async (token, pool = defaultPool) => {
 };
 
 // Mark an invitation as used
-export const markInvitationAsUsed = async (invitationId, usedByUserId, pool = defaultPool) => {
-  const client = await pool.connect(); // Use injected pool
+export const markInvitationAsUsed = async (invitationId, usedByUserId) => { // Removed pool param
+  const client = await defaultPool.connect(); // Use internal defaultPool
   try {
     const queryText = `
       UPDATE workspace_invitations

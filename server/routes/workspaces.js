@@ -1,5 +1,5 @@
 import express from 'express';
-import { pool } from '../db/pool.js'; // Import the pool object
+// import { pool } from '../db/pool.js'; // Removed pool import
 // Removed direct DB imports
 // import { ... } from '../db/workspaces.js';
 // import { getUserByEmail } from '../db/users.js';
@@ -12,6 +12,7 @@ import logger from '../logger.js';
 // Wrap routes in a setup function that accepts db dependencies
 export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb) {
     const router = express.Router();
+    // Removed destructuring, will access directly
 
     // Create a new workspace
     router.post('/', authenticateToken, async (req, res, next) => {
@@ -24,7 +25,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }
 
         // Use injected dependency
-        const workspace = await workspaceDb.createWorkspace(name, description, userId, pool);
+        const workspace = await workspaceDb.createWorkspace(name, description, userId); // Removed pool
 
         res.status(201).json({
           message: 'Workspace created successfully',
@@ -41,7 +42,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
       try {
         const userId = req.user.userId;
         // Use injected dependency
-        const workspaces = await workspaceDb.getUserWorkspaces(userId, pool);
+        const workspaces = await workspaceDb.getUserWorkspaces(userId); // Removed pool
 
         res.json(workspaces);
       } catch (error) {
@@ -55,7 +56,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
       try {
         const workspaceId = req.params.id;
         // Use injected dependency
-        const workspace = await workspaceDb.getWorkspaceById(workspaceId, pool);
+        const workspace = await workspaceDb.getWorkspaceById(workspaceId); // Removed pool
 
         if (!workspace) {
           return res.status(404).json({ error: 'Workspace not found' });
@@ -75,7 +76,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!role || role !== 'admin') {
           return res.status(403).json({ error: 'You do not have permission to update this workspace' });
@@ -86,7 +87,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }
 
         // Use injected dependency
-        const workspace = await workspaceDb.updateWorkspace(workspaceId, name, description, pool);
+        const workspace = await workspaceDb.updateWorkspace(workspaceId, name, description); // Removed pool
 
         res.json({
           message: 'Workspace updated successfully',
@@ -106,21 +107,21 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!userRole || userRole !== 'admin') {
           return res.status(403).json({ error: 'You do not have permission to add members' });
         }
 
         // Use injected dependency
-        const user = await userDb.getUserByEmail(email);
+        const user = await userDb.getUserByEmail(email); // Removed pool
 
         if (!user) {
           return res.status(404).json({ error: 'User not found' });
         }
 
         // Use injected dependency
-        await workspaceDb.addWorkspaceMember(workspaceId, user.id, role || 'member', pool);
+        await workspaceDb.addWorkspaceMember(workspaceId, user.id, role || 'member'); // Removed pool
 
         res.status(201).json({
           message: 'Member added successfully',
@@ -143,14 +144,14 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!userRole || userRole !== 'admin') {
           return res.status(403).json({ error: 'You do not have permission to remove members' });
         }
 
         // Use injected dependency
-        const workspace = await workspaceDb.getWorkspaceById(workspaceId, pool);
+        const workspace = await workspaceDb.getWorkspaceById(workspaceId); // Removed pool
         if (!workspace) {
           logger.error(`Workspace ${workspaceId} not found during member removal check by user ${userId}`);
           return res.status(404).json({ error: 'Workspace not found' });
@@ -161,7 +162,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }
 
         // Use injected dependency
-        await workspaceDb.removeWorkspaceMember(workspaceId, memberId, pool);
+        await workspaceDb.removeWorkspaceMember(workspaceId, memberId); // Removed pool
         // The original code had duplicate checks here, removed them.
         // The removeWorkspaceMember function should handle non-existent members gracefully (e.g., affect 0 rows).
 
@@ -181,14 +182,14 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!role) {
           return res.status(403).json({ error: 'You do not have access to this workspace' });
         }
 
         // Use injected dependency
-        const members = await workspaceDb.getWorkspaceMembers(workspaceId, pool);
+        const members = await workspaceDb.getWorkspaceMembers(workspaceId); // Removed pool
         res.json(members);
       } catch (error) {
         logger.error('Get members error:', { error: error.message, stack: error.stack, userId: req.user?.userId, workspaceId: req.params.id });
@@ -203,7 +204,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!role) {
           return res.status(403).json({ error: 'You do not have access to this workspace' });
@@ -235,7 +236,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!role) {
           return res.status(403).json({ error: 'You do not have access to this workspace' });
@@ -266,14 +267,14 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const userId = req.user.userId;
 
         // Use injected dependency
-        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const role = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
 
         if (!role) {
           return res.status(403).json({ error: 'You do not have access to this workspace' });
         }
 
         // Use injected dependency from velocityDb
-        const teams = await velocityDb.getWorkspaceVelocityTeams(workspaceId);
+        const teams = await velocityDb.velocityUtils.getWorkspaceVelocityTeams(workspaceId); // Access method via velocityDb.velocityUtils
 
         const teamList = teams.map(team => ({
           id: team.id,
@@ -298,7 +299,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const { roleToAssign = 'member', expiresInDays = 7 } = req.body;
 
         // Use injected dependency
-        const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId, pool);
+        const userRole = await workspaceDb.getUserWorkspaceRole(workspaceId, userId); // Removed pool
         if (userRole !== 'admin') {
           logger.warn(`User ${userId} attempted to create invite for workspace ${workspaceId} without admin rights.`);
           return res.status(403).json({ error: 'Forbidden: Only admins can create invitations.' });
@@ -306,7 +307,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
 
         // Use injected dependency
         // Pass pool, crypto is handled by default param in DB function
-        const token = await workspaceDb.createInvitation(workspaceId, userId, roleToAssign, expiresInDays, pool);
+        const token = await workspaceDb.createInvitation(workspaceId, userId, roleToAssign, expiresInDays); // Removed pool
 
         logger.info(`User ${userId} created invitation token for workspace ${workspaceId}`);
         res.status(201).json({ token });
@@ -328,7 +329,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         }
 
         // Use injected dependency
-        const invitation = await workspaceDb.findValidInvitationByToken(token, pool);
+        const invitation = await workspaceDb.findValidInvitationByToken(token); // Removed pool
         if (!invitation) {
           logger.warn(`User ${userId} attempted to use invalid/expired token: ${token}`);
           return res.status(400).json({ error: 'Invalid or expired invitation token.' });
@@ -337,17 +338,17 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
         const { id: invitationId, workspace_id: workspaceId, role_to_assign: roleToAssign } = invitation;
 
         // Use injected dependency
-        const alreadyMember = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool);
+        const alreadyMember = await workspaceDb.isWorkspaceMember(workspaceId, userId); // Removed pool
         if (alreadyMember) {
            logger.info(`User ${userId} tried to accept invite for workspace ${workspaceId} but is already a member.`);
            return res.status(200).json({ message: 'You are already a member of this workspace.', workspaceId });
         }
 
         // Use injected dependency
-        await workspaceDb.addWorkspaceMember(workspaceId, userId, roleToAssign, pool);
+        await workspaceDb.addWorkspaceMember(workspaceId, userId, roleToAssign); // Removed pool
 
         // Use injected dependency
-        const marked = await workspaceDb.markInvitationAsUsed(invitationId, userId, pool);
+        const marked = await workspaceDb.markInvitationAsUsed(invitationId, userId); // Removed pool
         if (!marked) {
             logger.warn(`Failed to mark invitation ${invitationId} as used for user ${userId}, possibly already used concurrently.`);
         }
@@ -359,7 +360,7 @@ export default function setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retro
          if (error.code === '23505') {
             logger.warn(`Error accepting invitation for user ${req.user?.userId} - likely already a member: ${error.message}`);
             // Need to re-fetch invitation to get workspaceId if add failed but find succeeded
-            const invitation = await workspaceDb.findValidInvitationByToken(req.body.token, pool).catch(() => null); // Ignore error here
+            const invitation = await workspaceDb.findValidInvitationByToken(req.body.token).catch(() => null); // Removed pool
             return res.status(409).json({ message: 'You are already a member of this workspace.', workspaceId: invitation?.workspace_id });
          }
         logger.error('Error accepting workspace invitation:', { error: error.message, stack: error.stack, userId: req.user?.userId, body: req.body });

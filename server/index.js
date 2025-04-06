@@ -71,8 +71,8 @@ const pokerIo = io.of('/poker');
 const retroIo = io.of('/retro');
 
 // Initialize socket namespaces
-initializePokerSocket(pokerIo);
-initializeRetroSocket(retroIo);
+initializePokerSocket(pokerIo, pokerDb); // Pass pokerDb dependency
+initializeRetroSocket(retroIo, retroDb); // Pass retroDb dependency
 
 // --- Test Routes for Error Handling ---
 app.get('/api/test-error', (req, res, next) => {

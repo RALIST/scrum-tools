@@ -4,7 +4,7 @@ import { pool } from '../db/pool.js';
 import { jest, describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 // Import DB functions needed for direct setup/cleanup
 import { createWorkspace, addWorkspaceMember } from '../db/workspaces.js';
-import { createTeam } from '../db/velocity.js'; // createWorkspace dependency
+// Removed unused velocityUtils import for integration test
 
 // Helper function (copied from original test file)
 const registerAndLoginUser = async (emailSuffix) => {
@@ -45,12 +45,13 @@ describe('Workspaces Routes (Integration Tests)', () => {
     const description = 'Initial workspace for integ tests';
     try {
       // Use the real createTeam function as the dependency
-      const workspace = await createWorkspace(workspaceName, description, ownerInfo.userId, pool, createTeam);
+      // createWorkspace now uses internal pool and velocityUtils.createTeam
+      const workspace = await createWorkspace(workspaceName, description, ownerInfo.userId);
       expect(workspace).toBeDefined();
       testWorkspaceId = workspace.id;
 
       // Add nonAdminInfo as a member directly
-      await addWorkspaceMember(testWorkspaceId, nonAdminInfo.userId, 'member', pool);
+      await addWorkspaceMember(testWorkspaceId, nonAdminInfo.userId, 'member'); // addWorkspaceMember no longer takes pool
     } catch (err) {
       console.error("Error during beforeAll setup:", err);
       throw err; // Fail fast if setup fails

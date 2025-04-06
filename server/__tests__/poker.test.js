@@ -331,7 +331,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
       expect(res.body).toHaveProperty('roomId', roomId);
       expect(res.body).toHaveProperty('hasPassword', false); // Workspace rooms don't have passwords
       // Check that membership was verified
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
       // Corrected argument order based on routes/poker.js
       expect(mockPokerDb.createRoom).toHaveBeenCalledWith(
           roomId,
@@ -355,7 +355,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         // Route now checks membership first
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to create a room in this workspace.');
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         expect(mockPokerDb.getRoom).not.toHaveBeenCalled(); // Should not be called if not member
         expect(mockPokerDb.createRoom).not.toHaveBeenCalled(); // Should not be called if not member
     });
@@ -379,7 +379,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         expect(res.body).toHaveProperty('error', 'Room already exists');
         // Ensure membership was checked (if workspaceId provided)
         if (testWorkspaceId) {
-            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         }
         expect(mockPokerDb.getRoom).toHaveBeenCalledWith(createdAuthRoomId);
         expect(mockPokerDb.createRoom).not.toHaveBeenCalled(); // createRoom should not be called
@@ -424,7 +424,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         // Route maps the response, compare relevant fields
         expect(res.body[0]).toMatchObject(expectedMappedRooms[0]); // Assert against expected mapped structure
         // Check membership was verified
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         expect(mockPokerDb.getWorkspaceRooms).toHaveBeenCalledWith(testWorkspaceId);
         expect(mockPokerDb.getRooms).not.toHaveBeenCalled(); // Changed mock name
     });
@@ -440,7 +440,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to access rooms for this workspace.');
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
         expect(mockPokerDb.getWorkspaceRooms).not.toHaveBeenCalled(); // Should not be called if not member
     });
 

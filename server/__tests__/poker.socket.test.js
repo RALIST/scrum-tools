@@ -1,9 +1,7 @@
-import { createServer } from 'http';
 import { io as Client } from 'socket.io-client';
 import { server as httpServer, io, app } from '../index.js'; // Import app and io
 import { pool } from '../db/pool.js';
 import request from 'supertest';
-import { v4 as uuidv4 } from 'uuid';
 
 describe('Planning Poker Socket Events (/poker namespace)', () => {
   let clientSocket1, clientSocket2;
@@ -144,13 +142,15 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       // Don't join a room first
       clientSocket1.emit('vote', { roomId: 'non-existent-room', vote: voteValue });
       let errorReceived = false;
+      let errorTimeout; // Define timeout variable here
       clientSocket1.on('error', (err) => {
+        clearTimeout(errorTimeout); // Clear timeout on error
         expect(err.message).toEqual('Failed to record vote');
         errorReceived = true;
         done();
       });
       // Add a timeout in case the error event isn't emitted
-      setTimeout(() => {
+      errorTimeout = setTimeout(() => { // Assign timeout ID
         if (!errorReceived) done(new Error('Timeout waiting for vote error'));
       }, 1000);
     });
@@ -189,13 +189,15 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       // Don't join a room first
       clientSocket1.emit('resetVotes', { roomId: 'non-existent-room' });
       let errorReceived = false;
+      let errorTimeout; // Define timeout variable here
       clientSocket1.on('error', (err) => {
+        clearTimeout(errorTimeout); // Clear timeout on error
         expect(err.message).toEqual('Failed to reset votes');
         errorReceived = true;
         done();
       });
       // Add a timeout in case the error event isn't emitted
-      setTimeout(() => {
+      errorTimeout = setTimeout(() => { // Assign timeout ID
          if (!errorReceived) done(new Error('Timeout waiting for resetVotes error'));
       }, 1000);
     });
@@ -223,13 +225,15 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       // Don't join a room first
       clientSocket1.emit('changeName', { roomId: 'non-existent-room', newName: newName });
       let errorReceived = false;
+      let errorTimeout; // Define timeout variable here
       clientSocket1.on('error', (err) => {
+        clearTimeout(errorTimeout); // Clear timeout on error
         expect(err.message).toEqual('Failed to change name');
         errorReceived = true;
         done();
       });
       // Add a timeout in case the error event isn't emitted
-      setTimeout(() => {
+      errorTimeout = setTimeout(() => { // Assign timeout ID
          if (!errorReceived) done(new Error('Timeout waiting for changeName error'));
       }, 1000);
     });

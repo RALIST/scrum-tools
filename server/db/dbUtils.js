@@ -1,4 +1,4 @@
-import { pool } from './pool.js';
+import { pool } from './pool.js'; // Import pool directly
 import logger from '../logger.js'; // Import the logger
 
 /**
@@ -12,9 +12,9 @@ import logger from '../logger.js'; // Import the logger
  * @returns {Promise<QueryResult>} A promise that resolves with the query result.
  * @throws {Error} Throws an error if the query fails.
  */
-export const executeQuery = async (queryText, params = [], existingClient = null) => {
+const executeQueryInternal = async (queryText, params = [], existingClient = null) => { // Remove pool argument
     const isNewClient = !existingClient;
-    const client = existingClient || await pool.connect();
+    const client = existingClient || await pool.connect(); // Use internal pool
     // logger.info(`Executing query (new client: ${isNewClient}): ${queryText.substring(0, 100)}...`, { params: params }); // Log start // REMOVED VERBOSE LOG
 
     try {
@@ -40,6 +40,11 @@ export const executeQuery = async (queryText, params = [], existingClient = null
              // logger.info('Not releasing DB client (was passed in).'); // REMOVED VERBOSE LOG
         }
     }
+};
+
+// Export an object containing the function
+export const dbUtils = {
+    executeQuery: executeQueryInternal
 };
 
 // Example of a function that might need multiple operations within a transaction
