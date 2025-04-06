@@ -108,8 +108,7 @@ const isMainModule: boolean = import.meta.url === pathToFileURL(process.argv[1])
 
 if (isMainModule) {
     server.listen(PORT, () => {
-        // Use logger instead of console.log
-        logger.info(`Server running on port ${PORT}`);
+      logger.info(`Server running on port ${PORT}`);
     });
 }
 

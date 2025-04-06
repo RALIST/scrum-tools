@@ -97,7 +97,7 @@ export interface RetroCardVote {
 /**
  * Represents the detailed retro board data including cards, as returned by getRetroBoard.
  */
-export interface RetroBoardDetails extends Omit<RetroBoard, 'card_count' | 'password'> {
+export interface RetroBoardDetails extends Omit<RetroBoard, 'card_count'> { // Keep password field
   cards: RetroCard[]; // Includes cards with votes populated
 }
 

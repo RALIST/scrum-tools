@@ -259,6 +259,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
           id: publicRoomId,
           name: 'Public Room Info',
           sequence: 'fibonacci',
+          hasPassword: false,
           participants: [], // Empty array from empty map
           created_at: expect.any(String),
           workspace_id: null
@@ -277,6 +278,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         id: anonRoomId,
         name: 'Anon Room Info',
         sequence: 'tshirt',
+        hasPassword: true,
         participants: [], // Empty array from empty map
         created_at: expect.any(String),
         workspace_id: null
@@ -486,6 +488,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
             id: createdAuthRoomId,
             name: 'WS Room Info',
             workspace_id: testWorkspaceId,
+            hasPassword: false,
             sequence: 'powers', // Expect key
             participants: [],
             created_at: expect.any(String)

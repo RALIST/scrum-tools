@@ -176,12 +176,9 @@ export const initializePokerSocket = (
     pokerDb: PokerDbModule // Use the defined type
 ): void => {
     pokerIo.on('connection', (socket: TypedSocket) => { // Type the socket
-        console.log(`Socket connected to /poker: ${socket.id}`);
-
         handlePokerSocketEvents(pokerIo, socket, pokerDb);
 
         socket.on('disconnect', async () => {
-            console.log(`Socket disconnected from /poker: ${socket.id}`);
             const roomId: string | undefined = socket.data.roomId;
 
             if (roomId) {
@@ -194,7 +191,6 @@ export const initializePokerSocket = (
                             participants: Array.from(updatedRoom.participants.values()),
                         });
                     } else {
-                        console.log(`Room ${roomId} is now empty or deleted after participant ${socket.id} left.`);
                         // Optionally: Add logic here to delete the room if it's empty
                     }
                 } catch (error: any) {

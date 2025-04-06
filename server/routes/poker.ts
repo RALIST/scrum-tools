@@ -165,6 +165,7 @@ export default function setupPokerRoutes(
             // Convert participants Map to Array for JSON response
             const responsePayload = {
                 ...roomInfoToSend,
+                hasPassword: !!roomDetails.password, // Explicitly add hasPassword
                 participants: Array.from(roomInfoToSend.participants.values())
             };
 

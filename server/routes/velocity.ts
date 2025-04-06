@@ -187,47 +187,32 @@ export default function setupVelocityRoutes(
             }
             // --- Anonymous Mode ---
             else {
-                // --- Anonymous Mode ---
+                // Use getTeam directly, which handles password verification and throws specific errors
                 try {
-                    // First, check if team exists without providing password to get its state
-                    const teamCheck = await velocityDb.getTeam(name, null);
-
-                    if (!teamCheck) {
-                        // If team doesn't exist even with null password, it's truly not found
+                    team = await velocityDb.getTeam(name, password);
+                    if (!team) {
+                        // getTeam returns null if not found (and doesn't throw for not found)
                         res.status(404).json({ error: `Team '${name}' not found.` });
                         return;
                     }
-
-                    // Now fetch the full team data including password hash to check password requirement
-                    const fullTeam = await velocityDb.getTeamById(teamCheck.id);
-                    if (!fullTeam) {
-                        // This indicates a data integrity issue
-                        throw new Error("Team data inconsistency after initial check.");
-                    }
-
-                    // Check password requirements
-                    if (fullTeam.password) { // Team requires a password
-                        if (!password) {
-                            res.status(401).json({ error: 'Password required for this team' });
-                            return;
-                        }
-                        // Compare provided password with hash
-                        const isValid: boolean = await bcrypt.compare(password, fullTeam.password);
-                        if (!isValid) {
-                            // Use the specific error message the test expects
-                            res.status(401).json({ error: 'Invalid password.' });
-                            return;
-                        }
-                    } else if (password) { // Team does NOT require password, but one was provided
-                        res.status(401).json({ error: 'Invalid password (team does not require one).' });
+                    // If team is found and password is valid (or not needed), execution continues
+                } catch (error: any) {
+                    // Catch specific errors thrown by getTeam for invalid password/context
+                    const knownAuthErrors = [
+                        "Invalid password for anonymous team",
+                        "Password required for this anonymous team",
+                        "Invalid password (anonymous team does not require one)",
+                        "Password or workspace context required for this team.", // Should not happen here
+                        "Cannot access workspace team using a password." // Should not happen here
+                    ];
+                     if (knownAuthErrors.includes(error.message)) {
+                        // Return 401 for authentication/authorization issues from getTeam
+                        res.status(401).json({ error: 'Invalid team name or password' }); // Generic message for security
                         return;
+                    } else {
+                        // Re-throw other unexpected errors
+                        throw error;
                     }
-                    // If we reach here, authorization is successful for anonymous team
-                    team = teamCheck; // Assign the checked team (without password hash)
-
-                } catch (dbError: any) {
-                     res.status(500).json({ error: 'Error verifying team access.' });
-                     return;
                 }
             }
 
@@ -238,8 +223,6 @@ export default function setupVelocityRoutes(
 
             // --- Create Sprint ---
             const id: string = uuidv4();
-            // Use injected dependency
-            // Assert non-null for team.id
             const sprint: VelocitySprint = await velocityDb.createSprint(id, team!.id, sprintName, startDate, endDate);
             res.status(201).json({ id: sprint.id });
         } catch (error: any) { // Type error

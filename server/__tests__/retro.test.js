@@ -228,7 +228,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
         const res = await request(testApp) // Use testApp
           .put(`/api/retro/${publicBoardId}/settings`)
-          .send({ defaultTimer: 150 });
+          .send({ settings: { defaultTimer: 150 }});
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('id', publicBoardId);
         expect(res.body).toHaveProperty('default_timer', 150);
@@ -243,7 +243,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
           const res = await request(testApp) // Use testApp
               .put(`/api/retro/${publicBoardId}/settings`)
-              .send({ defaultTimer: 150 });
+              .send({ settings: { defaultTimer: 150 }});
 
           expect(res.statusCode).toEqual(500);
           expect(res.body).toHaveProperty('error', 'Internal Server Error');
@@ -259,7 +259,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
           const res = await request(testApp) // Use testApp
               .put(`/api/retro/${publicBoardId}/settings`)
-              .send({ defaultTimer: 150 });
+              .send({ settings: { defaultTimer: 150 }});
 
           expect(res.statusCode).toEqual(500);
           expect(res.body).toHaveProperty('error', 'Internal Server Error');
@@ -281,7 +281,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
       const res = await request(testApp) // Use testApp
         .put(`/api/retro/${nonExistentBoardId}/settings`)
         // .set('Authorization', `Bearer ${authUserInfo.token}`) // Auth not needed for 404 check
-        .send({ defaultTimer: 500 });
+        .send({ settings: { defaultTimer: 500 }});
       expect(res.statusCode).toEqual(404);
       expect(res.body).toHaveProperty('error', 'Board not found');
       expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(nonExistentBoardId);
@@ -392,7 +392,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
     });
 
     it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated member)', async () => {
-        const newSettings = { defaultTimer: 900, hideAuthorNames: true };
+        const newSettings = { settings: { defaultTimer: 900, hideAuthorNames: true } };
         const initialBoard = { id: createdAuthBoardId, name: 'Old Name', workspace_id: testWorkspaceId };
         const updatedBoard = { ...initialBoard, default_timer: 900, hide_author_names: true };
 
@@ -411,17 +411,16 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.body).toHaveProperty('hide_author_names', true);
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledTimes(2);
         expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId); // Removed pool expectation
-        expect(mockRetroDb.updateRetroBoardSettings).toHaveBeenCalledWith(createdAuthBoardId, newSettings);
+        expect(mockRetroDb.updateRetroBoardSettings).toHaveBeenCalledWith(createdAuthBoardId, newSettings.settings);
     });
 
     it('PUT /api/retro/:boardId/settings - should fail to update workspace board if not authenticated', async () => {
-        const newSettings = { defaultTimer: 900 };
+        const newSettings = { settings: { defaultTimer: 900 } };
         const initialBoard = { id: createdAuthBoardId, workspace_id: testWorkspaceId };
         mockRetroDb.getRetroBoard.mockResolvedValueOnce(initialBoard); // Board exists
 
         const res = await request(testApp)
             .put(`/api/retro/${createdAuthBoardId}/settings`)
-            // No Authorization header
             .send(newSettings);
         expect(res.statusCode).toEqual(401);
         expect(res.body).toHaveProperty('error', 'Authentication required to update settings for this retro board.');
@@ -432,7 +431,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
     });
 
      it('PUT /api/retro/:boardId/settings - should fail to update workspace board if not workspace member', async () => {
-        const newSettings = { defaultTimer: 900 };
+        const newSettings = { settings: { defaultTimer: 900 } };
         const initialBoard = { id: createdAuthBoardId, workspace_id: testWorkspaceId };
         mockRetroDb.getRetroBoard.mockResolvedValueOnce(initialBoard); // Board exists
         mockWorkspaceDb.isWorkspaceMember.mockResolvedValueOnce(false); // Mock user is NOT member

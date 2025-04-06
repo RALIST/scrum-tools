@@ -25,7 +25,7 @@ export default function setupRetroRoutes(
     // POST /
     router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         const boardId: string = Math.random().toString(36).substring(2, 8);
-        const { name, settings = {}, workspaceId } = req.body;
+        const { name, settings = {}, workspaceId } = req.body; // Expect settings object again
         const defaultName: string = `Retro ${formatDate(new Date())}`;
 
         const userId: string | undefined = req.user?.userId; // Get userId from auth middleware
@@ -44,8 +44,9 @@ export default function setupRetroRoutes(
                 }
             }
             // Use injected dependency
+            // Use injected dependency
             // Type settings explicitly
-            await retroDb.createRetroBoard(boardId, name || defaultName, workspaceId, settings as RetroBoardSettings);
+            await retroDb.createRetroBoard(boardId, name || defaultName, workspaceId, settings as RetroBoardSettings); // Pass settings object directly
             res.json({ success: true, boardId });
         } catch (error: any) { // Type error
             next(error);
@@ -78,8 +79,8 @@ export default function setupRetroRoutes(
                     return;
                 }
             }
-            // Allow access if board is public or user is a member
-            res.json(board);
+            // The 'board' object from getRetroBoard already has 'hasPassword' and omits the actual password hash.
+            res.json(board); // Send the object directly
         } catch (error: any) { // Type error
             next(error);
         }
@@ -102,15 +103,16 @@ export default function setupRetroRoutes(
     // PUT /:boardId/settings
     router.put('/:boardId/settings', async (req: Request<{ boardId: string }>, res: Response, next: NextFunction) => {
         const { boardId } = req.params;
+        const {settings } = req.body; // Expect settings object again
         const {
             defaultTimer,
             hideCardsByDefault,
             hideAuthorNames,
             password
-        } = req.body;
-
+        } = settings;
         const userId: string | undefined = req.user?.userId; // Get userId from auth middleware
         try {
+
             // Use injected dependency for both checks and updates
             const existingBoard: RetroBoardDetails | null = await retroDb.getRetroBoard(boardId);
             if (!existingBoard) {

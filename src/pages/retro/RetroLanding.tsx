@@ -176,9 +176,13 @@ const RetroLanding: FC = () => {
         body: {
           name: createSettings.boardName || "Retro Board",
           workspaceId: createSettings.workspaceId,
-          password: createSettings.password,
-          hide_cards_by_default: createSettings.hideCardsByDefault,
-          hide_author_names: createSettings.hideAuthorNames,
+          settings: {
+            // Nest settings under a 'settings' key
+            password: createSettings.password,
+            hideCardsByDefault: createSettings.hideCardsByDefault, // Match DB function expected keys
+            hideAuthorNames: createSettings.hideAuthorNames, // Match DB function expected keys
+            // defaultTimer could be added here if needed
+          },
         },
         includeAuth,
       });
