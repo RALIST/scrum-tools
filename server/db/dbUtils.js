@@ -15,11 +15,11 @@ import logger from '../logger.js'; // Import the logger
 export const executeQuery = async (queryText, params = [], existingClient = null) => {
     const isNewClient = !existingClient;
     const client = existingClient || await pool.connect();
-    logger.info(`Executing query (new client: ${isNewClient}): ${queryText.substring(0, 100)}...`, { params: params }); // Log start
+    // logger.info(`Executing query (new client: ${isNewClient}): ${queryText.substring(0, 100)}...`, { params: params }); // Log start // REMOVED VERBOSE LOG
 
     try {
         const result = await client.query(queryText, params);
-        logger.info(`Query executed successfully. Row count: ${result?.rowCount}`); // Log success
+        // logger.info(`Query executed successfully. Row count: ${result?.rowCount}`); // Log success // REMOVED VERBOSE LOG
         return result;
     } catch (error) {
         // Log the error internally using logger, but re-throw
@@ -34,10 +34,10 @@ export const executeQuery = async (queryText, params = [], existingClient = null
     } finally {
         // Only release the client if it was acquired within this function
         if (isNewClient && client) {
-            logger.info('Releasing acquired DB client.'); // Log release
+            // logger.info('Releasing acquired DB client.'); // Log release // REMOVED VERBOSE LOG
             client.release();
         } else if (client) {
-             logger.info('Not releasing DB client (was passed in).');
+             // logger.info('Not releasing DB client (was passed in).'); // REMOVED VERBOSE LOG
         }
     }
 };

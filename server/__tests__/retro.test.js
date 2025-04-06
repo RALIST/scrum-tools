@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../index.js'; // Import only app
-import { pool } from '../db/pool.js'; 
+import { pool } from '../db/pool.js';
 
 describe('Retro Routes (/api/retro)', () => {
   // Variables needed across contexts
@@ -32,7 +32,7 @@ describe('Retro Routes (/api/retro)', () => {
 
   // Close DB pool after all tests
   afterAll(async () => {
-    await pool.end(); 
+    await pool.end();
   });
 
   // --- Anonymous Access Tests ---
@@ -83,19 +83,19 @@ describe('Retro Routes (/api/retro)', () => {
         expect(publicBoardId).toBeDefined();
         const res = await request(app)
           .post(`/api/retro/${publicBoardId}/verify-password`) // Use correct prefix
-          .send({ password: '' }); 
+          .send({ password: '' });
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('valid', true);
      });
 
      it('PUT /api/retro/:boardId/settings - should succeed without authentication', async () => {
-        expect(publicBoardId).toBeDefined(); 
+        expect(publicBoardId).toBeDefined();
         const res = await request(app)
           .put(`/api/retro/${publicBoardId}/settings`) // Use correct prefix
-          .send({ defaultTimer: 150 }); 
-        expect(res.statusCode).toEqual(200); 
+          .send({ defaultTimer: 150 });
+        expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('id', publicBoardId);
-        expect(res.body).toHaveProperty('default_timer', 150); 
+        expect(res.body).toHaveProperty('default_timer', 150);
       });
   });
 
@@ -118,17 +118,6 @@ describe('Retro Routes (/api/retro)', () => {
       authToken = resRegister.body.token;
       userId = resRegister.body.user.id;
 
-
-
-    it('PUT /api/retro/:boardId/settings - should return 404 for non-existent board', async () => {
-      const nonExistentBoardId = 'non-existent-settings';
-      const res = await request(app)
-        .put(`/api/retro/${nonExistentBoardId}/settings`)
-        // No auth needed as it should 404 before auth check
-        .send({ defaultTimer: 500 });
-      expect(res.statusCode).toEqual(404);
-      expect(res.body).toHaveProperty('error', 'Board not found');
-    });
       // Create workspace
       const workspaceName = `Retro Auth Test Workspace ${Date.now()}`;
       const resWorkspace = await request(app)
@@ -138,6 +127,18 @@ describe('Retro Routes (/api/retro)', () => {
       expect(resWorkspace.statusCode).toEqual(201);
       testWorkspaceId = resWorkspace.body.workspace.id;
     });
+
+    // --- MOVED TEST START ---
+    it('PUT /api/retro/:boardId/settings - should return 404 for non-existent board', async () => {
+      const nonExistentBoardId = 'non-existent-settings';
+      const res = await request(app)
+        .put(`/api/retro/${nonExistentBoardId}/settings`)
+        // No auth needed as it should 404 before auth check
+        .send({ defaultTimer: 500 });
+      expect(res.statusCode).toEqual(404);
+      expect(res.body).toHaveProperty('error', 'Board not found');
+    });
+    // --- MOVED TEST END ---
 
     it('POST /api/retro - should create a new retro board linked to a workspace', async () => {
       const boardName = 'Workspace Linked Retro Auth';
@@ -159,14 +160,14 @@ describe('Retro Routes (/api/retro)', () => {
         expect(createdAuthBoardId).toBeDefined();
         const res = await request(app)
           .get(`/api/retro/${createdAuthBoardId}`) // Use correct prefix
-          .set('Authorization', `Bearer ${authToken}`); 
+          .set('Authorization', `Bearer ${authToken}`);
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('id', createdAuthBoardId);
         expect(res.body).toHaveProperty('name', 'Workspace Linked Retro Auth');
         expect(res.body).toHaveProperty('workspace_id', testWorkspaceId);
         expect(res.body).toHaveProperty('default_timer', 600);
     });
-    
+
     it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated)', async () => {
         expect(createdAuthBoardId).toBeDefined();
         const newSettings = { defaultTimer: 900, hideAuthorNames: true };

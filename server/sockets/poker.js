@@ -85,6 +85,7 @@ const handlePokerSocketEvents = (io, socket) => {
             // Validate settings input
             if (settings.sequence !== undefined && !Array.isArray(settings.sequence)) {
                 logger.warn(`Invalid sequence type received for room ${roomId}: ${typeof settings.sequence}`);
+                // Emit the specific validation error and return
                 socket.emit('error', { message: 'Invalid settings format: sequence must be an array.' });
                 return;
             }
@@ -103,8 +104,18 @@ const handlePokerSocketEvents = (io, socket) => {
                 }
             }
 
+            // Call the DB function only if validation passes
             await updateRoomSettings(roomId, settings.sequence, hashedPassword);
-            const updatedRoom = await getRoom(roomId)
+            const updatedRoom = await getRoom(roomId); // Fetch updated room after successful settings update
+
+            // Check if room exists after update (might be redundant if updateRoomSettings ensures existence, but safe)
+            if (!updatedRoom) {
+                 logger.error(`Room ${roomId} not found after attempting settings update.`);
+                 // Handle case where room might have been deleted between update and get
+                 socket.emit('error', { message: 'Room not found after update.' });
+                 return;
+            }
+
 
             io.to(roomId).emit('settingsUpdated', {
                 settings: {
@@ -113,8 +124,10 @@ const handlePokerSocketEvents = (io, socket) => {
                 }
             });
         } catch (error) {
-            logger.error('Error updating poker room settings:', { roomId, settings, socketId: socket.id, error: error.message, stack: error.stack });
-            socket.emit('error', { message: 'Failed to update settings' });
+            // This catch block now handles errors from updateRoomSettings or getRoom
+            logger.error('Error during settings update process:', { roomId, settings, socketId: socket.id, error: error.message, stack: error.stack });
+            // Emit the actual error message caught from DB or other operations
+            socket.emit('error', { message: error.message || 'Failed to update settings' });
         }
     });
 

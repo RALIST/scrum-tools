@@ -20,20 +20,20 @@ const formatDate = (date) => {
 router.post('/', async (req, res, next) => {
     const boardId = Math.random().toString(36).substring(2, 8);
     // Correctly extract settings from req.body.settings
-    const { name, settings = {}, workspaceId } = req.body; 
+    const { name, settings = {}, workspaceId } = req.body;
     // const { // Destructure from settings object
-    //     defaultTimer, 
-    //     hideCardsByDefault, 
-    //     hideAuthorNames, 
-    //     password 
+    //     defaultTimer,
+    //     hideCardsByDefault,
+    //     hideAuthorNames,
+    //     password
     // } = settings;
 
     const defaultName = `Retro ${formatDate(new Date())}`;
 
     try {
         // Pass the whole settings object directly to createRetroBoard
-        await createRetroBoard(boardId, name || defaultName, workspaceId, settings); 
-        
+        await createRetroBoard(boardId, name || defaultName, workspaceId, settings);
+
         res.json({ success: true, boardId });
     } catch (error) {
         console.error('Error creating retro board:', error);
@@ -88,14 +88,22 @@ router.put('/:boardId/settings', async (req, res, next) => {
     } = req.body
 
     try {
+        // --- FIX START: Check if board exists first ---
+        const existingBoard = await getRetroBoard(boardId);
+        if (!existingBoard) {
+            return res.status(404).json({ error: 'Board not found' });
+        }
+        // --- FIX END ---
+
         await updateRetroBoardSettings(boardId, {
             defaultTimer,
             hideCardsByDefault,
             hideAuthorNames,
             password
         })
-        const board = await getRetroBoard(boardId)
-        res.json(board);
+        // Fetch the updated board to return the latest state
+        const updatedBoard = await getRetroBoard(boardId)
+        res.json(updatedBoard); // Return the updated board
     } catch (error) {
         console.error('Error updating retro board settings:', error);
         // Pass error to the centralized handler

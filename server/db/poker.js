@@ -120,19 +120,25 @@ export const resetVotes = async (roomId) => {
 };
 
 export const updateRoomSettings = async (roomId, sequence, password) => {
+    // Removed the redundant validation from here
+
     const updates = [];
     const values = [];
     let paramCount = 1;
 
     if (sequence !== undefined) {
         updates.push(`sequence = $${paramCount}`);
-        values.push(sequence);
+        // Ensure sequence is formatted correctly for PostgreSQL array literal if needed,
+        // but the validation above should prevent non-arrays.
+        // If your DB driver doesn't handle JS arrays automatically, you might need:
+        // values.push(`{${sequence.map(item => `"${item}"`).join(',')}}`);
+        values.push(sequence); // Assuming DB driver handles JS array -> TEXT[]
         paramCount++;
     }
 
     if (password !== undefined) {
         updates.push(`password = $${paramCount}`);
-        values.push(password);
+        values.push(password); // Password should be hashed *before* calling this function
         paramCount++;
     }
 

@@ -2,7 +2,7 @@ import { createServer } from 'http';
 import { io as Client } from 'socket.io-client';
 import { server as httpServer, io, app } from '../index.js'; // Import app and io
 import { pool } from '../db/pool.js';
-import request from 'supertest'; 
+import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 
 describe('Planning Poker Socket Events (/poker namespace)', () => {
@@ -11,7 +11,8 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
   let testRoomId = `poker-socket-test-${Date.now()}`;
   let testRoomPassword = 'socktestpassword';
   let publicRoomId = `public-poker-socket-${Date.now()}`;
-  let settingsTestRoomId = `settings-poker-socket-${Date.now()}`;
+  // settingsTestRoomId is no longer needed globally for the failing test
+  // let settingsTestRoomId = `settings-poker-socket-${Date.now()}`;
   let authToken; // For authenticated tests if needed later
   let userId;
   let testUserName = 'Poker Sock User Auth'; // Define username for auth tests
@@ -31,19 +32,12 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       .send({ roomId: publicRoomId, name: 'Public Poker Socket Room' });
     expect(resPublic.statusCode).toEqual(200);
 
-    // Create a room specifically for the settings test
-    const resSettings = await request(app)
-      .post('/api/poker/rooms')
-      .send({ roomId: settingsTestRoomId, name: 'Settings Test Poker Room' });
-    expect(resSettings.statusCode).toEqual(200);
-
-
     // Create a password-protected room
     const resPwd = await request(app)
       .post('/api/poker/rooms')
       .send({ roomId: testRoomId, name: 'Pwd Poker Socket Room', password: testRoomPassword });
     expect(resPwd.statusCode).toEqual(200);
-      
+
     // Register a user (for potential future authenticated tests)
      const userEmail = `poker_sock_user_auth_${Date.now()}@example.com`;
      const userPassword = 'password123';
@@ -51,7 +45,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
        .post('/api/auth/register')
        .send({ email: userEmail, password: userPassword, name: testUserName });
      expect(resRegister.statusCode).toEqual(201);
-     authToken = resRegister.body.token; 
+     authToken = resRegister.body.token;
      userId = resRegister.body.user.id;
   });
 
@@ -59,8 +53,8 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
   afterAll(async () => {
     clientSocket1?.close();
     clientSocket2?.close();
-    io.close(); 
-    await new Promise(resolve => httpServer.close(resolve)); 
+    io.close();
+    await new Promise(resolve => httpServer.close(resolve));
   });
 
   // --- Anonymous Access Tests ---
@@ -69,7 +63,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       const url = `http://localhost:${httpServerAddr.port}/poker`;
       clientSocket1 = Client(url, { forceNew: true, transports: ['websocket'] });
       clientSocket1.on('connect', done);
-      clientSocket1.on('connect_error', (err) => done(err));
+      clientSocket1.on('connect_error', (err) => done(err)); // Fail test on connect error
     });
 
     afterEach(() => {
@@ -106,7 +100,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       });
       clientSocket1.on('roomJoined', () => done(new Error('Should not have joined with wrong password')));
     });
-    
+
     it('should reject joining a non-existent room', (done) => {
         const userName = 'AnonDavid';
         clientSocket1.emit('joinRoom', { roomId: 'non-existent', userName });
@@ -159,7 +153,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         if (!errorReceived) done(new Error('Timeout waiting for vote error'));
       }, 1000);
     });
-    
+
       it('should reveal votes', (done) => {
         const userName = 'AnonAlice';
         clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
@@ -170,7 +164,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         });
          clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
-    
+
       it('should reset votes', (done) => {
         const userName = 'AnonAlice';
         clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
@@ -204,7 +198,7 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
          if (!errorReceived) done(new Error('Timeout waiting for resetVotes error'));
       }, 1000);
     });
-    
+
       it('should allow changing name', (done) => {
           const initialName = 'AnonAlice';
           const newName = 'AnonAlice B.';
@@ -239,61 +233,114 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       }, 1000);
     });
 
-    it('should update room settings (sequence and password)', (done) => {
+    it('should update room settings (sequence and password)', async () => { // Made async for await request
       const userName = 'AnonSettingsUser';
       const newSequence = ['1', '2', '3', '5', '8', '?'];
       const newPassword = 'newPokerPassword';
+      const testSpecificRoomId = `settings-test-${Date.now()}`; // Unique ID for this test
 
-      clientSocket1.emit('joinRoom', { roomId: settingsTestRoomId, userName }); // Use dedicated room ID
-      clientSocket1.once('roomJoined', () => {
-        clientSocket1.emit('updateSettings', { // Use dedicated room ID
-          roomId: settingsTestRoomId,
-          settings: { sequence: newSequence, password: newPassword }
-        });
+      // Create the room via API
+      const resCreate = await request(app)
+        .post('/api/poker/rooms')
+        .send({ roomId: testSpecificRoomId, name: 'Isolated Settings Test Room' });
+      expect(resCreate.statusCode).toEqual(200);
 
-        clientSocket1.on('settingsUpdated', (data) => {
-          expect(data.settings.sequence).toEqual(newSequence);
-          expect(data.settings.hasPassword).toBe(true);
-          // Optional: Try joining with the new password later if needed
-          done();
+      await new Promise((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: testSpecificRoomId, userName }); // Use unique room ID
+
+        clientSocket1.once('roomJoined', () => {
+          clientSocket1.emit('updateSettings', { // Use unique room ID
+            roomId: testSpecificRoomId,
+            settings: { sequence: newSequence, password: newPassword }
+          });
+
+          clientSocket1.on('settingsUpdated', (data) => {
+            try {
+              expect(data.settings.sequence).toEqual(newSequence);
+              expect(data.settings.hasPassword).toBe(true);
+              resolve(); // Test passed
+            } catch (e) {
+              reject(e); // Assertion failed
+            }
+          });
+          clientSocket1.on('error', (err) => reject(new Error(`Update settings error: ${err.message}`)));
         });
-        clientSocket1.on('error', (err) => done(new Error(`Update settings error: ${err.message}`)));
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
       });
-      clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
     });
 
-    it('should handle error during updateSettings', (done) => {
+    // --- REVISED TEST ---
+    it('should handle error during updateSettings', async () => { // Made async for await request
       const userName = 'AnonSettingsErrorUser';
-      
-      // Define the error listener *before* emitting the event that might cause it
-      clientSocket1.on('error', (err) => {
-        // Only call done if it's the error we expect for this test
-        if (err.message === 'Invalid settings format: sequence must be an array.') {
-          done(); 
-        } else {
-          // If it's another error (like join error), let the test time out or fail explicitly
-           console.error(`Received unexpected error in updateSettings test: ${err.message}`);
-           // Fail the test immediately if an unexpected error occurs
-           done(new Error(`Received unexpected error: ${err.message}`)); 
-        }
-      });
+      const invalidSettings = { sequence: 'invalid-sequence' };
+      const testSpecificRoomId = `settings-error-test-${Date.now()}`; // Unique ID
 
-      clientSocket1.emit('joinRoom', { roomId: settingsTestRoomId, userName });
-      clientSocket1.once('roomJoined', () => {
-        // Add a small delay to ensure join is processed server-side
-        setTimeout(() => {
-            // Send invalid settings after joining
-            clientSocket1.emit('updateSettings', {
-              roomId: settingsTestRoomId,
-              settings: { sequence: 'invalid-sequence' } 
-            });
-        }, 50); // 50ms delay
-        // Rely on Jest's default timeout or explicit test timeout
+      // Create the room via API
+      const resCreate = await request(app)
+        .post('/api/poker/rooms')
+        .send({ roomId: testSpecificRoomId, name: 'Isolated Settings Error Test Room' });
+      expect(resCreate.statusCode).toEqual(200);
+
+
+      await new Promise((resolve, reject) => {
+        let errorTimeout; // To store the timeout ID
+
+        const errorHandler = (err) => {
+          clearTimeout(errorTimeout); // Clear the timeout if error is received
+          try {
+            // Check if the error message is the one we expect
+            expect(err.message).toEqual('Invalid settings format: sequence must be an array.');
+            resolve(); // Test passed
+          } catch (assertionError) {
+            reject(assertionError); // Fail test if assertion fails
+          } finally {
+             // Clean up listeners immediately after handling
+             clientSocket1.off('error', errorHandler);
+             clientSocket1.off('settingsUpdated', settingsUpdatedHandler);
+          }
+        };
+
+        const settingsUpdatedHandler = () => {
+          clearTimeout(errorTimeout); // Clear timeout
+          // Clean up listeners before failing
+          clientSocket1.off('error', errorHandler);
+          clientSocket1.off('settingsUpdated', settingsUpdatedHandler);
+          reject(new Error('Should not have received settingsUpdated event'));
+        };
+
+        // Listen for the specific error
+        clientSocket1.on('error', errorHandler);
+        // Also handle unexpected 'settingsUpdated' event
+        clientSocket1.on('settingsUpdated', settingsUpdatedHandler);
+
+        clientSocket1.emit('joinRoom', { roomId: testSpecificRoomId, userName }); // Use unique room ID
+        clientSocket1.once('roomJoined', () => {
+          // Send invalid settings immediately after joining
+          clientSocket1.emit('updateSettings', {
+            roomId: testSpecificRoomId, // Use unique room ID
+            settings: invalidSettings
+          });
+          // Add a timeout to fail the test if no error is received
+          errorTimeout = setTimeout(() => {
+              // Clean up listeners before failing
+              clientSocket1.off('error', errorHandler);
+              clientSocket1.off('settingsUpdated', settingsUpdatedHandler);
+              reject(new Error('Timeout waiting for updateSettings error'));
+          }, 1500); // Increased timeout slightly
+        });
+
+         // Handle potential join errors separately
+         clientSocket1.on('connect_error', (err) => reject(err)); // Already handled in beforeEach, but good practice
+         clientSocket1.on('error', (err) => { // Catch join errors specifically if needed
+             if (!errorHandler) { // Only reject if the main error handler isn't set yet or has been removed
+                 reject(new Error(`Join error: ${err.message}`));
+             }
+         });
       });
-       // No need for the outer error handler here as the primary one handles unexpected errors
     });
+    // --- END REVISED TEST ---
 
-    
+
       it('should remove participant on disconnect', (done) => {
           const userName1 = 'AnonAlice';
           const userName2 = 'AnonBob';
@@ -301,14 +348,14 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
           clientSocket2 = Client(url, { forceNew: true, transports: ['websocket'] });
           let client1Joined = false;
           let client2Joined = false;
-    
+
           const checkDone = () => {
               if (client1Joined && client2Joined) clientSocket1.disconnect();
           };
-    
+
           clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName: userName1 });
           clientSocket1.once('roomJoined', () => { client1Joined = true; checkDone(); });
-    
+
           clientSocket2.on('connect', () => {
               clientSocket2.emit('joinRoom', { roomId: publicRoomId, userName: userName2 });
               clientSocket2.once('roomJoined', () => {
@@ -332,19 +379,19 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
   // --- Authenticated Access Tests ---
   describe('Authenticated Access', () => {
       // We already have authToken, userId, testUserName from the top-level beforeAll
-      
+
       beforeEach((done) => {
         const url = `http://localhost:${httpServerAddr.port}/poker`;
         // Pass auth token if socket authentication is implemented
-        clientSocket1 = Client(url, { 
-            forceNew: true, 
+        clientSocket1 = Client(url, {
+            forceNew: true,
             transports: ['websocket'],
-            // auth: { token: authToken } 
+            // auth: { token: authToken }
         });
         clientSocket1.on('connect', done);
         clientSocket1.on('connect_error', (err) => done(err));
       });
-  
+
       afterEach(() => {
         if (clientSocket1?.connected) clientSocket1.disconnect();
       });
@@ -358,9 +405,9 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
         });
         clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
-      
+
        it('should allow an authenticated user to join a password room', (done) => {
-        const userName = testUserName; 
+        const userName = testUserName;
         clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: testRoomPassword });
         clientSocket1.on('roomJoined', (data) => {
             expect(data.participants.some(p => p.name === userName)).toBe(true);
@@ -372,25 +419,25 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       // Add more tests specific to authenticated users if functionality differs
       // For example, if joining links the socket to the userId internally
   });
-});
 
-
-
-  // --- Disconnect Test ---
+  // --- Disconnect Test (Moved Inside Main Describe) ---
   it('should handle disconnect gracefully even if user did not join a room', (done) => {
     const url = `http://localhost:${httpServerAddr.port}/poker`;
     const tempSocket = Client(url, { forceNew: true, transports: ['websocket'] });
-    
+
     tempSocket.on('connect', () => {
         // Immediately disconnect without joining
         tempSocket.disconnect();
-        // We can't easily assert server-side logs here, 
+        // We can't easily assert server-side logs here,
         // but we can check that the disconnect doesn't crash the server.
         // The test passes if done() is called without errors.
         // Add a small delay to allow server-side disconnect logic to run.
-        setTimeout(done, 200); 
+        setTimeout(done, 200);
     });
 
     tempSocket.on('connect_error', (err) => done(err));
     tempSocket.on('error', (err) => done(new Error(`Unexpected socket error: ${err.message}`)));
   });
+  // --- End Disconnect Test ---
+
+}); // End of main describe block
