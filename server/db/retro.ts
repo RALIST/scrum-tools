@@ -1,14 +1,22 @@
 import bcrypt from 'bcryptjs';
-import { executeQuery } from './dbUtils.js';
-export const createRetroBoard = async (boardId, name, workspaceId, settings = {}) => {
+import { QueryResult } from 'pg'; // Import QueryResult type
+import { executeQuery } from './dbUtils.js'; // Needs .js extension
+import { RetroBoard, RetroCard, RetroBoardDetails, RetroBoardSettings } from '../types/db.js'; // Needs .js extension
+
+export const createRetroBoard = async (
+    boardId: string,
+    name: string | undefined,
+    workspaceId: string | null | undefined,
+    settings: RetroBoardSettings = {}
+): Promise<void> => {
     const {
         defaultTimer = 300,
         hideCardsByDefault = false,
         hideAuthorNames = false,
         password
-    } = settings;
+    } = settings; // Types for these are inferred from RetroBoardSettings
 
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+    const hashedPassword: string | null = password ? await bcrypt.hash(password, 10) : null;
 
     const queryText = `
         INSERT INTO retro_boards (
@@ -17,7 +25,7 @@ export const createRetroBoard = async (boardId, name, workspaceId, settings = {}
         ) VALUES ($1, $2, false, $3, $4, $5, $6, $7, $8)
     `;
     // Use defaultTimer for time_left ($3) and the actual value from settings for default_timer ($4)
-    const timerValueToInsert = settings.defaultTimer !== undefined ? settings.defaultTimer : 300;
+    const timerValueToInsert: number = settings.defaultTimer !== undefined ? settings.defaultTimer : 300;
     const params = [
         boardId, name || boardId, timerValueToInsert, timerValueToInsert, 
         hideCardsByDefault, hideAuthorNames, hashedPassword, workspaceId || null
@@ -25,9 +33,9 @@ export const createRetroBoard = async (boardId, name, workspaceId, settings = {}
     await executeQuery(queryText, params); // Use executeQuery
 };
 
-export const getRetroBoard = async (boardId) => {
+export const getRetroBoard = async (boardId: string): Promise<RetroBoardDetails | null> => {
     const boardQuery = 'SELECT * FROM retro_boards WHERE id = $1';
-    const boardResult = await executeQuery(boardQuery, [boardId]); // Use executeQuery
+    const boardResult: QueryResult<RetroBoard> = await executeQuery(boardQuery, [boardId]); // Use executeQuery
 
     if (boardResult.rows.length === 0) {
         return null;
@@ -41,24 +49,27 @@ export const getRetroBoard = async (boardId) => {
         GROUP BY c.id
         ORDER BY c.created_at ASC
     `;
-    const cardsResult = await executeQuery(cardsQuery, [boardId]); // Use executeQuery
+    // Type for cardsResult needs to account for the aggregated 'votes' column
+    const cardsResult: QueryResult<RetroCard & { votes: string[] }> = await executeQuery(cardsQuery, [boardId]); // Use executeQuery
 
-    const board = boardResult.rows[0];
+    const board: RetroBoard = boardResult.rows[0];
     // Ensure hasPassword reflects the presence of a password hash
-    const hasPassword = !!board.password; 
+    const hasPassword = !!board.password;
+    // Destructure to exclude password from the returned object
+    const { password: _password, ...boardDetails } = board;
+
     return {
-        ...board,
-        // Explicitly remove the password hash before returning
-        password: undefined, 
-        hasPassword: hasPassword, // Use the calculated value
-        cards: cardsResult.rows.map(card => ({
+        ...boardDetails, // Spread properties except password
+        hasPassword: hasPassword, // Add the calculated hasPassword flag
+        // Map cards, ensuring votes is always an array
+        cards: cardsResult.rows.map((card: RetroCard & { votes: string[] }) => ({
             ...card,
-            votes: card.votes || []
-        }))
+            votes: Array.isArray(card.votes) ? card.votes : [] // Ensure votes is an array
+        })) as RetroCard[] // Assert final type after mapping
     };
 };
 
-export const getWorkspaceRetroBoards = async (workspaceId) => {
+export const getWorkspaceRetroBoards = async (workspaceId: string): Promise<RetroBoard[]> => {
     // Assuming 'workspace_id' column exists after migration.
     const boardsQuery = `
         SELECT rb.*, 
@@ -69,43 +80,51 @@ export const getWorkspaceRetroBoards = async (workspaceId) => {
         GROUP BY rb.id
         ORDER BY rb.created_at DESC
     `;
-    const boardsResult = await executeQuery(boardsQuery, [workspaceId]); // Use executeQuery
+    // Type needs to account for aggregated 'card_count'
+    const boardsResult: QueryResult<RetroBoard & { card_count: string | number }> = await executeQuery(boardsQuery, [workspaceId]); // Use executeQuery
 
-    return boardsResult.rows.map(board => ({
+    return boardsResult.rows.map((board: RetroBoard & { card_count: string | number }) => ({
         ...board,
+        card_count: typeof board.card_count === 'string' ? parseInt(board.card_count, 10) : board.card_count, // Ensure count is number
         hasPassword: !!board.password,
         password: undefined // Don't send password hash to client
     }));
 };
 
-export const addRetroCard = async (boardId, cardId, columnId, text, authorName) => {
+export const addRetroCard = async (
+    boardId: string,
+    cardId: string,
+    columnId: string,
+    text: string,
+    authorName: string
+): Promise<void> => {
     const queryText = 'INSERT INTO retro_cards (id, board_id, column_id, text, author_name) VALUES ($1, $2, $3, $4, $5)';
     const params = [cardId, boardId, columnId, text, authorName];
     await executeQuery(queryText, params); // Use executeQuery
 };
 
-export const updateRetroCardText = async (cardId, text) => {
+export const updateRetroCardText = async (cardId: string, text: string): Promise<void> => {
     const queryText = 'UPDATE retro_cards SET text = $2 WHERE id = $1';
     const params = [cardId, text];
     await executeQuery(queryText, params); // Use executeQuery
 };
 
-export const updateRetroCardAuthor = async (cardId, authorName) => {
+export const updateRetroCardAuthor = async (cardId: string, authorName: string): Promise<void> => {
     const queryText = 'UPDATE retro_cards SET author_name = $2 WHERE id = $1';
     const params = [cardId, authorName];
     await executeQuery(queryText, params); // Use executeQuery
 };
 
-export const deleteRetroCard = async (cardId) => {
+export const deleteRetroCard = async (cardId: string): Promise<void> => {
     const queryText = 'DELETE FROM retro_cards WHERE id = $1';
     const params = [cardId];
     await executeQuery(queryText, params); // Use executeQuery
 };
 
-export const toggleRetroCardVote = async (cardId, userName) => {
+export const toggleRetroCardVote = async (cardId: string, userName: string): Promise<void> => {
     // Check if vote exists using the new primary key (card_id, user_name)
     const checkVoteQuery = 'SELECT 1 FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
-    const voteResult = await executeQuery(checkVoteQuery, [cardId, userName]); // Use executeQuery
+    const voteResult: QueryResult<{ '1': number }> = await executeQuery(checkVoteQuery, [cardId, userName]); // Use executeQuery
 
     if (voteResult.rows.length > 0) {
         // Remove vote using the new primary key
@@ -118,25 +137,27 @@ export const toggleRetroCardVote = async (cardId, userName) => {
     }
 };
 
-export const verifyRetroBoardPassword = async (boardId, password) => {
+export const verifyRetroBoardPassword = async (boardId: string, password?: string | null): Promise<boolean> => {
     const queryText = 'SELECT password FROM retro_boards WHERE id = $1';
-    const result = await executeQuery(queryText, [boardId]); // Use executeQuery
+    const result: QueryResult<{ password?: string | null }> = await executeQuery(queryText, [boardId]); // Use executeQuery
 
     if (result.rows.length === 0) {
         return false; // Board not found
     }
 
-    const board = result.rows[0];
+    const board = result.rows[0]; // Type inferred
     if (!board.password) {
-        return true; // No password set
+        // If no password is set on board, allow access only if no password was provided for verification
+        return !password;
     }
 
-    return await bcrypt.compare(password, board.password);
+    // If a password was provided for verification, compare it
+    return password ? await bcrypt.compare(password, board.password) : false;
 };
 
-export const updateRetroBoardSettings = async (boardId, settings) => {
-    const updates = [];
-    const values = [];
+export const updateRetroBoardSettings = async (boardId: string, settings: RetroBoardSettings): Promise<void> => {
+    const updates: string[] = [];
+    const values: any[] = [];
     let paramCount = 1;
 
     if (settings.defaultTimer !== undefined) {
@@ -158,7 +179,7 @@ export const updateRetroBoardSettings = async (boardId, settings) => {
     }
 
     if (settings.password !== undefined) {
-        const hashedPassword = settings.password ? await bcrypt.hash(settings.password, 10) : null;
+        const hashedPassword: string | null = settings.password ? await bcrypt.hash(settings.password, 10) : null;
         updates.push(`password = $${paramCount}`);
         values.push(hashedPassword);
         paramCount++;
@@ -171,22 +192,22 @@ export const updateRetroBoardSettings = async (boardId, settings) => {
     }
 };
 
-export const startRetroTimer = async (boardId) => {
+export const startRetroTimer = async (boardId: string): Promise<void> => {
     // Consider passing defaultTimer if already available in the calling context
     const getTimerQuery = 'SELECT default_timer FROM retro_boards WHERE id = $1';
-    const result = await executeQuery(getTimerQuery, [boardId]); // Use executeQuery
-    const defaultTimer = result.rows[0]?.default_timer || 300;
+    const result: QueryResult<{ default_timer: number }> = await executeQuery(getTimerQuery, [boardId]); // Use executeQuery
+    const defaultTimer: number = result.rows[0]?.default_timer || 300;
 
     const updateQuery = 'UPDATE retro_boards SET timer_running = true, time_left = $2 WHERE id = $1';
     await executeQuery(updateQuery, [boardId, defaultTimer]); // Use executeQuery
 };
 
-export const stopRetroTimer = async (boardId) => {
+export const stopRetroTimer = async (boardId: string): Promise<void> => {
     const queryText = 'UPDATE retro_boards SET timer_running = false WHERE id = $1';
     await executeQuery(queryText, [boardId]); // Use executeQuery
 };
 
-export const updateRetroTimer = async (boardId, timeLeft) => {
+export const updateRetroTimer = async (boardId: string, timeLeft: number): Promise<void> => {
     const queryText = 'UPDATE retro_boards SET time_left = $2 WHERE id = $1';
     await executeQuery(queryText, [boardId, timeLeft]); // Use executeQuery
 };

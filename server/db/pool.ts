@@ -1,11 +1,11 @@
-import pg from 'pg'
-import logger from '../logger.js'; // Import the logger
-const { Pool } = pg;
-let pool;
+import pg from 'pg'; // Use default import for pg
+import logger from '../logger.js'; // Import the logger (now .ts, but need .js extension for NodeNext)
+
+let pool: pg.Pool | undefined; // Type the pool variable using pg.Pool
 
 // Initialize pool immediately when the module loads
-export const initializePool = () => {
-    pool = new Pool({
+export const initializePool = (): void => { // Add return type void
+    pool = new pg.Pool({ // Use pg.Pool constructor
         user: process.env.DB_USER || '',
         host: process.env.DB_HOST || 'localhost',
         database: process.env.DB_NAME || '',
@@ -18,11 +18,10 @@ export const initializePool = () => {
 
     // Test connection using promises
     pool.connect()
-        .then(client => {
-            logger.info('Successfully connected to database');
+        .then((client: pg.PoolClient) => { // Type the client using pg.PoolClient
             client.release();
         })
-        .catch(err => {
+        .catch((err: Error) => { // Type the error
             logger.error('Error connecting to the database:', { stack: err.stack });
         });
 };

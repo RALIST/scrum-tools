@@ -1,34 +1,39 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+import express, { Express, Request, Response, NextFunction } from 'express';
+import { createServer, Server as HttpServer } from 'http';
+import { Server as SocketIOServer, Namespace } from 'socket.io';
 import cors from 'cors';
-import setupPokerRoutes from './routes/poker.js'; // Import setup function
-import setupRetroRoutes from './routes/retro.js'; // Import setup function
-import setupVelocityRoutes from './routes/velocity.js'; // Import setup function
-import setupAuthRoutes from './routes/auth.js'; // Import setup function
-import setupWorkspaceRoutes from './routes/workspaces.js'; // Import setup function
-import { authenticateToken } from './middleware/auth.js'; // Import auth middleware
+import setupPokerRoutes from './routes/poker.js';
+import setupRetroRoutes from './routes/retro.js';
+import setupVelocityRoutes from './routes/velocity.js';
+import setupAuthRoutes from './routes/auth.js';
+import setupWorkspaceRoutes from './routes/workspaces.js';
+import { authenticateToken, optionalAuthenticateToken } from './middleware/auth.js';
 import { initializePokerSocket } from './sockets/poker.js';
 import { initializeRetroSocket } from './sockets/retro.js';
-import { optionalAuthenticateToken } from './middleware/auth.js';
-import errorHandler from './middleware/errorHandler.js'; // Import the error handler
-import logger from './logger.js'; // Import the logger
+import errorHandler from './middleware/errorHandler.js';
+import logger from './logger.js';
+// Import types for Socket.IO namespaces
+import {
+    PokerClientToServerEvents, PokerServerToClientEvents, PokerInterServerEvents, PokerSocketData,
+    RetroClientToServerEvents, RetroServerToClientEvents, RetroInterServerEvents, RetroSocketData
+} from './types/sockets.js'; // Needs .js
 import { pathToFileURL } from 'url'; // Import pathToFileURL for ES Module check
 import dotenv from 'dotenv'; // Import dotenv for environment variable management
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { initializePool } from './db/pool.js'; // Import the pool initialization function
+// Import DB modules (ensure paths have .js extension)
 import * as retroDb from './db/retro.js';
 import * as userDb from './db/users.js';
-import * as pokerDb from './db/poker.js'; // Import poker DB functions
-import * as velocityDb from './db/velocity.js'; // Import velocity DB functions
-import * as workspaceDb from './db/workspaces.js'; // Import workspace DB functions
+import * as pokerDb from './db/poker.js';
+import * as velocityDb from './db/velocity.js';
+import * as workspaceDb from './db/workspaces.js';
 
 // Create proper __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename: string = fileURLToPath(import.meta.url);
+const __dirname: string = dirname(__filename);
 
-const env = process.env.NODE_ENV || 'development';
+const env: string = process.env.NODE_ENV || 'development';
 
 if (env == "development") {
    dotenv.config({ path: join(__dirname, '.env.development') });
@@ -40,7 +45,7 @@ if (env == "development") {
 
 initializePool(); // Initialize the database pool
 
-const app = express();
+const app: Express = express();
 app.use(cors());
 app.use(express.json());
 
@@ -48,13 +53,14 @@ app.use(express.json());
 app.use('/api/auth', setupAuthRoutes(userDb));
 // Inject all required DB dependencies for workspaces
 app.use('/api/workspaces', authenticateToken, setupWorkspaceRoutes(workspaceDb, userDb, pokerDb, retroDb, velocityDb)); // Pass velocityDb namespace
-app.use('/api/poker', optionalAuthenticateToken, setupPokerRoutes(pokerDb)); // Inject pokerDb
+app.use('/api/poker', optionalAuthenticateToken, setupPokerRoutes(pokerDb, workspaceDb)); // Inject pokerDb and workspaceDb
 app.use('/api/retro', optionalAuthenticateToken, setupRetroRoutes(retroDb, workspaceDb)); // Add workspaceDb injection
 // Inject velocityDb and workspaceDb
 app.use('/api/velocity', optionalAuthenticateToken, setupVelocityRoutes(velocityDb, workspaceDb)); // Pass velocityDb namespace
 
-const server = createServer(app);
-const io = new Server(server, {
+const server: HttpServer = createServer(app);
+// Define the main IO server type (can be generic or more specific if needed)
+const io = new SocketIOServer(server, {
     cors: {
         origin: "http://localhost:5173",
         methods: ["GET", "POST"]
@@ -62,23 +68,24 @@ const io = new Server(server, {
 });
 
 // Create namespaces for different features
-const pokerIo = io.of('/poker');
-const retroIo = io.of('/retro');
+// Type the namespaces using the defined event maps
+const pokerIo: Namespace<PokerClientToServerEvents, PokerServerToClientEvents, PokerInterServerEvents, PokerSocketData> = io.of('/poker');
+const retroIo: Namespace<RetroClientToServerEvents, RetroServerToClientEvents, RetroInterServerEvents, RetroSocketData> = io.of('/retro');
 
 // Initialize socket namespaces
 initializePokerSocket(pokerIo, pokerDb); // Pass pokerDb dependency
 initializeRetroSocket(retroIo, retroDb); // Pass retroDb dependency
 
 // --- Test Routes for Error Handling ---
-app.get('/api/test-error', (req, res, next) => {
+app.get('/api/test-error', (req: Request, res: Response, next: NextFunction) => {
   // Simulate an unexpected error
   next(new Error('Simulated unexpected error'));
 });
 
-app.get('/api/test-error-400', (req, res, next) => {
+app.get('/api/test-error-400', (req: Request, res: Response, next: NextFunction) => {
   // Simulate an error with a specific status code
   const err = new Error('Simulated bad request error');
-  err.statusCode = 400;
+  (err as any).statusCode = 400; // Add statusCode property (might need custom Error type)
   next(err);
 });
 // --- End Test Routes ---
@@ -89,14 +96,15 @@ app.use(errorHandler);
 // Use environment variable for port or default to 3001
 
 // Dummy route for testing authenticateToken middleware
-app.get('/api/test-auth', authenticateToken, (req, res) => {
-  res.json({ message: 'Authenticated!', userId: req.user.userId });
+app.get('/api/test-auth', authenticateToken, (req: Request, res: Response) => {
+  // Assert req.user exists
+  res.json({ message: 'Authenticated!', userId: req.user!.userId });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT: string | number = process.env.PORT || 3001;
 
 // Start the server only if this file is run directly (ES Module way)
-const isMainModule = import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule: boolean = import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
     server.listen(PORT, () => {

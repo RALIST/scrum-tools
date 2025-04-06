@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    /* Base Options: */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2020",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true, // Required for some tools like Babel, ensures files can be transpiled independently
+
+    /* Strictness */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Module Resolution */
+    "module": "NodeNext", // Use NodeNext for modern Node.js ESM
+    "moduleResolution": "NodeNext",
+
+    /* Output */
+    "outDir": "./dist",
+    "rootDir": ".", // Root directory of source files (relative to tsconfig.json)
+    "sourceMap": true, // Generate source maps for debugging
+
+    /* Type Checking */
+    "types": ["node", "jest"] // Include types for Node.js and Jest
+  },
+  "include": [
+    "./**/*.ts", // Include all TypeScript files
+    "./**/*.js"  // Include JavaScript files during migration
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "knexfile.cjs",
+    "data/migrations/**/*.cjs", // Exclude CJS migration files
+    "**/*.test.ts", // Exclude test files from the main build (handled by Jest/ts-jest)
+    "**/*.test.js" // Exclude JS test files as well
+  ]
+}

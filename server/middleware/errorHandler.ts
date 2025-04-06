@@ -1,20 +1,19 @@
+import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+
 /**
  * Centralized Express error handling middleware.
- *
- * @param {Error} err - The error object.
- * @param {import('express').Request} req - The Express request object.
- * @param {import('express').Response} res - The Express response object.
- * @param {import('express').NextFunction} next - The Express next middleware function.
  */
-const errorHandler = (err, req, res, next) => {
+const errorHandler: ErrorRequestHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
 
     // Determine the status code
     // Use err.statusCode if it's set (e.g., by custom error classes), otherwise default to 500
-    const statusCode = err.statusCode || 500;
+    // Check if statusCode exists and is a number, otherwise default to 500
+    const statusCode: number = typeof err.statusCode === 'number' ? err.statusCode : 500;
 
     // Determine the response message
     // For internal server errors (500), avoid sending detailed error messages to the client
-    const message = statusCode === 500 ? 'Internal Server Error' : err.message;
+    // Ensure err.message exists, otherwise provide a default
+    const message: string = statusCode === 500 ? 'Internal Server Error' : (err.message || 'An unexpected error occurred');
 
     // Send the standardized error response
     res.status(statusCode).json({

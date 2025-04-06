@@ -135,7 +135,7 @@ describe('Retro Socket Events (/retro namespace)', () => {
           const userName = 'AnonRetroNoPass';
           clientSocket.emit('joinRetroBoard', { boardId: anonBoardId, name: userName }); // No password provided
           clientSocket.on('error', (err) => {
-            expect(err.message).toEqual('Failed to join retro board'); 
+            expect(err.message).toEqual('Invalid password'); // Updated expectation
             resolve();
           });
           clientSocket.on('retroBoardJoined', () => reject(new Error('Should not have joined without password')));
@@ -547,8 +547,4 @@ describe('Retro Socket Events (/retro namespace)', () => {
         });
         clientSocket.disconnect();
       });
-      
-  // --- Disconnect Test ---
-  // Removed disconnect test temporarily to debug syntax error
-
 });

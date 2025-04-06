@@ -1,9 +1,11 @@
-import winston from 'winston';
+import winston, { Logform } from 'winston'; // Import Logform for types
 
 const { combine, timestamp, printf, colorize, align } = winston.format;
 
 // Define the log format
-const logFormat = printf(({ level, message, timestamp: ts, stack, ...metadata }) => {
+// Define the log format using TransformableInfo type
+const logFormat = printf((info: Logform.TransformableInfo): string => {
+  const { level, message, timestamp: ts, stack, ...metadata } = info;
   let msg = `${ts} [${level}]: ${message}`;
   // Include metadata if present
   if (metadata && Object.keys(metadata).length > 0) {
