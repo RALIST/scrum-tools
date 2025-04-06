@@ -5,6 +5,7 @@ import { pool } from '../db/pool.js';
 import setupRetroRoutes from '../routes/retro.js';
 // Import necessary functions from Jest globals for ESM
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 // Helper function to register/login a user and get token
 // (Assuming this function exists and works as before, using the main app)
@@ -87,14 +88,16 @@ describe('Retro Routes (/api/retro) with DI', () => {
     // Register authenticated user using the main app
     authUserInfo = await registerAndLoginUser('retro_di_test');
 
-    // Create workspace for authenticated user using the main app
-    const workspaceName = `Retro DI Test Workspace ${Date.now()}`;
-    const resWorkspace = await request(mainApp) // Use mainApp
-      .post('/api/workspaces')
-      .set('Authorization', `Bearer ${authUserInfo.token}`)
-      .send({ name: workspaceName });
-    expect(resWorkspace.statusCode).toEqual(201);
-    testWorkspaceId = resWorkspace.body.workspace.id;
+    // Assign placeholder ID instead of creating real workspace in DB
+    testWorkspaceId = uuidv4();
+    // // Create workspace for authenticated user using the main app - REMOVED DB CALL
+    // const workspaceName = `Retro DI Test Workspace ${Date.now()}`;
+    // const resWorkspace = await request(mainApp) // Use mainApp
+    //   .post('/api/workspaces')
+    //   .set('Authorization', `Bearer ${authUserInfo.token}`)
+    //   .send({ name: workspaceName });
+    // expect(resWorkspace.statusCode).toEqual(201);
+    // testWorkspaceId = resWorkspace.body.workspace.id;
 
     // We no longer need to create boards here as tests will use the API with mocks
     // Assign some placeholder IDs for tests that need them
@@ -115,9 +118,14 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
   // Close server, io, pool after all tests
   afterAll(async () => {
-    io.close();
-    await new Promise(resolve => server.close(resolve));
-    await pool.end();
+    // Ensure server is closed before ending the pool
+    if (server && server.listening) {
+      await new Promise(resolve => server.close(resolve));
+    }
+    if (io) {
+        io.close();
+    }
+    await pool.end(); // Close DB pool
   });
 
   // --- Anonymous Access Tests ---
@@ -309,7 +317,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
       expect(res.body).toHaveProperty('success', true);
       expect(res.body).toHaveProperty('boardId');
       createdAuthBoardId = res.body.boardId; // Store the generated ID for later tests
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
       expect(mockRetroDb.createRetroBoard).toHaveBeenCalledWith(
           expect.any(String),
           boardName,
@@ -342,7 +350,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
 
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to create a retro board in this workspace.');
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
         expect(mockRetroDb.createRetroBoard).not.toHaveBeenCalled();
     });
 
@@ -364,7 +372,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.body).toHaveProperty('id', createdAuthBoardId);
         expect(res.body).toHaveProperty('name', 'Workspace Linked Retro Auth');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
     });
 
     it('GET /api/retro/:boardId - should fail to get workspace board if not authenticated', async () => {
@@ -377,6 +385,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.statusCode).toEqual(401);
         expect(res.body).toHaveProperty('error', 'Authentication required to access this retro board.');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        // isWorkspaceMember is not called if auth fails first
         expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled();
     });
 
@@ -391,7 +400,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to access this retro board.');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
     });
 
     it('PUT /api/retro/:boardId/settings - should update settings for workspace board (authenticated member)', async () => {
@@ -413,7 +422,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.body).toHaveProperty('default_timer', 900);
         expect(res.body).toHaveProperty('hide_author_names', true);
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledTimes(2);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
         expect(mockRetroDb.updateRetroBoardSettings).toHaveBeenCalledWith(createdAuthBoardId, newSettings);
     });
 
@@ -429,6 +438,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.statusCode).toEqual(401);
         expect(res.body).toHaveProperty('error', 'Authentication required to update settings for this retro board.');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
+        // isWorkspaceMember is not called if auth fails first
         expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled();
         expect(mockRetroDb.updateRetroBoardSettings).not.toHaveBeenCalled();
     });
@@ -446,7 +456,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to update settings for this retro board.');
         expect(mockRetroDb.getRetroBoard).toHaveBeenCalledWith(createdAuthBoardId);
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Pool check already added
         expect(mockRetroDb.updateRetroBoardSettings).not.toHaveBeenCalled();
     });
 

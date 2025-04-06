@@ -17,18 +17,16 @@ function initializePool() {
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 2000,
     });
-    
-    // Test connection...
-    pool.connect((err, client, release) => {
-        if (err) {
-            // Use logger.error
-            logger.error('Error connecting to the database:', { stack: err.stack });
-        } else {
-            // Use logger.info
+
+    // Test connection using promises
+    pool.connect()
+        .then(client => {
             logger.info('Successfully connected to database');
-            release();
-        }
-    });
+            client.release();
+        })
+        .catch(err => {
+            logger.error('Error connecting to the database:', { stack: err.stack });
+        });
 }
 
 // Add event listener for process termination

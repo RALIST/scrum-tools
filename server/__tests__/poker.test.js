@@ -5,6 +5,7 @@ import { pool } from '../db/pool.js';
 import bcrypt from 'bcryptjs'; // Import bcrypt
 // Import necessary functions from Jest globals for ESM
 import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 // Import the route setup function
 import setupPokerRoutes from '../routes/poker.js';
@@ -103,14 +104,16 @@ describe('Poker Routes (/api/poker) with DI', () => {
     // Register authenticated user using the main app
     authUserInfo = await registerAndLoginUser('poker_di_test');
 
-    // Create workspace for authenticated user using the main app
-    const workspaceName = `Poker DI Test Workspace ${Date.now()}`;
-    const resWorkspace = await request(mainApp) // Use mainApp
-      .post('/api/workspaces')
-      .set('Authorization', `Bearer ${authUserInfo.token}`)
-      .send({ name: workspaceName });
-    expect(resWorkspace.statusCode).toEqual(201);
-    testWorkspaceId = resWorkspace.body.workspace.id;
+    // Assign placeholder ID instead of creating real workspace in DB
+    testWorkspaceId = uuidv4();
+    // // Create workspace for authenticated user using the main app - REMOVED DB CALL
+    // const workspaceName = `Poker DI Test Workspace ${Date.now()}`;
+    // const resWorkspace = await request(mainApp) // Use mainApp
+    //   .post('/api/workspaces')
+    //   .set('Authorization', `Bearer ${authUserInfo.token}`)
+    //   .send({ name: workspaceName });
+    // expect(resWorkspace.statusCode).toEqual(201);
+    // testWorkspaceId = resWorkspace.body.workspace.id;
 
     // No longer creating rooms here; tests will use mocks
   });
@@ -123,9 +126,14 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
   // Close server, io, pool after all tests
   afterAll(async () => {
-    io.close();
-    await new Promise(resolve => server.close(resolve));
-    await pool.end();
+    // Ensure server is closed before ending the pool
+    if (server && server.listening) {
+      await new Promise(resolve => server.close(resolve));
+    }
+    if (io) {
+        io.close();
+    }
+    await pool.end(); // Close DB pool
   });
 
   // --- Anonymous Access Tests ---
@@ -323,7 +331,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
       expect(res.body).toHaveProperty('roomId', roomId);
       expect(res.body).toHaveProperty('hasPassword', false); // Workspace rooms don't have passwords
       // Check that membership was verified
-      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+      expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
       // Corrected argument order based on routes/poker.js
       expect(mockPokerDb.createRoom).toHaveBeenCalledWith(
           roomId,
@@ -347,7 +355,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         // Route now checks membership first
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to create a room in this workspace.');
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
         expect(mockPokerDb.getRoom).not.toHaveBeenCalled(); // Should not be called if not member
         expect(mockPokerDb.createRoom).not.toHaveBeenCalled(); // Should not be called if not member
     });
@@ -371,7 +379,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         expect(res.body).toHaveProperty('error', 'Room already exists');
         // Ensure membership was checked (if workspaceId provided)
         if (testWorkspaceId) {
-            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+            expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
         }
         expect(mockPokerDb.getRoom).toHaveBeenCalledWith(createdAuthRoomId);
         expect(mockPokerDb.createRoom).not.toHaveBeenCalled(); // createRoom should not be called
@@ -416,7 +424,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         // Route maps the response, compare relevant fields
         expect(res.body[0]).toMatchObject(expectedMappedRooms[0]); // Assert against expected mapped structure
         // Check membership was verified
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
         expect(mockPokerDb.getWorkspaceRooms).toHaveBeenCalledWith(testWorkspaceId);
         expect(mockPokerDb.getRooms).not.toHaveBeenCalled(); // Changed mock name
     });
@@ -432,7 +440,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
 
         expect(res.statusCode).toEqual(403);
         expect(res.body).toHaveProperty('error', 'User is not authorized to access rooms for this workspace.');
-        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Add pool mock check
         expect(mockPokerDb.getWorkspaceRooms).not.toHaveBeenCalled(); // Should not be called if not member
     });
 
@@ -452,7 +460,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         expect(mockPokerDb.getRoom).toHaveBeenCalledWith(createdAuthRoomId);
         // Membership check might happen implicitly via middleware or not at all in this specific route
         // Let's assume it's not checked here based on previous failures
-        // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Keep commented or remove if route doesn't check
      });
 
      // This test might be invalid if the route doesn't check membership for verify-password
@@ -491,7 +499,7 @@ describe('Poker Routes (/api/poker) with DI', () => {
         // Route returns specific fields, not the whole DB object
         expect(res.body).toEqual(mockRoomInfo); // Compare against the full mock object
         expect(mockPokerDb.getPokerRoomInfo).toHaveBeenCalledWith(createdAuthRoomId);
-        // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId);
+        // expect(mockWorkspaceDb.isWorkspaceMember).toHaveBeenCalledWith(testWorkspaceId, authUserInfo.userId, expect.any(Object)); // Keep commented or remove if route doesn't check
      });
 
      it('GET /api/poker/rooms/:roomId/info - should return 404 for non-existent workspace room', async () => {
@@ -506,7 +514,8 @@ describe('Poker Routes (/api/poker) with DI', () => {
         expect(res.body).toHaveProperty('error', 'Room not found');
         expect(mockPokerDb.getPokerRoomInfo).toHaveBeenCalledWith(nonExistentRoomId); // Changed mock name
         // isWorkspaceMember should not be called if room not found
-        expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled();
+        // isWorkspaceMember is not called if room not found
+        expect(mockWorkspaceDb.isWorkspaceMember).not.toHaveBeenCalled(); // No change needed here
      });
 
   });

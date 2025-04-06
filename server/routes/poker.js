@@ -1,8 +1,9 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import { pool } from '../db/pool.js'; // Import pool
 // Removed direct DB imports
 // import { createRoom, getRooms, getRoom, getWorkspaceRooms, getPokerRoomInfo } from '../db/poker.js';
-import logger from '../logger.js'; // Import logger
+import logger from '../logger.js';
 
 // Wrap routes in a setup function that accepts db dependency
 export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspaceDb dependency
@@ -21,7 +22,7 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
             if (userId && workspaceId) {
                 logger.info(`Fetching poker rooms for workspace: ${workspaceId}, user: ${userId}`);
                 // Check if user is a member of the workspace
-                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId);
+                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool); // Pass pool
                 if (!isMember) {
                     logger.warn(`User ${userId} attempted to access poker rooms for workspace ${workspaceId} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to access rooms for this workspace.' });
@@ -65,7 +66,7 @@ export default function setupPokerRoutes(pokerDb, workspaceDb) { // Add workspac
                     logger.warn(`Anonymous user attempted to create a poker room in workspace ${workspaceId}.`);
                     return res.status(401).json({ error: 'Authentication required to create a workspace room.' });
                 }
-                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId);
+                const isMember = await workspaceDb.isWorkspaceMember(workspaceId, userId, pool); // Pass pool
                 if (!isMember) {
                     logger.warn(`User ${userId} attempted to create a poker room in workspace ${workspaceId} without membership.`);
                     return res.status(403).json({ error: 'User is not authorized to create a room in this workspace.' });

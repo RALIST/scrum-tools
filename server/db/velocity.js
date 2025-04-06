@@ -1,9 +1,9 @@
-import { executeQuery } from './dbUtils.js';
+import { executeQuery as defaultExecuteQuery } from './dbUtils.js'; // Rename import
 import bcrypt from 'bcryptjs';
-import logger from '../logger.js'; // Import logger at the top
+import logger from '../logger.js';
 
 // Add client as the last optional parameter
-export const createTeam = async (id, name, password, workspaceId = null, createdBy = null, client = null) => {
+export const createTeam = async (id, name, password, workspaceId = null, createdBy = null, client = null, dbExecutor = defaultExecuteQuery) => {
     const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
     // Use the correct column name 'password' from the schema
@@ -16,7 +16,7 @@ export const createTeam = async (id, name, password, workspaceId = null, created
 
     // Pass the client (which might be null) to executeQuery
     logger.info(`DEBUG: About to execute INSERT query for team '${name}' (id: ${id}).`); // DEBUG LOG
-    const result = await executeQuery(queryText, params, client);
+    const result = await dbExecutor(queryText, params, client);
 
     // Add check and logging
     if (!result || !result.rows || result.rows.length === 0) {
@@ -29,11 +29,11 @@ export const createTeam = async (id, name, password, workspaceId = null, created
     return result.rows[0];
 };
 
-export const getTeam = async (name, password) => {
+export const getTeam = async (name, password, dbExecutor = defaultExecuteQuery) => {
     // Use executeQuery
     const queryText = 'SELECT * FROM teams WHERE name = $1'; // Select hash to verify
     const params = [name];
-    const teamResult = await executeQuery(queryText, params);
+    const teamResult = await dbExecutor(queryText, params);
 
     if (teamResult.rows.length === 0) {
         return null; // Team not found
@@ -78,7 +78,7 @@ export const getTeam = async (name, password) => {
     return teamData;
 };
 
-export const getTeamByWorkspace = async (name, workspaceId) => {
+export const getTeamByWorkspace = async (name, workspaceId, dbExecutor = defaultExecuteQuery) => {
     // Use executeQuery
     const queryText = `
         SELECT id, name, workspace_id, created_by, created_at
@@ -86,13 +86,29 @@ export const getTeamByWorkspace = async (name, workspaceId) => {
         WHERE name = $1 AND workspace_id = $2
     `; // Exclude password_hash
     const params = [name, workspaceId];
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
 
     // Return the found team or null
     return result.rows[0] || null; 
 };
 
-export const createSprint = async (id, teamId, name, startDate, endDate) => {
+export const getTeamById = async (teamId, dbExecutor = defaultExecuteQuery) => {
+    const queryText = 'SELECT * FROM teams WHERE id = $1'; // Fetch all columns including password hash
+    const params = [teamId];
+    const result = await dbExecutor(queryText, params);
+    return result.rows[0] || null;
+};
+
+
+export const getSprintById = async (sprintId, dbExecutor = defaultExecuteQuery) => {
+    const queryText = 'SELECT * FROM sprints WHERE id = $1';
+    const params = [sprintId];
+    const result = await dbExecutor(queryText, params);
+    return result.rows[0] || null;
+};
+
+
+export const createSprint = async (id, teamId, name, startDate, endDate, dbExecutor = defaultExecuteQuery) => {
     // Use executeQuery
     const queryText = `
         INSERT INTO sprints (id, team_id, name, start_date, end_date)
@@ -100,11 +116,11 @@ export const createSprint = async (id, teamId, name, startDate, endDate) => {
         RETURNING *
     `;
     const params = [id, teamId, name, startDate, endDate];
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
     return result.rows[0];
 };
 
-export const updateSprintVelocity = async (sprintId, committedPoints, completedPoints) => {
+export const updateSprintVelocity = async (sprintId, committedPoints, completedPoints, dbExecutor = defaultExecuteQuery) => {
     // Use executeQuery
     const queryText = `
         INSERT INTO sprint_velocity (sprint_id, committed_points, completed_points)
@@ -114,14 +130,15 @@ export const updateSprintVelocity = async (sprintId, committedPoints, completedP
         RETURNING sprint_id, committed_points, completed_points, created_at 
     `; // Return specific fields including sprint_id
     const params = [sprintId, committedPoints, completedPoints];
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
     return result.rows[0];
 };
 
-export const getTeamVelocity = async (name, password) => {
+export const getTeamVelocity = async (name, password, dbExecutor = defaultExecuteQuery, _getTeam = getTeam) => {
     // Use executeQuery
     // First verify team and password using the updated getTeam function
-    const team = await getTeam(name, password); // This will throw if password invalid or team not found
+    // Use the injected _getTeam function and pass the dbExecutor along
+    const team = await _getTeam(name, password, dbExecutor); // This will throw if password invalid or team not found
     // No need to check if team is null here, getTeam handles it by throwing
 
     const queryText = `
@@ -135,14 +152,15 @@ export const getTeamVelocity = async (name, password) => {
         LIMIT 10
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
     return result.rows;
 };
 
-export const getTeamVelocityByWorkspace = async (name, workspaceId) => {
+export const getTeamVelocityByWorkspace = async (name, workspaceId, dbExecutor = defaultExecuteQuery, _getTeamByWorkspace = getTeamByWorkspace) => {
     // Use executeQuery
     // Verify team exists in this workspace
-    const team = await getTeamByWorkspace(name, workspaceId);
+    // Use the injected _getTeamByWorkspace function and pass the dbExecutor along
+    const team = await _getTeamByWorkspace(name, workspaceId, dbExecutor);
     if (!team) {
         return null; // Or throw an error if preferred
     }
@@ -158,14 +176,15 @@ export const getTeamVelocityByWorkspace = async (name, workspaceId) => {
         LIMIT 10
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
     return result.rows;
 };
 
-export const getTeamAverageVelocity = async (name, password) => {
+export const getTeamAverageVelocity = async (name, password, dbExecutor = defaultExecuteQuery, _getTeam = getTeam) => {
     // Use executeQuery
     // First verify team and password using the updated getTeam function
-    const team = await getTeam(name, password); // This will throw if password invalid or team not found
+    // Use the injected _getTeam function and pass the dbExecutor along
+    const team = await _getTeam(name, password, dbExecutor); // This will throw if password invalid or team not found
      // No need to check if team is null here
 
     const queryText = `
@@ -183,15 +202,16 @@ export const getTeamAverageVelocity = async (name, password) => {
         AND sv.completed_points IS NOT NULL -- Only average completed sprints
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
     // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
 
-export const getTeamAverageVelocityByWorkspace = async (name, workspaceId) => {
+export const getTeamAverageVelocityByWorkspace = async (name, workspaceId, dbExecutor = defaultExecuteQuery, _getTeamByWorkspace = getTeamByWorkspace) => {
     // Use executeQuery
     // Verify team exists in this workspace
-    const team = await getTeamByWorkspace(name, workspaceId);
+    // Use the injected _getTeamByWorkspace function and pass the dbExecutor along
+    const team = await _getTeamByWorkspace(name, workspaceId, dbExecutor);
     if (!team) {
         return null; // Or throw an error
     }
@@ -211,13 +231,13 @@ export const getTeamAverageVelocityByWorkspace = async (name, workspaceId) => {
         AND sv.completed_points IS NOT NULL
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
      // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
 
 // Get all velocity teams associated with a workspace
-export const getWorkspaceVelocityTeams = async (workspaceId) => {
+export const getWorkspaceVelocityTeams = async (workspaceId, dbExecutor = defaultExecuteQuery) => {
     const queryText = `
         SELECT 
             t.id, 
@@ -233,6 +253,6 @@ export const getWorkspaceVelocityTeams = async (workspaceId) => {
         ORDER BY t.name ASC
     `;
     const params = [workspaceId];
-    const result = await executeQuery(queryText, params);
+    const result = await dbExecutor(queryText, params);
     return result.rows;
 };
