@@ -88,7 +88,7 @@ const TeamVelocity: FC = () => {
   // Restore useState for velocity data and averages for anonymous mode
   const [anonVelocityData, setAnonVelocityData] = useState<SprintData[]>([]);
   const [anonAverages, setAnonAverages] = useState<TeamAverages | null>(null);
-  const [isTeamLoaded, setIsTeamLoaded] = useState(false);
+  // Removed isTeamLoaded state
 
   const {
     isOpen: isAddSprintOpen,
@@ -170,7 +170,7 @@ const TeamVelocity: FC = () => {
     queryKey: teamVelocityQueryKey,
     queryFn: fetchTeamVelocityData,
     // Enable query only when in workspace mode AND team is considered loaded
-    enabled: !!currentWorkspace && isTeamLoaded,
+    enabled: !!currentWorkspace, // Enable query based only on workspace context
     retry: 1,
   });
 
@@ -206,8 +206,8 @@ const TeamVelocity: FC = () => {
         status: "success", // Use success status
         duration: 2000,
       });
-      // Set isTeamLoaded to true AFTER the POST request succeeds
-      setIsTeamLoaded(true);
+      // Removed setIsTeamLoaded(true) for anonymous mode success
+      // Removed setIsTeamLoaded(true) call
       setFormErrors({}); // Clear errors
       // Save the returned data to local state for anonymous mode
       setAnonVelocityData(data.sprints || []);
@@ -221,7 +221,7 @@ const TeamVelocity: FC = () => {
         status: "error",
         duration: 3000,
       });
-      setIsTeamLoaded(false); // Ensure team is marked as not loaded on error
+      // Removed setIsTeamLoaded(false) for anonymous mode error
     },
   });
   // --- End Mutation ---
@@ -240,8 +240,7 @@ const TeamVelocity: FC = () => {
     if (isDataSuccess && currentWorkspace) {
       // Only clear errors if query succeeded (workspace mode)
       setFormErrors({});
-      // Set isTeamLoaded true when workspace data successfully loads
-      setIsTeamLoaded(true);
+      // Removed setIsTeamLoaded(true) for workspace mode success
     }
   }, [isDataSuccess, currentWorkspace]);
 
@@ -257,7 +256,7 @@ const TeamVelocity: FC = () => {
         duration: 3000,
         isClosable: true,
       });
-      setIsTeamLoaded(false); // Reset isTeamLoaded on error
+      // Removed setIsTeamLoaded(false) for workspace mode error
     }
   }, [isDataError, dataError, toast, currentWorkspace]);
   // --- End React Query for fetching data ---
@@ -297,7 +296,7 @@ const TeamVelocity: FC = () => {
   };
 
   const handleChangeTeam = () => {
-    setIsTeamLoaded(false);
+    // Removed setIsTeamLoaded(false) when changing team
     setTeamName("");
     setTeamPassword("");
     setFormErrors({});
@@ -328,13 +327,13 @@ const TeamVelocity: FC = () => {
         startDate: variables.startDate,
         endDate: variables.endDate,
         workspaceId: currentWorkspace?.id,
+        // Add password to body if anonymous
+        ...(!currentWorkspace && teamPassword && { password: teamPassword }),
       };
 
       const sprintData = await apiRequest<{ id: string }>(endpoint, {
         method: "POST",
         body,
-        ...(!currentWorkspace &&
-          teamPassword && { queryParams: { password: teamPassword } }),
       });
 
       await apiRequest(`/velocity/sprints/${sprintData.id}/velocity`, {
@@ -342,9 +341,13 @@ const TeamVelocity: FC = () => {
         body: {
           committedPoints: parseInt(variables.committedPoints),
           completedPoints: parseInt(variables.completedPoints),
+          // Add password to body if anonymous
+          ...(!currentWorkspace && teamPassword && { password: teamPassword }),
         },
-        ...(!currentWorkspace &&
-          teamPassword && { queryParams: { password: teamPassword } }),
+        // Removed password from queryParams for PUT
+        ...(currentWorkspace && {
+          headers: { "workspace-id": currentWorkspace.id },
+        }), // Keep workspace header
       });
     },
     onSuccess: () => {
@@ -378,7 +381,8 @@ const TeamVelocity: FC = () => {
   });
 
   const handleAddSprintSubmit = (data: AddSprintVariables) => {
-    if (!isTeamLoaded || !effectiveTeamName) {
+    // Check for effectiveTeamName directly; isTeamLoaded removed
+    if (!effectiveTeamName) {
       toast({ title: "Error", description: "No team loaded", status: "error" });
       return;
     }
@@ -435,14 +439,15 @@ const TeamVelocity: FC = () => {
             <WorkspaceTeamHeader
               currentWorkspace={currentWorkspace}
               workspaceMembers={workspaceMembers}
-              isTeamLoaded={isTeamLoaded} // Still use isTeamLoaded for UI switch
+              isTeamLoaded={isDataSuccess} // Pass query success state instead
               onAddSprintClick={onAddSprintOpen}
             />
           ) : (
             <TeamSetupForm
               teamName={teamName}
               teamPassword={teamPassword}
-              isTeamLoaded={isTeamLoaded} // Use isTeamLoaded to hide form
+              // Form should show inputs until the mutation succeeds
+              isTeamLoaded={createOrLoadTeamMutation.isSuccess}
               errors={formErrors}
               onNameChange={setTeamName}
               onPasswordChange={setTeamPassword}
@@ -454,7 +459,9 @@ const TeamVelocity: FC = () => {
           )}
 
           {/* Display Area (Stats, Chart, No Data Message) */}
-          {isTeamLoaded && (
+          {/* Show data area if in workspace OR anonymous team is loaded */}
+          {/* Show data area if in workspace OR anonymous team mutation succeeded */}
+          {(!!currentWorkspace || createOrLoadTeamMutation.isSuccess) && (
             <>
               {/* Use combined loading state */}
               {isLoadingDisplayData ? (

@@ -160,10 +160,8 @@ export default function setupVelocityRoutes(
     router.post('/teams/:name/sprints', async (req: Request<{ name: string }>, res: Response, next: NextFunction) => {
         try {
             const { name } = req.params;
-            // Type query param (could be string, string[], or undefined)
-            const passwordQuery = req.query.password;
-            const password = typeof passwordQuery === 'string' ? passwordQuery : undefined;
-            const { sprintName, startDate, endDate, workspaceId } = req.body;
+            // Read password from body instead of query for anonymous mode
+            const { sprintName, startDate, endDate, workspaceId, password } = req.body;
             const userId: string | undefined = req.user?.userId;
 
             let team: VelocityTeam | Omit<VelocityTeam, 'password'> | null = null; // Can be full team or partial
@@ -210,8 +208,10 @@ export default function setupVelocityRoutes(
                         res.status(401).json({ error: 'Invalid team name or password' }); // Generic message for security
                         return;
                     } else {
-                        // Re-throw other unexpected errors
-                        throw error;
+                        // Log unexpected errors during auth check but still return 401
+                        console.error("Unexpected error during team access verification:", error); // Log for debugging
+                        res.status(401).json({ error: 'Team access verification failed' }); // Return 401, not 500
+                        return;
                     }
                 }
             }
@@ -235,8 +235,9 @@ export default function setupVelocityRoutes(
         try {
             const { sprintId } = req.params;
             const { committedPoints, completedPoints } = req.body;
-            const passwordQuery = req.query.password;
-            const password = typeof passwordQuery === 'string' ? passwordQuery : undefined;
+            // Read password from body instead of query for anonymous mode
+            // committedPoints and completedPoints are already read from body
+            const { password } = req.body;
             const workspaceIdHeader = req.headers['workspace-id'];
             const workspaceId: string | undefined = Array.isArray(workspaceIdHeader) ? workspaceIdHeader[0] : workspaceIdHeader;
             const userId: string | undefined = req.user?.userId;

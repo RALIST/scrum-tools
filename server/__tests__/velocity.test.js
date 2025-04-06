@@ -240,13 +240,13 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
 
         const res = await request(testApp) // Use testApp
           .post(`/api/velocity/teams/${anonymousTeamName}/sprints`)
-          .query({ password: anonymousTeamPassword })
-          .send({ sprintName, startDate, endDate });
+          // Send password in body now
+          .send({ sprintName, startDate, endDate, password: anonymousTeamPassword });
 
         expect(res.statusCode).toEqual(201);
         expect(res.body).toEqual({ id: mockSprint.id }); // Check only id
         // Route calls getTeam first
-        expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, null); // Removed executor expectation
+        expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, anonymousTeamPassword); // Removed executor expectation
         // Check essential args, ignore executor placeholder
         expect(mockVelocityDb.createSprint).toHaveBeenCalledWith(expect.any(String), anonymousTeamId, sprintName, startDate, endDate); // Removed executor expectation
     });
@@ -256,8 +256,9 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       const mockTeamWithHash = { id: anonymousTeamId, name: anonymousTeamName, workspace_id: null, password: await bcrypt.hash(anonymousTeamPassword, 10) };
       // Route calls getTeam first
       // Ensure the mock includes the password field for the route's check
-      mockVelocityDb.getTeamById.mockResolvedValueOnce(mockTeamWithHash); // Mock for the second check
-      mockVelocityDb.getTeam.mockResolvedValueOnce({ ...mockTeamWithHash });
+      // Remove getTeamById mock
+      // Mock getTeam to REJECT with the specific error when called with the wrong password
+      mockVelocityDb.getTeam.mockRejectedValueOnce(new Error("Invalid password for anonymous team"));
       // checkIfTeamRequiresPassword and verifyTeamPassword are no longer used in route
 
       const sprintName = 'Anon Sprint Fail DI';
@@ -266,14 +267,13 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
 
       const res = await request(testApp) // Use testApp
         .post(`/api/velocity/teams/${anonymousTeamName}/sprints`)
-        .query({ password: 'wrongPassword' })
-        .send({ sprintName, startDate, endDate });
+        .send({ sprintName, startDate, endDate, password: 'wrongPassword' });
 
       expect(res.statusCode).toEqual(401);
-      expect(res.body).toHaveProperty('error', 'Invalid password.'); // Correct error message
-      // Route calls getTeam first
-      // Route calls getTeam with null password initially to check existence
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, null); // Removed executor expectation
+      // Expect the generic 401 error message from the route handler's catch block
+      expect(res.body).toHaveProperty('error', 'Invalid team name or password');
+      // Expect getTeam to have been called with the wrong password from the body
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(anonymousTeamName, 'wrongPassword');
       expect(mockVelocityDb.createSprint).not.toHaveBeenCalled();
     });
 
@@ -287,16 +287,13 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
       const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const nonExistentTeamName = `non-existent-team-${Date.now()}`;
 
-      const res = await request(testApp) // Use testApp
+      const res = await request(testApp)
         .post(`/api/velocity/teams/${nonExistentTeamName}/sprints`)
-        .query({ password: 'anyPassword' })
-        .send({ sprintName, startDate, endDate });
+        .send({ sprintName, startDate, endDate, password: "anyPassword" });
 
       expect(res.statusCode).toEqual(404); // Route returns 404 when team not found
       expect(res.body).toHaveProperty('error', `Team '${nonExistentTeamName}' not found.`);
-      // Route calls getTeam first
-      // Route calls getTeam with null password initially
-      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(nonExistentTeamName, null); // Removed executor expectation
+      expect(mockVelocityDb.getTeam).toHaveBeenCalledWith(nonExistentTeamName, 'anyPassword'); // Removed executor expectation
       expect(mockVelocityDb.createSprint).not.toHaveBeenCalled();
     });
 
@@ -315,8 +312,8 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
 
       const res = await request(testApp) // Use testApp
         .put(`/api/velocity/sprints/${createdAnonSprintId}/velocity`)
-        .query({ password: anonymousTeamPassword })
-        .send({ committedPoints, completedPoints });
+        // Send password in body now
+        .send({ committedPoints, completedPoints, password: anonymousTeamPassword });
 
       // With corrected route logic using mocks, this should now return 200
       expect(res.statusCode).toEqual(200);
@@ -339,8 +336,8 @@ describe('Velocity Routes (/api/velocity) with DI', () => {
 
       const res = await request(testApp) // Use testApp
         .put(`/api/velocity/sprints/${createdAnonSprintId}/velocity`)
-        .query({ password: 'wrongPassword' })
-        .send({ committedPoints: 10, completedPoints: 5 });
+        // Send password in body now
+        .send({ committedPoints: 10, completedPoints: 5, password: 'wrongPassword' });
 
       expect(res.statusCode).toEqual(401);
       // Error message should now be 'Invalid password' from the verify step
