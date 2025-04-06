@@ -3,7 +3,7 @@ import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 /**
  * Centralized Express error handling middleware.
  */
-const errorHandler: ErrorRequestHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+const errorHandler: ErrorRequestHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
 
     // Determine the status code
     // Use err.statusCode if it's set (e.g., by custom error classes), otherwise default to 500

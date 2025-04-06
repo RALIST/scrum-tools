@@ -7,11 +7,11 @@ import {
   Button,
   useToast,
 } from "@chakra-ui/react";
-import { SEQUENCES, SequenceType } from "../../constants/poker";
+// Removed import { SEQUENCES, SequenceType } from "../../constants/poker";
 import { Card } from "./Card";
 
 interface VotingAreaProps {
-  sequence: SequenceType;
+  sequence: string[] | null; // Accept the array directly
   selectedCard: string | null;
   isRevealed: boolean;
   onCardSelect: (value: string) => void;
@@ -42,16 +42,20 @@ export const VotingArea: FC<VotingAreaProps> = ({
   return (
     <VStack spacing={{ base: 4, md: 8 }} w="full">
       <Wrap spacing={4} justify="center">
-        {(SEQUENCES[sequence] || []).map((value) => (
-          <WrapItem key={value}>
-            <Card
-              value={value}
-              isSelected={selectedCard === value}
-              onClick={() => handleCardSelectInternal(value)}
-              disabled={isRevealed}
-            />
-          </WrapItem>
-        ))}
+        {(sequence || []).map(
+          (
+            value // Map over the sequence prop directly
+          ) => (
+            <WrapItem key={value}>
+              <Card
+                value={value}
+                isSelected={selectedCard === value}
+                onClick={() => handleCardSelectInternal(value)}
+                disabled={isRevealed}
+              />
+            </WrapItem>
+          )
+        )}
       </Wrap>
 
       <Stack

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { Server as SocketIOServer, Socket, Namespace } from 'socket.io'; // Import Namespace
+import { Socket, Namespace } from 'socket.io'; // Import Namespace
 import * as pokerDbFunctions from '../db/poker.js'; // Import DB functions (needs .js)
 import {
     PokerClientToServerEvents, PokerServerToClientEvents, PokerInterServerEvents, PokerSocketData,

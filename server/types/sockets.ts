@@ -1,5 +1,5 @@
 // server/types/sockets.ts
-import { PokerParticipant, PokerRoomDetails, RetroBoardDetails, RetroBoardSettings } from './db.js'; // Import related DB types (needs .js extension)
+import { PokerParticipant, RetroBoardDetails, RetroBoardSettings } from './db.js'; // Import related DB types (needs .js extension)
 
 // Define structure for error messages sent to client
 export interface SocketErrorPayload {

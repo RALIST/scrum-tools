@@ -77,12 +77,12 @@ initializePokerSocket(pokerIo, pokerDb); // Pass pokerDb dependency
 initializeRetroSocket(retroIo, retroDb); // Pass retroDb dependency
 
 // --- Test Routes for Error Handling ---
-app.get('/api/test-error', (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/test-error', (_req: Request, _res: Response, next: NextFunction) => {
   // Simulate an unexpected error
   next(new Error('Simulated unexpected error'));
 });
 
-app.get('/api/test-error-400', (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/test-error-400', (_req: Request, _res: Response, next: NextFunction) => {
   // Simulate an error with a specific status code
   const err = new Error('Simulated bad request error');
   (err as any).statusCode = 400; // Add statusCode property (might need custom Error type)

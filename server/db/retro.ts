@@ -10,7 +10,7 @@ export const createRetroBoard = async (
     settings: RetroBoardSettings = {}
 ): Promise<void> => {
     const {
-        defaultTimer = 300,
+        // defaultTimer = 300,
         hideCardsByDefault = false,
         hideAuthorNames = false,
         password

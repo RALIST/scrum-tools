@@ -42,7 +42,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 };
 
 // Optional middleware to make authentication optional
-export const optionalAuthenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+export const optionalAuthenticateToken = (req: Request, _res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token: string | undefined = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   

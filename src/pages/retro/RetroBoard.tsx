@@ -101,9 +101,8 @@ const RetroBoard: FC = () => {
       boardId,
     });
     // Fetch public info first, auth handled by apiRequest if needed later
-    return await apiRequest<RetroBoardType>(`/retro/${boardId}`, {
-      includeAuth: false,
-    });
+    // MODIFIED LINE: Removed { includeAuth: false } to allow default behavior
+    return await apiRequest<RetroBoardType>(`/retro/${boardId}`);
   };
 
   const {

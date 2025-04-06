@@ -1,4 +1,4 @@
-import { Namespace, Server as SocketIOServer, Socket } from 'socket.io'; // Import Namespace
+import { Namespace, Socket } from 'socket.io'; // Import Namespace
 import * as retroDbFunctions from '../db/retro.js'; // Import DB functions (needs .js)
 import {
     RetroClientToServerEvents, RetroServerToClientEvents, RetroInterServerEvents, RetroSocketData,

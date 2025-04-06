@@ -5,7 +5,7 @@ import * as velocityDbFunctions from '../db/velocity.js'; // Import DB functions
 import * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
 import {
     VelocityTeam, VelocitySprint, SprintVelocity, TeamVelocityData,
-    TeamAverageVelocity, WorkspaceVelocityTeam
+    TeamAverageVelocity
 } from '../types/db.js'; // Import types (needs .js)
 
 // Define types for injected DB modules
