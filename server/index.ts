@@ -12,7 +12,6 @@ import { initializePokerSocket } from './sockets/poker.js';
 import { initializeRetroSocket } from './sockets/retro.js';
 import errorHandler from './middleware/errorHandler.js';
 import logger from './logger.js';
-// Import types for Socket.IO namespaces
 import {
     PokerClientToServerEvents, PokerServerToClientEvents, PokerInterServerEvents, PokerSocketData,
     RetroClientToServerEvents, RetroServerToClientEvents, RetroInterServerEvents, RetroSocketData
@@ -26,6 +25,7 @@ import * as userDb from './db/users.js';
 import * as pokerDb from './db/poker.js';
 import * as velocityDb from './db/velocity.js';
 import * as workspaceDb from './db/workspaces.js';
+import { initializePool } from './db/pool.js';
 
 // Create proper __dirname equivalent for ESM
 const __filename: string = fileURLToPath(import.meta.url);
@@ -40,6 +40,19 @@ if (env == "development") {
 } else {
    //console.warn('No environment variables loaded. Using default environment variables if available.');
 }
+
+if (process.env.NODE_ENV == "production") {
+    logger.info('Running in production mode');
+    logger.info('Environment variables loaded from .env file');
+    logger.info("Database connection details:", {
+      user: process.env.DB_USER,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      port: process.env.DB_PORT
+    });
+}
+
+initializePool();
 
 const app: Express = express();
 app.use(cors());

@@ -37,16 +37,9 @@ export const initializePool = (): void => {
           client.release();
       })
       .catch((err: Error) => { // Type the error
-          logger.error('Error connecting to the database:', { stack: err.stack });
+        logger.error('Error connecting to the database:', { stack: err.stack });
       });
 };
-
-// Call initialize immediately
-if (!pool) initializePool();
-
-// SIGINT handler removed - Jest global teardown handles pool closure for tests.
-// For regular application shutdown, a more robust mechanism might be needed
-// depending on the deployment strategy (e.g., in server shutdown logic).
 
 // Export only the initialized pool
 export { pool };
