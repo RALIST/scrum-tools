@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
 Disallow: /planning-poker/*/
+Disallow: /retro/*/
+Disallow: /workspaces/
+Disallow: /workspaces/*/
+Disallow: /join/*/
+Disallow: /profile/
+Disallow: /login/
+Disallow: /register/
 
 Sitemap: https://scrumtools.app/sitemap.xml
