@@ -2,18 +2,7 @@
     "name": "Scrum Tools",
     "short_name": "Scrum Tools",
     "description": "Free online tools for agile teams including Planning Poker and Daily Standup",
-    "icons": [
-        {
-            "src": "/android-chrome-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "/android-chrome-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ],
+    "icons": [],
     "theme_color": "#4299E1",
     "background_color": "#FFFFFF",
     "display": "standalone",
