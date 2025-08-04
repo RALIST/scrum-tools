@@ -1,5 +1,5 @@
-import { FC, useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useMutation
+import { FC, useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Import useMutation
 import {
   Container,
   Heading,
@@ -13,25 +13,33 @@ import {
   AlertIcon,
   AlertDescription,
   Center,
-} from "@chakra-ui/react";
-import PageContainer from "../../components/PageContainer";
-import PageHelmet from "../../components/PageHelmet";
-import SeoText from "../../components/SeoText";
-import { AddSprintModal } from "../../components/modals";
-import {
-  VelocityChart,
-  VelocityStats,
-  TeamSetupForm,
-  WorkspaceTeamHeader,
-} from "../../components/velocity";
-import {
-  teamVelocitySeo,
-  teamVelocitySeoSections,
-} from "../../content/teamVelocitySeo";
-import config from "../../config";
-import { useAuth } from "../../contexts/AuthContext";
-import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { apiRequest } from "../../utils/apiUtils"; // Import AuthError
+} from '@chakra-ui/react';
+import PageContainer from '../../components/PageContainer';
+import PageHelmet from '../../components/PageHelmet';
+import SeoText from '../../components/SeoText';
+import { AddSprintModal } from '../../components/modals';
+import { VelocityStats, TeamSetupForm, WorkspaceTeamHeader } from '../../components/velocity';
+import { teamVelocitySeo, teamVelocitySeoSections } from '../../content/teamVelocitySeo';
+import config from '../../config';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { apiRequest, ApiOptions } from '../../utils/apiUtils';
+import { WorkspaceVelocityTeam } from '../../hooks/useWorkspaceTools';
+
+// Lazy load heavy chart component
+const VelocityChart = lazy(() => import('../../components/velocity/VelocityChart'));
+
+// Chart loading component
+const ChartLoadingSpinner: FC = () => (
+  <Center h="400px" border="1px" borderColor="gray.200" borderRadius="md">
+    <VStack spacing={3}>
+      <Spinner size="lg" color="blue.500" />
+      <Text fontSize="sm" color="gray.500">
+        Loading chart...
+      </Text>
+    </VStack>
+  </Center>
+);
 
 interface SprintData {
   sprint_id: string; // Assuming API returns sprint_id now
@@ -63,27 +71,21 @@ interface WorkspaceMember {
 
 const TeamVelocity: FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth(); // Get loading state
-  const {
-    currentWorkspace,
-    getWorkspaceMembers,
-    isLoading: isWorkspaceLoading,
-  } = useWorkspace(); // Get loading state
-  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>(
-    []
-  );
-  const [_isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const { currentWorkspace, getWorkspaceMembers, isLoading: isWorkspaceLoading } = useWorkspace(); // Get loading state
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [, setIsLoadingMembers] = useState(false);
 
   // State for anonymous team setup
-  const [teamName, setTeamName] = useState("");
-  const [teamPassword, setTeamPassword] = useState("");
+  const [teamName, setTeamName] = useState('');
+  const [teamPassword, setTeamPassword] = useState('');
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   // State for sprint data form (used by modal)
-  const [sprintName, setSprintName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [committedPoints, setCommittedPoints] = useState("");
-  const [completedPoints, setCompletedPoints] = useState("");
+  const [sprintName, setSprintName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [committedPoints, setCommittedPoints] = useState('');
+  const [completedPoints, setCompletedPoints] = useState('');
 
   // Restore useState for velocity data and averages for anonymous mode
   const [anonVelocityData, setAnonVelocityData] = useState<SprintData[]>([]);
@@ -115,7 +117,7 @@ const TeamVelocity: FC = () => {
       const members = await getWorkspaceMembers(currentWorkspace.id);
       setWorkspaceMembers(members);
     } catch (error) {
-      console.error("Error loading workspace members:", error);
+      console.error('Error loading workspace members:', error);
       // Optional: Show toast for member loading error
     } finally {
       setIsLoadingMembers(false);
@@ -128,7 +130,7 @@ const TeamVelocity: FC = () => {
 
   // --- React Query for fetching team velocity data ---
   const teamVelocityQueryKey = [
-    "teamVelocity",
+    'teamVelocity',
     { teamName: effectiveTeamName, workspaceId: currentWorkspace?.id },
   ];
 
@@ -137,27 +139,24 @@ const TeamVelocity: FC = () => {
     averages: TeamAverages;
   }> => {
     if (!effectiveTeamName) {
-      throw new Error("Team name is required to fetch velocity data.");
+      throw new Error('Team name is required to fetch velocity data.');
     }
 
     const endpoint = `/velocity/teams/${effectiveTeamName}/velocity`;
-    let options: any = { method: "GET" };
+    let options: ApiOptions = { method: 'GET' };
 
     if (currentWorkspace) {
-      options.headers = { "workspace-id": currentWorkspace.id };
+      options.headers = { 'workspace-id': currentWorkspace.id };
     } else {
       if (!teamPassword) {
         // This condition should ideally not be met if 'enabled' works correctly
-        throw new Error("Password required for anonymous team lookup.");
+        throw new Error('Password required for anonymous team lookup.');
       }
       options.includeAuth = false;
       options.queryParams = { password: teamPassword };
     }
 
-    return await apiRequest<{ sprints: SprintData[]; averages: TeamAverages }>(
-      endpoint,
-      options
-    );
+    return await apiRequest<{ sprints: SprintData[]; averages: TeamAverages }>(endpoint, options);
   };
 
   const {
@@ -179,31 +178,31 @@ const TeamVelocity: FC = () => {
   const createOrLoadTeamMutation = useMutation<
     {
       success: boolean;
-      team: any;
+      team: WorkspaceVelocityTeam;
       sprints: SprintData[];
       averages: TeamAverages;
     },
     Error,
     { name: string; password: string }
   >({
-    mutationFn: async (variables) => {
+    mutationFn: async variables => {
       return await apiRequest<{
         success: boolean;
-        team: any;
+        team: WorkspaceVelocityTeam;
         sprints: SprintData[];
         averages: TeamAverages;
       }>(`/velocity/teams`, {
-        method: "POST",
+        method: 'POST',
         body: variables,
         includeAuth: false,
       });
     },
-    onSuccess: (data) => {
+    onSuccess: data => {
       // Receive data in onSuccess
       toast({
-        title: "Team Ready",
-        description: "Team found or created successfully.", // Simplified message
-        status: "success", // Use success status
+        title: 'Team Ready',
+        description: 'Team found or created successfully.', // Simplified message
+        status: 'success', // Use success status
         duration: 2000,
       });
       // Removed setIsTeamLoaded(true) for anonymous mode success
@@ -213,12 +212,12 @@ const TeamVelocity: FC = () => {
       setAnonVelocityData(data.sprints || []);
       setAnonAverages(data.averages || null);
     },
-    onError: (error) => {
-      console.error("Error creating/loading team:", error);
+    onError: error => {
+      console.error('Error creating/loading team:', error);
       toast({
-        title: "Error Accessing Team",
-        description: error.message || "Failed to create or load team",
-        status: "error",
+        title: 'Error Accessing Team',
+        description: error.message || 'Failed to create or load team',
+        status: 'error',
         duration: 3000,
       });
       // Removed setIsTeamLoaded(false) for anonymous mode error
@@ -230,9 +229,7 @@ const TeamVelocity: FC = () => {
   const isLoadingDisplayData = currentWorkspace
     ? isLoadingData // Use query loading state for workspace
     : createOrLoadTeamMutation.isPending; // Use mutation loading state initially for anonymous
-  const velocityData = currentWorkspace
-    ? teamData?.sprints || []
-    : anonVelocityData;
+  const velocityData = currentWorkspace ? teamData?.sprints || [] : anonVelocityData;
   const averages = currentWorkspace ? teamData?.averages || null : anonAverages;
 
   // Effect to handle successful data fetch for workspace mode and clear form errors
@@ -248,11 +245,11 @@ const TeamVelocity: FC = () => {
   useEffect(() => {
     if (isDataError && dataError && currentWorkspace) {
       // Only handle query errors in workspace mode
-      console.error("Error loading team data:", dataError);
+      console.error('Error loading team data:', dataError);
       toast({
-        title: "Error Loading Data",
-        description: dataError.message || "Failed to load team data",
-        status: "error",
+        title: 'Error Loading Data',
+        description: dataError.message || 'Failed to load team data',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -266,19 +263,19 @@ const TeamVelocity: FC = () => {
     let isValid = true;
 
     if (!teamName.trim()) {
-      errors.teamName = "Team name is required";
+      errors.teamName = 'Team name is required';
       isValid = false;
     } else if (teamName.length < 3) {
-      errors.teamName = "Team name must be at least 3 characters";
+      errors.teamName = 'Team name must be at least 3 characters';
       isValid = false;
     }
 
     if (!currentWorkspace) {
       if (!teamPassword.trim()) {
-        errors.teamPassword = "Password is required";
+        errors.teamPassword = 'Password is required';
         isValid = false;
       } else if (teamPassword.length < 6) {
-        errors.teamPassword = "Password must be at least 6 characters";
+        errors.teamPassword = 'Password must be at least 6 characters';
         isValid = false;
       }
     }
@@ -297,8 +294,8 @@ const TeamVelocity: FC = () => {
 
   const handleChangeTeam = () => {
     // Removed setIsTeamLoaded(false) when changing team
-    setTeamName("");
-    setTeamPassword("");
+    setTeamName('');
+    setTeamPassword('');
     setFormErrors({});
     // Clear local state for anonymous data
     setAnonVelocityData([]);
@@ -317,9 +314,9 @@ const TeamVelocity: FC = () => {
   }
 
   const addSprintMutation = useMutation<void, Error, AddSprintVariables>({
-    mutationFn: async (variables) => {
+    mutationFn: async variables => {
       if (!effectiveTeamName) {
-        throw new Error("Cannot add sprint without an effective team name.");
+        throw new Error('Cannot add sprint without an effective team name.');
       }
       const endpoint = `/velocity/teams/${effectiveTeamName}/sprints`;
       const body = {
@@ -332,12 +329,12 @@ const TeamVelocity: FC = () => {
       };
 
       const sprintData = await apiRequest<{ id: string }>(endpoint, {
-        method: "POST",
+        method: 'POST',
         body,
       });
 
       await apiRequest(`/velocity/sprints/${sprintData.id}/velocity`, {
-        method: "PUT",
+        method: 'PUT',
         body: {
           committedPoints: parseInt(variables.committedPoints),
           completedPoints: parseInt(variables.completedPoints),
@@ -346,12 +343,12 @@ const TeamVelocity: FC = () => {
         },
         // Removed password from queryParams for PUT
         ...(currentWorkspace && {
-          headers: { "workspace-id": currentWorkspace.id },
+          headers: { 'workspace-id': currentWorkspace.id },
         }), // Keep workspace header
       });
     },
     onSuccess: () => {
-      toast({ title: "Sprint data added", status: "success", duration: 2000 });
+      toast({ title: 'Sprint data added', status: 'success', duration: 2000 });
       // Invalidate the query to refetch data (important for workspace mode)
       queryClient.invalidateQueries({ queryKey: teamVelocityQueryKey });
       // Manually update local state for anonymous mode to avoid full page reload feel
@@ -364,17 +361,17 @@ const TeamVelocity: FC = () => {
         });
       }
       onAddSprintClose();
-      setSprintName("");
-      setStartDate("");
-      setEndDate("");
-      setCommittedPoints("");
-      setCompletedPoints("");
+      setSprintName('');
+      setStartDate('');
+      setEndDate('');
+      setCommittedPoints('');
+      setCompletedPoints('');
     },
-    onError: (error) => {
+    onError: error => {
       toast({
-        title: "Error Adding Sprint",
-        description: error.message || "Unknown error",
-        status: "error",
+        title: 'Error Adding Sprint',
+        description: error.message || 'Unknown error',
+        status: 'error',
         duration: 3000,
       });
     },
@@ -383,7 +380,7 @@ const TeamVelocity: FC = () => {
   const handleAddSprintSubmit = (data: AddSprintVariables) => {
     // Check for effectiveTeamName directly; isTeamLoaded removed
     if (!effectiveTeamName) {
-      toast({ title: "Error", description: "No team loaded", status: "error" });
+      toast({ title: 'Error', description: 'No team loaded', status: 'error' });
       return;
     }
     addSprintMutation.mutate(data);
@@ -391,16 +388,16 @@ const TeamVelocity: FC = () => {
   // --- End React Query Mutation ---
 
   const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Team Velocity Tracker",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Any",
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Team Velocity Tracker',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Any',
     description: teamVelocitySeo.description,
     offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
     },
     featureList: teamVelocitySeo.content.features,
   };
@@ -472,15 +469,16 @@ const TeamVelocity: FC = () => {
                 <>
                   {averages && <VelocityStats averages={averages} />}
                   {velocityData.length > 0 && (
-                    <VelocityChart velocityData={velocityData} />
+                    <Suspense fallback={<ChartLoadingSpinner />}>
+                      <VelocityChart velocityData={velocityData} />
+                    </Suspense>
                   )}
                   {/* Show no data message if not loading and no data */}
                   {velocityData.length === 0 && !isLoadingDisplayData && (
                     <Alert status="info" borderRadius="md">
                       <AlertIcon />
                       <AlertDescription>
-                        No sprint data available. Add your first sprint to see
-                        velocity metrics.
+                        No sprint data available. Add your first sprint to see velocity metrics.
                       </AlertDescription>
                     </Alert>
                   )}

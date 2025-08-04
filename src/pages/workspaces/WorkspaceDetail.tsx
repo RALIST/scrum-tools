@@ -1,4 +1,4 @@
-import { FC, useState, useCallback } from "react";
+import { FC, useState, useCallback, Suspense, lazy } from 'react';
 import {
   Box,
   Tabs,
@@ -14,32 +14,45 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
-} from "@chakra-ui/react";
-import { useParams } from "react-router-dom";
-import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { useAuth } from "../../contexts/AuthContext";
-import PageHelmet from "../../components/PageHelmet";
-import { FaUsers, FaThLarge } from "react-icons/fa";
+} from '@chakra-ui/react';
+import { useParams } from 'react-router-dom';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useAuth } from '../../contexts/AuthContext';
+import PageHelmet from '../../components/PageHelmet';
+import { FaUsers, FaThLarge } from 'react-icons/fa';
 
 // Import custom hooks
-import { useWorkspaceData } from "../../hooks/useWorkspaceData";
-import { useWorkspaceMembers } from "../../hooks/useWorkspaceMembers";
-import { useWorkspaceTools } from "../../hooks/useWorkspaceTools";
+import { useWorkspaceData } from '../../hooks/useWorkspaceData';
+import { useWorkspaceMembers } from '../../hooks/useWorkspaceMembers';
+import { useWorkspaceTools } from '../../hooks/useWorkspaceTools';
 
 // Import components
-import WorkspaceDetailHeader from "../../components/workspaces/WorkspaceDetailHeader";
-import WorkspaceToolsPanel from "../../components/workspaces/WorkspaceToolsPanel";
-import WorkspaceMembersPanel from "../../components/workspaces/WorkspaceMembersPanel";
-import EditWorkspaceModal from "../../components/workspaces/modals/EditWorkspaceModal";
-import AddMemberModal from "../../components/workspaces/modals/AddMemberModal";
-import RemoveMemberDialog from "../../components/workspaces/modals/RemoveMemberDialog";
+import WorkspaceDetailHeader from '../../components/workspaces/WorkspaceDetailHeader';
+import WorkspaceToolsPanel from '../../components/workspaces/WorkspaceToolsPanel';
+import WorkspaceMembersPanel from '../../components/workspaces/WorkspaceMembersPanel';
+
+// Lazy load modal components for better code splitting
+const EditWorkspaceModal = lazy(
+  () => import('../../components/workspaces/modals/EditWorkspaceModal')
+);
+const AddMemberModal = lazy(() => import('../../components/workspaces/modals/AddMemberModal'));
+const RemoveMemberDialog = lazy(
+  () => import('../../components/workspaces/modals/RemoveMemberDialog')
+);
+
+// Modal loading component
+const ModalLoadingSpinner: FC = () => (
+  <Center h="200px">
+    <Spinner size="lg" color="blue.500" />
+  </Center>
+);
 
 // Define Member type (or import if shared)
 interface Member {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "member" | string;
+  role: 'admin' | 'member' | string;
 }
 
 const WorkspaceDetail: FC = () => {
@@ -76,21 +89,13 @@ const WorkspaceDetail: FC = () => {
   } = useWorkspaceTools(workspaceId);
 
   // --- Modal/Dialog States ---
-  const {
-    isOpen: isEditOpen,
-    onOpen: onEditOpen,
-    onClose: onEditClose,
-  } = useDisclosure();
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const {
     isOpen: isAddMemberOpen,
     onOpen: onAddMemberOpen,
     onClose: onAddMemberClose,
   } = useDisclosure();
-  const {
-    isOpen: isRemoveOpen,
-    onOpen: onRemoveOpen,
-    onClose: onRemoveClose,
-  } = useDisclosure();
+  const { isOpen: isRemoveOpen, onOpen: onRemoveOpen, onClose: onRemoveClose } = useDisclosure();
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
 
   // --- Callback Handlers ---
@@ -142,7 +147,7 @@ const WorkspaceDetail: FC = () => {
           <AlertIcon />
           <AlertTitle>Error Loading Workspace</AlertTitle>
           <AlertDescription>
-            {workspaceError?.message || "Could not load workspace data."}
+            {workspaceError?.message || 'Could not load workspace data.'}
           </AlertDescription>
         </Alert>
       </Center>
@@ -202,7 +207,7 @@ const WorkspaceDetail: FC = () => {
               </Alert>
             )}
             <WorkspaceMembersPanel
-              workspaceId={workspaceId || ""}
+              workspaceId={workspaceId || ''}
               members={members}
               isLoadingMembers={isLoadingMembers}
               isAdmin={isAdmin}
@@ -215,27 +220,33 @@ const WorkspaceDetail: FC = () => {
       </Tabs>
 
       {/* Modals and Dialogs */}
-      <EditWorkspaceModal
-        isOpen={isEditOpen}
-        onClose={onEditClose}
-        workspace={workspace}
-        onUpdateWorkspace={updateWorkspace} // Pass context function directly
-      />
+      <Suspense fallback={<ModalLoadingSpinner />}>
+        <EditWorkspaceModal
+          isOpen={isEditOpen}
+          onClose={onEditClose}
+          workspace={workspace}
+          onUpdateWorkspace={updateWorkspace} // Pass context function directly
+        />
+      </Suspense>
 
-      <AddMemberModal
-        isOpen={isAddMemberOpen}
-        onClose={onAddMemberClose}
-        workspaceId={workspaceId}
-        onAddMember={handleAddMember} // Pass memoized handler
-      />
+      <Suspense fallback={<ModalLoadingSpinner />}>
+        <AddMemberModal
+          isOpen={isAddMemberOpen}
+          onClose={onAddMemberClose}
+          workspaceId={workspaceId}
+          onAddMember={handleAddMember} // Pass memoized handler
+        />
+      </Suspense>
 
-      <RemoveMemberDialog
-        isOpen={isRemoveOpen}
-        onClose={onRemoveClose}
-        memberToRemove={memberToRemove}
-        workspaceId={workspaceId}
-        onRemoveMember={handleRemoveMember} // Pass memoized handler
-      />
+      <Suspense fallback={<ModalLoadingSpinner />}>
+        <RemoveMemberDialog
+          isOpen={isRemoveOpen}
+          onClose={onRemoveClose}
+          memberToRemove={memberToRemove}
+          workspaceId={workspaceId}
+          onRemoveMember={handleRemoveMember} // Pass memoized handler
+        />
+      </Suspense>
     </Box>
   );
 };

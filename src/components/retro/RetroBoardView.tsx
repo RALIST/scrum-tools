@@ -1,4 +1,4 @@
-import React, { FC, useMemo } from "react";
+import React, { FC, useMemo, Suspense, lazy } from 'react';
 import {
   Box,
   SimpleGrid,
@@ -6,12 +6,24 @@ import {
   useColorMode,
   useDisclosure,
   Flex,
-} from "@chakra-ui/react";
-import { Helmet } from "react-helmet-async";
-import { RetroBoardSettingsModal, ChangeRetroBoardNameModal } from "../modals"; // Adjust path if needed
-import { RetroHeader, RetroColumn } from "."; // Assuming index.ts exports these
+  Spinner,
+  Center,
+} from '@chakra-ui/react';
+import { Helmet } from 'react-helmet-async';
+import { RetroHeader, RetroColumn } from '.'; // Assuming index.ts exports these
 // Import the correct type name 'RetroBoard' and also 'RetroCard'
-import { RetroBoard, RetroCard } from "../../hooks/useRetroSocket";
+import { RetroBoard, RetroCard } from '../../hooks/useRetroSocket';
+
+// Lazy load modal components
+const RetroBoardSettingsModal = lazy(() => import('../modals/RetroBoardSettingsModal'));
+const ChangeRetroBoardNameModal = lazy(() => import('../modals/ChangeRetroBoardNameModal'));
+
+// Modal loading component for retro
+const RetroModalLoadingSpinner: FC = () => (
+  <Center h="250px">
+    <Spinner size="lg" color="green.500" />
+  </Center>
+);
 
 // Define Column type locally or import
 interface RetroColumnType {
@@ -21,9 +33,9 @@ interface RetroColumnType {
 }
 
 const COLUMNS: RetroColumnType[] = [
-  { id: "good", title: "What Went Well", color: "green.500" },
-  { id: "improve", title: "What Could Be Improved", color: "orange.500" },
-  { id: "actions", title: "Action Items", color: "blue.500" },
+  { id: 'good', title: 'What Went Well', color: 'green.500' },
+  { id: 'improve', title: 'What Could Be Improved', color: 'orange.500' },
+  { id: 'actions', title: 'Action Items', color: 'blue.500' },
 ];
 
 interface RetroBoardViewProps {
@@ -77,14 +89,15 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
 
   // Memoize column cards calculation
   const columnCards = useMemo(() => {
-    return COLUMNS.reduce((acc, column) => {
-      // Add explicit type for 'card' using the imported RetroCard type
-      acc[column.id] = board.cards.filter(
-        (card: RetroCard) => card.column_id === column.id
-      );
-      return acc;
-    }, {} as { [key: string]: typeof board.cards });
-  }, [board.cards]); // Depend only on board.cards
+    return COLUMNS.reduce(
+      (acc, column) => {
+        // Add explicit type for 'card' using the imported RetroCard type
+        acc[column.id] = board.cards.filter((card: RetroCard) => card.column_id === column.id);
+        return acc;
+      },
+      {} as { [key: string]: typeof board.cards }
+    );
+  }, [board.cards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -94,7 +107,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <Box
-        bg={colorMode === "light" ? "gray.50" : "gray.900"}
+        bg={colorMode === 'light' ? 'gray.50' : 'gray.900'}
         borderRadius="lg"
         display="flex"
         flexDirection="column"
@@ -102,11 +115,11 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
         p={4} // Add some padding to the container
       >
         <VStack spacing={6} align="stretch" flex={1}>
-          {" "}
+          {' '}
           {/* Reduced spacing */}
           <RetroHeader
             boardName={board.name}
-            userName={userName || "User"} // Provide a fallback for null userName
+            userName={userName || 'User'} // Provide a fallback for null userName
             boardId={board.id}
             isTimerRunning={isTimerRunning}
             timeLeft={timeLeft}
@@ -118,7 +131,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
             isNameFixed={isNameFixed} // Pass the flag down to the header
           />
           <Flex flex={1} minH={0} overflowX="auto">
-            {" "}
+            {' '}
             {/* Allow horizontal scroll if needed */}
             <SimpleGrid
               columns={{ base: 1, md: 3 }}
@@ -127,7 +140,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
               minW={COLUMNS.length * 320} // Ensure minimum width for columns
               alignItems="flex-start" // Align columns to top
             >
-              {COLUMNS.map((column) => (
+              {COLUMNS.map(column => (
                 <RetroColumn
                   key={column.id}
                   title={column.title}
@@ -135,9 +148,9 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
                   cards={columnCards[column.id] || []}
                   hideCards={hideCards}
                   hideAuthorNames={board.hide_author_names}
-                  userName={userName || ""} // Provide fallback for null userName
+                  userName={userName || ''} // Provide fallback for null userName
                   isTimerRunning={isTimerRunning}
-                  onAddCard={(text) => onAddCard(column.id, text)} // Pass columnId
+                  onAddCard={text => onAddCard(column.id, text)} // Pass columnId
                   onDeleteCard={onDeleteCard}
                   onVoteCard={onVoteCard}
                   onEditCard={onEditCard}
@@ -148,25 +161,29 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
         </VStack>
 
         {/* Settings Modal */}
-        <RetroBoardSettingsModal
-          isOpen={isSettingsOpen}
-          onClose={onSettingsClose}
-          settings={{
-            defaultTimer: board.default_timer,
-            hideCardsByDefault: board.hide_cards_by_default,
-            hideAuthorNames: board.hide_author_names,
-          }}
-          onSave={onUpdateSettings}
-        />
+        <Suspense fallback={<RetroModalLoadingSpinner />}>
+          <RetroBoardSettingsModal
+            isOpen={isSettingsOpen}
+            onClose={onSettingsClose}
+            settings={{
+              defaultTimer: board.default_timer,
+              hideCardsByDefault: board.hide_cards_by_default,
+              hideAuthorNames: board.hide_author_names,
+            }}
+            onSave={onUpdateSettings}
+          />
+        </Suspense>
 
         {/* Change Name Modal - Conditionally render based on isNameFixed */}
         {!isNameFixed && (
-          <ChangeRetroBoardNameModal
-            isOpen={isChangeNameOpen}
-            onClose={onChangeNameClose}
-            currentName={userName || ""} // Pass current name
-            onChangeName={onChangeNameSubmit} // Pass handler from props
-          />
+          <Suspense fallback={<RetroModalLoadingSpinner />}>
+            <ChangeRetroBoardNameModal
+              isOpen={isChangeNameOpen}
+              onClose={onChangeNameClose}
+              currentName={userName || ''} // Pass current name
+              onChangeName={onChangeNameSubmit} // Pass handler from props
+            />
+          </Suspense>
         )}
       </Box>
     </>
