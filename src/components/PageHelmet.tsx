@@ -1,5 +1,5 @@
-import { FC } from "react";
-import { Helmet } from "react-helmet-async";
+import { FC, memo, useMemo } from 'react';
+import { Helmet } from 'react-helmet-async';
 
 interface PageHelmetProps {
   title: string;
@@ -7,58 +7,63 @@ interface PageHelmetProps {
   keywords: string;
   canonicalUrl?: string;
   imageUrl?: string;
-  jsonLd?: Record<string, any>;
+  jsonLd?: Record<string, unknown>;
 }
 
-const PageHelmet: FC<PageHelmetProps> = ({
-  title,
-  description,
-  keywords,
-  canonicalUrl,
-  imageUrl,
-  jsonLd,
-}) => {
-  const defaultJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: "Scrum Tools",
-    applicationCategory: "ProjectManagementApplication",
-    operatingSystem: "Any",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
-    },
-  };
+const PageHelmet: FC<PageHelmetProps> = memo(
+  ({ title, description, keywords, canonicalUrl, imageUrl, jsonLd }) => {
+    // Memoize the default JSON-LD to avoid recreation on every render
+    const defaultJsonLd = useMemo(
+      () => ({
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: 'Scrum Tools',
+        applicationCategory: 'ProjectManagementApplication',
+        operatingSystem: 'Any',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      }),
+      []
+    );
 
-  const finalJsonLd = jsonLd || defaultJsonLd;
+    // Memoize the final JSON-LD computation
+    const finalJsonLd = useMemo(() => jsonLd || defaultJsonLd, [jsonLd, defaultJsonLd]);
 
-  return (
-    <Helmet>
-      {/* Standard SEO */}
-      <title>{title}</title>
-      <meta name="description" content={description} />
-      <meta name="keywords" content={keywords} />
-      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    // Memoize the image URL computation
+    const finalImageUrl = useMemo(() => imageUrl || '/og-image.svg', [imageUrl]);
 
-      {/* Open Graph */}
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
-      <meta property="og:type" content="website" />
-      {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
-      <meta property="og:image" content={imageUrl || "/og-image.svg"} />
-      <meta property="og:site_name" content="Scrum Tools" />
+    return (
+      <Helmet>
+        {/* Standard SEO */}
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta name="keywords" content={keywords} />
+        {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
-      {/* Twitter Card */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={imageUrl || "/og-image.svg"} />
+        {/* Open Graph */}
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+        <meta property="og:image" content={finalImageUrl} />
+        <meta property="og:site_name" content="Scrum Tools" />
 
-      {/* JSON-LD Structured Data */}
-      <script type="application/ld+json">{JSON.stringify(finalJsonLd)}</script>
-    </Helmet>
-  );
-};
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={finalImageUrl} />
+
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">{JSON.stringify(finalJsonLd)}</script>
+      </Helmet>
+    );
+  }
+);
+
+PageHelmet.displayName = 'PageHelmet';
 
 export default PageHelmet;

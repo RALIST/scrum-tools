@@ -125,33 +125,39 @@ export const usePokerSocket = ({
     [isJoined, initialUserName, emitJoinRoom]
   );
 
-  const handleManagerDisconnect = useCallback((reason: ClientSocket.DisconnectReason) => {
-    logger.debug('Socket disconnected via useSocketManager', { reason });
-    setIsJoined(false);
-    setIsJoining(false);
-    pendingJoinRef.current = null;
-    if (reason !== 'io client disconnect') {
-      toast({
-        title: 'Disconnected',
-        description: 'Connection lost. Attempting to reconnect...',
-        status: 'warning',
-        duration: 3000,
-      });
-    }
-  }, []);
+  const handleManagerDisconnect = useCallback(
+    (reason: ClientSocket.DisconnectReason) => {
+      logger.debug('Socket disconnected via useSocketManager', { reason });
+      setIsJoined(false);
+      setIsJoining(false);
+      pendingJoinRef.current = null;
+      if (reason !== 'io client disconnect') {
+        toast({
+          title: 'Disconnected',
+          description: 'Connection lost. Attempting to reconnect...',
+          status: 'warning',
+          duration: 3000,
+        });
+      }
+    },
+    [toast]
+  );
 
-  const handleManagerError = useCallback((err: Error) => {
-    logger.debug('Socket connection error via useSocketManager', err);
-    setIsJoining(false);
-    pendingJoinRef.current = null;
-    toast({
-      title: 'Connection Error',
-      description: err.message,
-      status: 'error',
-      duration: 5000,
-      isClosable: true,
-    });
-  }, []);
+  const handleManagerError = useCallback(
+    (err: Error) => {
+      logger.debug('Socket connection error via useSocketManager', err);
+      setIsJoining(false);
+      pendingJoinRef.current = null;
+      toast({
+        title: 'Connection Error',
+        description: err.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+    [toast]
+  );
 
   // --- Use the Socket Manager Hook ---
   const { socket, isConnected, isConnecting } = useSocketManager({
@@ -170,89 +176,97 @@ export const usePokerSocket = ({
   }, [socket, handleManagerConnectInternal]);
 
   // --- Memoized Event Handlers for Better Performance ---
-  const memoizedEventHandlers = useMemo(() => ({
-    handleRoomJoined: (data: {
-      participants: Participant[];
-      settings: { sequence: string; hasPassword: boolean };
-    }) => {
-      logger.debug('Received roomJoined:', data);
-      setParticipants(data.participants);
-      // Ensure received sequence is a valid key before setting
-      if (['fibonacci', 'tshirt', 'powers'].includes(data.settings.sequence)) {
-        setSettings({
-          sequence: data.settings.sequence as SequenceType,
-          hasPassword: data.settings.hasPassword,
-        });
-      } else {
-        console.warn(
-          `Received invalid sequence key from backend: ${data.settings.sequence}. Defaulting to fibonacci.`
-        );
-        setSettings({ sequence: 'fibonacci', hasPassword: data.settings.hasPassword });
-      }
-      setIsJoined(true);
-      setIsJoining(false);
-      pendingJoinRef.current = null;
-      onRoomJoined();
-    },
-
-    handleParticipantUpdate: (data: { participants: Participant[] }) => {
-      logger.debug('Received participantUpdate:', data);
-      setParticipants(data.participants);
-    },
-
-    handleSettingsUpdated: (data: { settings: { sequence: string; hasPassword: boolean } }) => {
-      logger.debug('Received settingsUpdated:', data);
-      // Ensure received sequence is a valid key before setting
-      if (['fibonacci', 'tshirt', 'powers'].includes(data.settings.sequence)) {
-        setSettings({
-          sequence: data.settings.sequence as SequenceType,
-          hasPassword: data.settings.hasPassword,
-        });
-      } else {
-        console.warn(
-          `Received invalid sequence key from backend during update: ${data.settings.sequence}. Keeping previous settings.`
-        );
-      }
-    },
-
-    handleVotesRevealed: () => {
-      logger.debug('Received votesRevealed');
-      setIsRevealed(true);
-    },
-
-    handleVotesReset: () => {
-      logger.debug('Received votesReset');
-      setIsRevealed(false);
-    },
-
-    handlePokerError: (errorData: any) => {
-      const errorMessage =
-        (typeof errorData === 'object' && errorData?.message) || 'An unknown poker error occurred';
-      logger.debug('Poker Namespace Error:', errorMessage);
-      if (
-        errorMessage.toLowerCase().includes('password') ||
-        errorMessage.toLowerCase().includes('join')
-      ) {
+  const memoizedEventHandlers = useMemo(
+    () => ({
+      handleRoomJoined: (data: {
+        participants: Participant[];
+        settings: { sequence: string; hasPassword: boolean };
+      }) => {
+        logger.debug('Received roomJoined:', data);
+        setParticipants(data.participants);
+        // Ensure received sequence is a valid key before setting
+        if (['fibonacci', 'tshirt', 'powers'].includes(data.settings.sequence)) {
+          setSettings({
+            sequence: data.settings.sequence as SequenceType,
+            hasPassword: data.settings.hasPassword,
+          });
+        } else {
+          console.warn(
+            `Received invalid sequence key from backend: ${data.settings.sequence}. Defaulting to fibonacci.`
+          );
+          setSettings({ sequence: 'fibonacci', hasPassword: data.settings.hasPassword });
+        }
+        setIsJoined(true);
         setIsJoining(false);
         pendingJoinRef.current = null;
-        if (onJoinError) onJoinError(errorMessage);
-        else
+        onRoomJoined();
+      },
+
+      handleParticipantUpdate: (data: { participants: Participant[] }) => {
+        logger.debug('Received participantUpdate:', data);
+        setParticipants(data.participants);
+      },
+
+      handleSettingsUpdated: (data: { settings: { sequence: string; hasPassword: boolean } }) => {
+        logger.debug('Received settingsUpdated:', data);
+        // Ensure received sequence is a valid key before setting
+        if (['fibonacci', 'tshirt', 'powers'].includes(data.settings.sequence)) {
+          setSettings({
+            sequence: data.settings.sequence as SequenceType,
+            hasPassword: data.settings.hasPassword,
+          });
+        } else {
+          console.warn(
+            `Received invalid sequence key from backend during update: ${data.settings.sequence}. Keeping previous settings.`
+          );
+        }
+      },
+
+      handleVotesRevealed: () => {
+        logger.debug('Received votesRevealed');
+        setIsRevealed(true);
+      },
+
+      handleVotesReset: () => {
+        logger.debug('Received votesReset');
+        setIsRevealed(false);
+      },
+
+      handlePokerError: (errorData: unknown) => {
+        const errorMessage =
+          typeof errorData === 'object' &&
+          errorData !== null &&
+          'message' in errorData &&
+          typeof (errorData as { message: unknown }).message === 'string'
+            ? (errorData as { message: string }).message
+            : 'An unknown poker error occurred';
+        logger.debug('Poker Namespace Error:', errorMessage);
+        if (
+          errorMessage.toLowerCase().includes('password') ||
+          errorMessage.toLowerCase().includes('join')
+        ) {
+          setIsJoining(false);
+          pendingJoinRef.current = null;
+          if (onJoinError) onJoinError(errorMessage);
+          else
+            toast({
+              title: 'Join Error',
+              description: errorMessage,
+              status: 'error',
+              duration: 3000,
+            });
+        } else {
           toast({
-            title: 'Join Error',
+            title: 'Poker Room Error',
             description: errorMessage,
             status: 'error',
             duration: 3000,
           });
-      } else {
-        toast({
-          title: 'Poker Room Error',
-          description: errorMessage,
-          status: 'error',
-          duration: 3000,
-        });
-      }
-    },
-  }), [onRoomJoined, onJoinError, toast]);
+        }
+      },
+    }),
+    [onRoomJoined, onJoinError, toast]
+  );
 
   // --- Extract handlers for easier reference ---
   const {

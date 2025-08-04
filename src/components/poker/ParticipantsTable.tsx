@@ -112,7 +112,7 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = memo(
         </TableContainer>
         {isRevealed && (
           <Text mt={4} fontWeight="bold" textAlign={{ base: 'center', md: 'left' }}>
-            Average (excluding '?'): {average.toFixed(1)}
+            Average (excluding &apos;?&apos;): {average.toFixed(1)}
           </Text>
         )}
       </Box>
