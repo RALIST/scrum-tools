@@ -1,23 +1,16 @@
-import { FC, useCallback, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
-import {
-  VStack,
-  useToast,
-  Spinner,
-  Center,
-  Text,
-  useDisclosure,
-} from "@chakra-ui/react";
-import { JoinRetroBoardModal } from "../../components/modals";
+import { FC, useCallback, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
+import { VStack, useToast, Spinner, Center, Text, useDisclosure } from '@chakra-ui/react';
+import { JoinRetroBoardModal } from '../../components/modals';
 import {
   useRetroSocket,
   RetroBoard as RetroBoardType, // Import type from hook
-} from "../../hooks/useRetroSocket";
-import { useRetroUser } from "../../hooks/useRetroUser";
-import { useAuth } from "../../contexts/AuthContext";
-import RetroBoardView from "../../components/retro/RetroBoardView";
-import { apiRequest, AuthError } from "../../utils/apiUtils"; // Import apiRequest
+} from '../../hooks/useRetroSocket';
+import { useRetroUser } from '../../hooks/useRetroUser';
+import { useAuth } from '../../contexts/AuthContext';
+import RetroBoardView from '../../components/retro/RetroBoardView';
+import { apiRequest, AuthError } from '../../utils/apiUtils'; // Import apiRequest
 
 const RetroBoard: FC = () => {
   const { boardId } = useParams();
@@ -39,15 +32,15 @@ const RetroBoard: FC = () => {
   // Callback for when board is successfully joined via socket
   const onBoardJoined = useCallback(() => {
     onJoinModalClose(); // Close modal on successful join
-  }, [toast, onJoinModalClose]);
+  }, [onJoinModalClose]);
 
   // Callback for join errors from socket hook
   const onJoinError = useCallback(
     (message: string) => {
       toast({
-        title: "Join Error",
+        title: 'Join Error',
         description: message,
-        status: "error",
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -55,6 +48,14 @@ const RetroBoard: FC = () => {
       onJoinModalOpen();
     },
     [toast, onJoinModalOpen]
+  );
+
+  // Callback for when name change is confirmed from socket hook
+  const onNameChanged = useCallback(
+    (newName: string) => {
+      setUserNameAndStorage(newName);
+    },
+    [setUserNameAndStorage]
   );
 
   // Use the socket hook - it now primarily manages socket state and events
@@ -78,14 +79,15 @@ const RetroBoard: FC = () => {
     boardId: boardId || null,
     onBoardJoined,
     onJoinError,
+    onNameChanged,
   });
 
   // --- React Query for initial board data ---
-  const initialBoardQueryKey = ["retroBoard", boardId];
+  const initialBoardQueryKey = ['retroBoard', boardId];
 
   const fetchInitialBoardData = async (): Promise<RetroBoardType> => {
     if (!boardId) {
-      throw new Error("Board ID is required");
+      throw new Error('Board ID is required');
     }
     // Fetch public info first, auth handled by apiRequest if needed later
     // MODIFIED LINE: Removed { includeAuth: false } to allow default behavior
@@ -111,14 +113,14 @@ const RetroBoard: FC = () => {
     if (isInitialError && initialLoadError) {
       const description =
         initialLoadError instanceof AuthError
-          ? "Authentication error loading board."
+          ? 'Authentication error loading board.'
           : initialLoadError instanceof Error
-          ? initialLoadError.message
-          : "Failed to load board";
+            ? initialLoadError.message
+            : 'Failed to load board';
       toast({
-        title: "Initialization Error",
+        title: 'Initialization Error',
         description,
-        status: "error",
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -130,12 +132,7 @@ const RetroBoard: FC = () => {
 
   // Effect 2: Handle auto-join or modal display *after* initial data is loaded (or query finishes)
   useEffect(() => {
-    if (
-      isLoadingInitialData ||
-      isInitialError ||
-      !initialBoardData ||
-      !boardId
-    ) {
+    if (isLoadingInitialData || isInitialError || !initialBoardData || !boardId) {
       return;
     }
 
@@ -148,13 +145,11 @@ const RetroBoard: FC = () => {
     }
 
     // Determine if auto-join should happen
-    const shouldAutoJoin =
-      isAuthenticated && user?.name && !initialBoardData.hasPassword;
+    const shouldAutoJoin = isAuthenticated && user?.name && !initialBoardData.hasPassword;
 
     if (shouldAutoJoin) {
       if (!isConnectingOrJoining) {
         joinBoard(user.name); // Call the hook's join function
-      } else {
       }
       // Ensure modal is closed during auto-join attempt
       if (isJoinModalOpen) {
@@ -203,11 +198,10 @@ const RetroBoard: FC = () => {
   const handleChangeNameSubmit = useCallback(
     (newName: string) => {
       if (!boardId) return;
-      // Update local name first for immediate UI feedback if needed
-      setUserNameAndStorage(newName);
+      // Note: Local name will be updated via onNameChanged callback when server confirms the change
       changeName(newName); // Call the hook's function
     },
-    [boardId, changeName, setUserNameAndStorage]
+    [boardId, changeName]
   );
 
   // Handler for adding a card (passed to RetroBoardView -> RetroColumn)
@@ -217,10 +211,10 @@ const RetroBoard: FC = () => {
       let authorNameToUse = userName;
       if (!authorNameToUse) {
         try {
-          authorNameToUse = localStorage.getItem("retroUserName");
+          authorNameToUse = localStorage.getItem('retroUserName');
         } catch (e) {
           console.error(
-            "[RetroBoard Component] Error reading username from localStorage in handleAddCard",
+            '[RetroBoard Component] Error reading username from localStorage in handleAddCard',
             e
           );
         }
@@ -228,7 +222,7 @@ const RetroBoard: FC = () => {
 
       // Check conditions with the potentially updated authorNameToUse
       if (!text.trim() || !isTimerRunning || !authorNameToUse) {
-        console.warn("[RetroBoard Component] handleAddCard blocked:", {
+        console.warn('[RetroBoard Component] handleAddCard blocked:', {
           text: text.trim(),
           isTimerRunning,
           authorNameToUse,
@@ -263,9 +257,7 @@ const RetroBoard: FC = () => {
   // Handle initial load error (using state from useQuery)
   if (isInitialError && !isLoadingInitialData) {
     const errorMessage =
-      initialLoadError instanceof Error
-        ? initialLoadError.message
-        : "Unknown error";
+      initialLoadError instanceof Error ? initialLoadError.message : 'Unknown error';
     return (
       <Center minH="calc(100vh - 120px)">
         <Text color="red.500">Error loading board data: {errorMessage}</Text>
@@ -280,7 +272,7 @@ const RetroBoard: FC = () => {
     return (
       <JoinRetroBoardModal
         isOpen={true}
-        onClose={() => navigate("/retro")}
+        onClose={() => navigate('/retro')}
         onJoin={handleJoinBoard}
         hasPassword={initialBoardData.hasPassword} // Use initial data here
         initialName={isAuthenticated ? user?.name : userName}
@@ -296,16 +288,16 @@ const RetroBoard: FC = () => {
     let nameToDisplay = userName;
     if (!nameToDisplay) {
       try {
-        nameToDisplay = localStorage.getItem("retroUserName");
+        nameToDisplay = localStorage.getItem('retroUserName');
       } catch (e) {
         console.error(
-          "[RetroBoard Component] Error reading username from localStorage for display",
+          '[RetroBoard Component] Error reading username from localStorage for display',
           e
         );
       }
     }
     // Default to empty string if still null after checking localStorage
-    nameToDisplay = nameToDisplay || "";
+    nameToDisplay = nameToDisplay || '';
 
     return (
       <RetroBoardView

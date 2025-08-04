@@ -26,24 +26,30 @@ export const useRetroUser = (): UseRetroUserResult => {
   }, [isAuthenticated, user?.name]); // Recalculate if auth state changes
 
   const [userName, setUserName] = useState<string | null>(initialName);
+  const [hasManuallyChangedName, setHasManuallyChangedName] = useState(false); // Track if user manually changed name
 
   // Effect to update userName if auth state changes *after* initial load
   useEffect(() => {
-    if (isAuthenticated && user?.name) {
+    // Only auto-update from auth if the user hasn't manually changed their name
+    if (isAuthenticated && user?.name && !hasManuallyChangedName) {
       setUserName(user.name);
       // Optionally clear localStorage if user logs in?
       // try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    } else if (!isAuthenticated && userName !== initialName) {
+    } else if (!isAuthenticated && userName !== initialName && !hasManuallyChangedName) {
       // If user logs out, revert to initial name (which might be from localStorage or null)
       setUserName(initialName);
     }
-  }, [isAuthenticated, user?.name, initialName, userName]);
+  }, [isAuthenticated, user?.name, initialName, userName, hasManuallyChangedName]);
 
   const setUserNameAndStorage = useCallback(
     (newName: string) => {
-      // Do nothing if the user is authenticated (name is fixed)
+      // Mark that the user has manually changed their name
+      setHasManuallyChangedName(true);
+
+      // For authenticated users, we still update the local state for the retro session
+      // but we don't save to localStorage (their account name remains unchanged)
       if (isAuthenticated) {
-        console.warn('Attempted to change retro name while authenticated.');
+        setUserName(newName);
         return;
       }
 
@@ -65,8 +71,8 @@ export const useRetroUser = (): UseRetroUserResult => {
     [isAuthenticated]
   ); // Depend on isAuthenticated
 
-  // Determine if the name is fixed (comes from auth)
-  const isNameFixed = isAuthenticated;
+  // Determine if the name is fixed (for retro sessions, names are not fixed even for authenticated users)
+  const isNameFixed = false; // Allow all users to change their retro display name
 
   return { userName, setUserNameAndStorage, isNameFixed };
 };

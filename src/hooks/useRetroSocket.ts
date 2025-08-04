@@ -36,6 +36,7 @@ interface UseRetroSocketProps {
   boardId: string | null;
   onBoardJoined: () => void; // Callback when successfully joined the board via socket event
   onJoinError?: (message: string) => void; // Callback on join error
+  onNameChanged?: (newName: string) => void; // Callback when name change is confirmed
 }
 
 interface UseRetroSocketResult {
@@ -68,6 +69,7 @@ export const useRetroSocket = ({
   boardId,
   onBoardJoined,
   onJoinError,
+  onNameChanged,
 }: UseRetroSocketProps): UseRetroSocketResult => {
   // --- State specific to Retro ---
   const [board, setBoard] = useState<RetroBoard | null>(null);
@@ -79,6 +81,7 @@ export const useRetroSocket = ({
 
   // --- Refs ---
   const joinParamsRef = useRef<{ name: string; password?: string } | null>(null); // For manual join initiated before connect
+  const pendingNameChangeRef = useRef<string | null>(null); // Track pending name change
   // Removed timerIntervalRef
   const toast = useToast();
   const socketRef = useRef<ClientSocket | null>(null);
@@ -195,12 +198,24 @@ export const useRetroSocket = ({
     [onBoardJoined]
   );
 
-  const handleRetroBoardUpdated = useCallback((data: RetroBoard) => {
-    logger.debug('Board updated', data);
-    setBoard(data);
-    setIsTimerRunning(data.timer_running);
-    setTimeLeft(data.time_left);
-  }, []);
+  const handleRetroBoardUpdated = useCallback(
+    (data: RetroBoard) => {
+      logger.debug('Board updated', data);
+      setBoard(data);
+      setIsTimerRunning(data.timer_running);
+      setTimeLeft(data.time_left);
+
+      // Check if this update is in response to a name change
+      if (pendingNameChangeRef.current && onNameChanged) {
+        logger.debug('Name change confirmed, updating local state', {
+          newName: pendingNameChangeRef.current,
+        });
+        onNameChanged(pendingNameChangeRef.current);
+        pendingNameChangeRef.current = null; // Clear the pending change
+      }
+    },
+    [onNameChanged]
+  );
 
   const handleCardsVisibilityChanged = useCallback(
     ({ hideCards: newHideCards }: { hideCards: boolean }) => {
@@ -227,7 +242,7 @@ export const useRetroSocket = ({
   }, []);
 
   const handleRetroError = useCallback(
-    (errorData: any) => {
+    (errorData: { message: string }) => {
       const errorMessage =
         (typeof errorData === 'object' && errorData?.message) || 'An unknown retro error occurred';
       logger.debug('Retro Namespace Error:', errorMessage);
@@ -341,6 +356,7 @@ export const useRetroSocket = ({
     (newName: string) => {
       if (!socketRef.current || !boardId || !hasJoined) return;
       logger.debug('Changing name', { newName });
+      pendingNameChangeRef.current = newName; // Store the pending name change
       socketRef.current.emit('changeRetroName', { boardId, newName });
     },
     [boardId, hasJoined]
