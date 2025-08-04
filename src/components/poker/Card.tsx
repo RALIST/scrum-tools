@@ -1,5 +1,5 @@
-import { FC } from "react";
-import { Button, useColorMode } from "@chakra-ui/react";
+import { FC, memo } from 'react';
+import { Button, useColorMode } from '@chakra-ui/react';
 
 interface CardProps {
   value: string;
@@ -8,7 +8,7 @@ interface CardProps {
   disabled?: boolean;
 }
 
-export const Card: FC<CardProps> = ({
+export const Card: FC<CardProps> = memo(({
   value,
   isSelected,
   onClick,
@@ -40,4 +40,6 @@ export const Card: FC<CardProps> = ({
       {value}
     </Button>
   );
-};
+});
+
+Card.displayName = 'Card';

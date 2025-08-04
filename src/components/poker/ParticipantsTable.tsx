@@ -1,4 +1,4 @@
-import { FC, useCallback } from "react";
+import { FC, useCallback, memo, useMemo } from 'react';
 import {
   Table,
   Thead,
@@ -10,8 +10,8 @@ import {
   Text,
   TableContainer,
   Box,
-} from "@chakra-ui/react";
-import { SEQUENCES, SequenceType } from "../../constants/poker"; // Re-added import
+} from '@chakra-ui/react';
+import { SEQUENCES, SequenceType } from '../../constants/poker'; // Re-added import
 
 // Define Participant type based on usage in PlanningPokerRoom
 interface Participant {
@@ -32,95 +32,92 @@ interface ParticipantsTableProps {
   settings: RoomSettings | null; // Pass settings for calculations
 }
 
-export const ParticipantsTable: FC<ParticipantsTableProps> = ({
-  participants,
-  isRevealed,
-  settings,
-}) => {
-  const calculateAverage = useCallback(() => {
-    if (!participants) return 0;
-    const numericVotes = participants
-      .map((p) => p.vote)
-      .filter((v) => v && v !== "?" && !isNaN(Number(v)))
-      .map(Number);
-    if (numericVotes.length === 0) return 0;
-    return numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
-  }, [participants]);
+export const ParticipantsTable: FC<ParticipantsTableProps> = memo(
+  ({ participants, isRevealed, settings }) => {
+    // Memoize average calculation to avoid recalculating on every render
+    const average = useMemo(() => {
+      if (!participants) return 0;
+      const numericVotes = participants
+        .map(p => p.vote)
+        .filter(v => v && v !== '?' && !isNaN(Number(v)))
+        .map(Number);
+      if (numericVotes.length === 0) return 0;
+      return numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
+    }, [participants]);
 
-  const getVoteColor = useCallback(
-    (vote: string | null) => {
-      // Reverted logic to use sequence key
-      if (!vote || vote === "?" || !isRevealed || !settings) return undefined;
-      const voteNum = Number(vote);
-      const average = calculateAverage();
-      if (isNaN(voteNum)) return undefined;
-      // Use the key to look up the array
-      const sequenceValues = SEQUENCES[settings.sequence] || [];
-      const maxDiff = Math.max(
-        ...sequenceValues
-          .filter((v) => v !== "?" && !isNaN(Number(v)))
-          .map((v) => Math.abs(Number(v) - average))
-      );
-      if (maxDiff === 0) return "green.500"; // All votes are the same number
-      const diff = Math.abs(voteNum - average);
-      const percentage = diff / maxDiff;
-      if (percentage <= 0.2) return "green.500";
-      if (percentage <= 0.4) return "green.300";
-      if (percentage <= 0.6) return "yellow.400";
-      if (percentage <= 0.8) return "orange.400";
-      return "red.500";
-    },
-    [isRevealed, settings, calculateAverage] // Keep settings dependency
-  );
+    // Memoize sequence values to avoid repeated lookups
+    const sequenceValues = useMemo(() => {
+      if (!settings) return [];
+      return SEQUENCES[settings.sequence] || [];
+    }, [settings]);
 
-  if (!participants || !settings) {
-    return null; // Or a loading/empty state
-  }
+    const getVoteColor = useCallback(
+      (vote: string | null) => {
+        if (!vote || vote === '?' || !isRevealed || !settings) return undefined;
+        const voteNum = Number(vote);
+        if (isNaN(voteNum)) return undefined;
 
-  return (
-    <Box w="full" overflowX="auto">
-      <TableContainer>
-        <Table variant="simple" size={{ base: "sm", md: "md" }}>
-          <Thead>
-            <Tr>
-              <Th>Participant</Th>
-              <Th>Status</Th>
-              {isRevealed && <Th>Vote</Th>}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {participants.map((participant) => (
-              <Tr key={participant.id}>
-                <Td>{participant.name}</Td>
-                <Td>
-                  <Badge colorScheme={participant.vote ? "green" : "yellow"}>
-                    {participant.vote ? "Voted" : "Not Voted"}
-                  </Badge>
-                </Td>
-                {isRevealed && (
-                  <Td>
-                    <Text
-                      color={getVoteColor(participant.vote)}
-                      fontWeight="bold"
-                    >
-                      {participant.vote || "No vote"}
-                    </Text>
-                  </Td>
-                )}
+        const maxDiff = Math.max(
+          ...sequenceValues
+            .filter(v => v !== '?' && !isNaN(Number(v)))
+            .map(v => Math.abs(Number(v) - average))
+        );
+        if (maxDiff === 0) return 'green.500'; // All votes are the same number
+        const diff = Math.abs(voteNum - average);
+        const percentage = diff / maxDiff;
+        if (percentage <= 0.2) return 'green.500';
+        if (percentage <= 0.4) return 'green.300';
+        if (percentage <= 0.6) return 'yellow.400';
+        if (percentage <= 0.8) return 'orange.400';
+        return 'red.500';
+      },
+      [isRevealed, settings, average, sequenceValues]
+    );
+
+    if (!participants || !settings) {
+      return null; // Or a loading/empty state
+    }
+
+    return (
+      <Box w="full" overflowX="auto">
+        <TableContainer>
+          <Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+            <Thead>
+              <Tr>
+                <Th>Participant</Th>
+                <Th>Status</Th>
+                {isRevealed && <Th>Vote</Th>}
               </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
-      {isRevealed && (
-        <Text
-          mt={4}
-          fontWeight="bold"
-          textAlign={{ base: "center", md: "left" }}
-        >
-          Average (excluding '?'): {calculateAverage().toFixed(1)}
-        </Text>
-      )}
-    </Box>
-  );
-};
+            </Thead>
+            <Tbody>
+              {participants.map(participant => (
+                <Tr key={participant.id}>
+                  <Td>{participant.name}</Td>
+                  <Td>
+                    <Badge colorScheme={participant.vote ? 'green' : 'yellow'}>
+                      {participant.vote ? 'Voted' : 'Not Voted'}
+                    </Badge>
+                  </Td>
+                  {isRevealed && (
+                    <Td>
+                      <Text color={getVoteColor(participant.vote)} fontWeight="bold">
+                        {participant.vote || 'No vote'}
+                      </Text>
+                    </Td>
+                  )}
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+        {isRevealed && (
+          <Text mt={4} fontWeight="bold" textAlign={{ base: 'center', md: 'left' }}>
+            Average (excluding '?'): {average.toFixed(1)}
+          </Text>
+        )}
+      </Box>
+    );
+  }
+);
+
+ParticipantsTable.displayName = 'ParticipantsTable';

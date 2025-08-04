@@ -1,7 +1,7 @@
-import { useEffect } from "react";
-import { useToast } from "@chakra-ui/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query"; // Import useQuery and client
-import { apiRequest } from "../utils/apiUtils";
+import { useEffect } from 'react';
+import { useToast } from '@chakra-ui/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import useQuery and client
+import { apiRequest } from '../utils/apiUtils';
 
 export interface WorkspaceRetroBoard {
   id: string;
@@ -57,19 +57,15 @@ export interface WorkspaceToolsPanelProps {
   // Add callbacks for create buttons later if needed
 }
 
-export const useWorkspaceTools = (
-  workspaceId: string | undefined
-): UseWorkspaceToolsResult => {
+export const useWorkspaceTools = (workspaceId: string | undefined): UseWorkspaceToolsResult => {
   const toast = useToast();
   const queryClient = useQueryClient(); // Get query client instance
 
   // --- Query for Poker Rooms ---
-  const pokerRoomsQueryKey = ["workspacePokerRooms", { workspaceId }];
+  const pokerRoomsQueryKey = ['workspacePokerRooms', { workspaceId }];
   const fetchPokerRooms = async (): Promise<WorkspacePokerRoom[]> => {
     if (!workspaceId) return [];
-    return await apiRequest<WorkspacePokerRoom[]>(
-      `/workspaces/${workspaceId}/rooms`
-    );
+    return await apiRequest<WorkspacePokerRoom[]>(`/workspaces/${workspaceId}/rooms`);
   };
   const {
     data: pokerRooms = [],
@@ -83,12 +79,10 @@ export const useWorkspaceTools = (
   });
 
   // --- Query for Retro Boards ---
-  const retroBoardsQueryKey = ["workspaceRetroBoards", { workspaceId }];
+  const retroBoardsQueryKey = ['workspaceRetroBoards', { workspaceId }];
   const fetchRetroBoards = async (): Promise<WorkspaceRetroBoard[]> => {
     if (!workspaceId) return [];
-    return await apiRequest<WorkspaceRetroBoard[]>(
-      `/workspaces/${workspaceId}/retros`
-    );
+    return await apiRequest<WorkspaceRetroBoard[]>(`/workspaces/${workspaceId}/retros`);
   };
   const {
     data: retroBoards = [],
@@ -102,12 +96,10 @@ export const useWorkspaceTools = (
   });
 
   // --- Query for Velocity Teams ---
-  const velocityTeamsQueryKey = ["workspaceVelocityTeams", { workspaceId }];
+  const velocityTeamsQueryKey = ['workspaceVelocityTeams', { workspaceId }];
   const fetchVelocityTeams = async (): Promise<WorkspaceVelocityTeam[]> => {
     if (!workspaceId) return [];
-    return await apiRequest<WorkspaceVelocityTeam[]>(
-      `/workspaces/${workspaceId}/velocity-teams`
-    );
+    return await apiRequest<WorkspaceVelocityTeam[]>(`/workspaces/${workspaceId}/velocity-teams`);
   };
   const {
     data: velocityTeams = [],
@@ -129,11 +121,11 @@ export const useWorkspaceTools = (
   // Effect to show toast on any error
   useEffect(() => {
     if (isError && error) {
-      console.error("Error loading workspace tools:", error);
+      console.error('Error loading workspace tools:', error);
       toast({
-        title: "Error Loading Tools",
-        description: error.message || "Could not fetch workspace tools.",
-        status: "error",
+        title: 'Error Loading Tools',
+        description: error.message || 'Could not fetch workspace tools.',
+        status: 'error',
         duration: 5000,
         isClosable: true,
       });
@@ -144,9 +136,9 @@ export const useWorkspaceTools = (
   // --- Refresh Function ---
   const refreshTools = () => {
     // Invalidate all queries related to this workspace's tools
-    queryClient.invalidateQueries({ queryKey: ["workspacePokerRooms", { workspaceId }] });
-    queryClient.invalidateQueries({ queryKey: ["workspaceRetroBoards", { workspaceId }] });
-    queryClient.invalidateQueries({ queryKey: ["workspaceVelocityTeams", { workspaceId }] });
+    queryClient.invalidateQueries({ queryKey: ['workspacePokerRooms', { workspaceId }] });
+    queryClient.invalidateQueries({ queryKey: ['workspaceRetroBoards', { workspaceId }] });
+    queryClient.invalidateQueries({ queryKey: ['workspaceVelocityTeams', { workspaceId }] });
   };
 
   // Remove old useEffect and fetchTools function

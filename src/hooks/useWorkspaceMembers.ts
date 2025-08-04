@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import { useToast } from "@chakra-ui/react";
-import { useWorkspace } from "../contexts/WorkspaceContext";
+import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@chakra-ui/react';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 // Assuming Member type is defined elsewhere or imported
 interface Member {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "member" | string;
+  role: 'admin' | 'member' | string;
 }
 
 interface UseWorkspaceMembersResult {
@@ -17,9 +17,7 @@ interface UseWorkspaceMembersResult {
   refreshMembers: () => Promise<void>; // Function to manually refresh
 }
 
-export const useWorkspaceMembers = (
-  workspaceId: string | undefined
-): UseWorkspaceMembersResult => {
+export const useWorkspaceMembers = (workspaceId: string | undefined): UseWorkspaceMembersResult => {
   const { getWorkspaceMembers } = useWorkspace(); // Get function from context
   const toast = useToast();
 
@@ -29,10 +27,10 @@ export const useWorkspaceMembers = (
 
   const fetchMembers = useCallback(async () => {
     if (!workspaceId) {
-        setMembers([]); // Clear members if no ID
-        setIsLoading(false);
-        setError(null); // No error if ID is just missing
-        return;
+      setMembers([]); // Clear members if no ID
+      setIsLoading(false);
+      setError(null); // No error if ID is just missing
+      return;
     }
 
     setIsLoading(true);
@@ -41,13 +39,13 @@ export const useWorkspaceMembers = (
       const membersList = await getWorkspaceMembers(workspaceId);
       setMembers(membersList || []); // Ensure it's an array
     } catch (err) {
-      console.error("Error loading members:", err);
-      setError(err instanceof Error ? err : new Error("Failed to load members"));
+      console.error('Error loading members:', err);
+      setError(err instanceof Error ? err : new Error('Failed to load members'));
       setMembers([]); // Clear members on error
       toast({
-        title: "Error Loading Members",
-        description: "Could not fetch workspace members.",
-        status: "error",
+        title: 'Error Loading Members',
+        description: 'Could not fetch workspace members.',
+        status: 'error',
         duration: 5000,
         isClosable: true,
       });
