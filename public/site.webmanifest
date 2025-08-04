@@ -1,12 +1,46 @@
 {
-    "name": "Scrum Tools",
-    "short_name": "Scrum Tools",
-    "description": "Free online tools for agile teams including Planning Poker and Daily Standup",
-    "icons": [],
-    "theme_color": "#4299E1",
-    "background_color": "#FFFFFF",
+    "name": "Scrum Tools - Agile Project Management",
+    "short_name": "ScrumTools",
+    "description": "Comprehensive agile tools including Planning Poker, Retro Boards, Daily Standups, and Team Velocity tracking for effective sprint management",
+    "icons": [
+        {
+            "src": "favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "theme_color": "#1a365d",
+    "background_color": "#ffffff",
     "display": "standalone",
     "start_url": "/",
     "scope": "/",
-    "orientation": "any"
+    "orientation": "any",
+    "categories": ["productivity", "business", "collaboration"],
+    "lang": "en",
+    "dir": "ltr",
+    "prefer_related_applications": false,
+    "shortcuts": [
+        {
+            "name": "Planning Poker",
+            "short_name": "Poker",
+            "description": "Start a planning poker session",
+            "url": "/poker",
+            "icons": [{ "src": "favicon.svg", "sizes": "any" }]
+        },
+        {
+            "name": "Retro Board",
+            "short_name": "Retro",
+            "description": "Create a retrospective board",
+            "url": "/retro",
+            "icons": [{ "src": "favicon.svg", "sizes": "any" }]
+        },
+        {
+            "name": "Team Velocity",
+            "short_name": "Velocity",
+            "description": "Track team velocity",
+            "url": "/velocity",
+            "icons": [{ "src": "favicon.svg", "sizes": "any" }]
+        }
+    ]
 }
