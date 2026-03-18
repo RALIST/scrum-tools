@@ -1,10 +1,10 @@
-import { QueryResult, PoolClient } from 'pg'; // Import pg types
-import { executeQuery } from './dbUtils.js'; // Import executeQuery directly (needs .js extension)
 import bcrypt from 'bcryptjs';
-import {
+import type { PoolClient } from 'pg'; // Import pg types
+import type {
     VelocityTeam, VelocitySprint, SprintVelocity, TeamVelocityData,
     TeamAverageVelocity, WorkspaceVelocityTeam
 } from '../types/db.js'; // Import types (needs .js extension)
+import { executeQuery } from './dbUtils.js'; // Import executeQuery directly (needs .js extension)
 
 // Add client as the last optional parameter
 export const createTeam = async (
@@ -26,13 +26,13 @@ export const createTeam = async (
     const params = [id, name, passwordHash, workspaceId, createdBy];
 
     // Pass the client (which might be null) to executeQuery
-    const result: QueryResult<VelocityTeam> = await executeQuery(queryText, params, client); // Use imported executeQuery
+    const result = await executeQuery<VelocityTeam>(queryText, params, client); // Use imported executeQuery
 
     // Add check and logging
-    if (!result || !result.rows || result.rows.length === 0) {
+    if (result.rows.length === 0) {
         return null; // Return null
     }
-    return result.rows[0];
+    return result.rows[0] ?? null;
 };
 
 // Return type excludes password hash
@@ -40,13 +40,14 @@ export const getTeam = async (name: string, password?: string | null): Promise<O
     // Use executeQuery
     const queryText = 'SELECT * FROM teams WHERE name = $1'; // Select hash to verify
     const params = [name];
-    const teamResult: QueryResult<VelocityTeam> = await executeQuery(queryText, params); // Use imported executeQuery
+    const teamResult = await executeQuery<VelocityTeam>(queryText, params); // Use imported executeQuery
 
     if (teamResult.rows.length === 0) {
         return null; // Team not found
     }
 
-  const team: VelocityTeam = teamResult.rows[0];
+  const team = teamResult.rows[0];
+  if (!team) throw new Error('Expected team row not found');
 
   // If team is associated with a workspace
   if (team.workspace_id) {
@@ -70,7 +71,7 @@ export const getTeam = async (name: string, password?: string | null): Promise<O
         }
         // Compare provided password with the stored hash
         // team.password could be null here, bcrypt.compare handles it gracefully
-        const isValid: boolean = await bcrypt.compare(password, team.password!); // Use non-null assertion as logic checks existence
+        const isValid: boolean = await bcrypt.compare(password, team.password); // Logic above checks existence
         if (!isValid) {
             // Throw specific error for invalid password
             throw new Error("Invalid password for anonymous team");
@@ -82,6 +83,7 @@ export const getTeam = async (name: string, password?: string | null): Promise<O
     // If team is anonymous and has no password hash, and no password was provided, access is granted.
 
     // Return team data without the password hash/field
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _removedPassword, ...teamData } = team; // Destructure and exclude password
     return teamData;
 };
@@ -95,7 +97,7 @@ export const getTeamByWorkspace = async (name: string, workspaceId: string): Pro
         WHERE name = $1 AND workspace_id = $2
     `; // Exclude password_hash
     const params = [name, workspaceId];
-    const result: QueryResult<Omit<VelocityTeam, 'password'>> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<Omit<VelocityTeam, 'password'>>(queryText, params); // Use imported executeQuery
 
     // Return the found team or null
     return result.rows[0] || null; 
@@ -104,7 +106,7 @@ export const getTeamByWorkspace = async (name: string, workspaceId: string): Pro
 export const getTeamById = async (teamId: string): Promise<VelocityTeam | null> => {
     const queryText = 'SELECT * FROM teams WHERE id = $1'; // Fetch all columns including password hash
     const params = [teamId];
-    const result: QueryResult<VelocityTeam> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<VelocityTeam>(queryText, params); // Use imported executeQuery
     return result.rows[0] || null;
 };
 
@@ -112,7 +114,7 @@ export const getTeamById = async (teamId: string): Promise<VelocityTeam | null> 
 export const getSprintById = async (sprintId: string): Promise<VelocitySprint | null> => {
     const queryText = 'SELECT * FROM sprints WHERE id = $1';
     const params = [sprintId];
-    const result: QueryResult<VelocitySprint> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<VelocitySprint>(queryText, params); // Use imported executeQuery
     return result.rows[0] || null;
 };
 
@@ -131,8 +133,10 @@ export const createSprint = async (
         RETURNING *
     `;
     const params = [id, teamId, name, startDate, endDate];
-    const result: QueryResult<VelocitySprint> = await executeQuery(queryText, params); // Use imported executeQuery
-    return result.rows[0];
+    const result = await executeQuery<VelocitySprint>(queryText, params); // Use imported executeQuery
+    const sprint = result.rows[0];
+    if (!sprint) throw new Error('Expected sprint row not found after insert');
+    return sprint;
 };
 
 export const updateSprintVelocity = async (
@@ -146,11 +150,13 @@ export const updateSprintVelocity = async (
         VALUES ($1, $2, $3)
         ON CONFLICT (sprint_id)
         DO UPDATE SET committed_points = $2, completed_points = $3
-        RETURNING sprint_id, committed_points, completed_points, created_at 
+        RETURNING sprint_id, committed_points, completed_points, created_at
     `; // Return specific fields including sprint_id
     const params = [sprintId, committedPoints, completedPoints];
-    const result: QueryResult<SprintVelocity> = await executeQuery(queryText, params); // Use imported executeQuery
-    return result.rows[0];
+    const result = await executeQuery<SprintVelocity>(queryText, params); // Use imported executeQuery
+    const velocity = result.rows[0];
+    if (!velocity) throw new Error('Expected velocity row not found after upsert');
+    return velocity;
 };
 
 // Define type for the injected getTeam function
@@ -181,7 +187,7 @@ export const getTeamVelocity = async (
         LIMIT 10
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result: QueryResult<TeamVelocityData> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<TeamVelocityData>(queryText, params); // Use imported executeQuery
     return result.rows;
 };
 
@@ -209,7 +215,7 @@ export const getTeamVelocityByWorkspace = async (
         LIMIT 10
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result: QueryResult<TeamVelocityData> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<TeamVelocityData>(queryText, params); // Use imported executeQuery
     return result.rows;
 };
 
@@ -242,7 +248,7 @@ export const getTeamAverageVelocity = async (
         AND sv.completed_points IS NOT NULL -- Only average completed sprints
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result: QueryResult<TeamAverageVelocity> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<TeamAverageVelocity>(queryText, params); // Use imported executeQuery
     // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
@@ -275,7 +281,7 @@ export const getTeamAverageVelocityByWorkspace = async (
         AND sv.completed_points IS NOT NULL
     `;
     const params = [team.id]; // Use the verified team's ID
-    const result: QueryResult<TeamAverageVelocity> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<TeamAverageVelocity>(queryText, params); // Use imported executeQuery
      // Return the averages, providing defaults if no data exists
     return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
@@ -297,7 +303,7 @@ export const getWorkspaceVelocityTeams = async (workspaceId: string): Promise<Wo
         ORDER BY t.name ASC
     `;
     const params = [workspaceId];
-    const result: QueryResult<WorkspaceVelocityTeam> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<WorkspaceVelocityTeam>(queryText, params); // Use imported executeQuery
     return result.rows;
 };
 

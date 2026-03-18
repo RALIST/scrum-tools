@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   Box,
   Button,
@@ -15,12 +15,12 @@ import {
   IconButton,
   useColorMode,
 } from "@chakra-ui/react";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { type FC, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
+import PageHelmet from "../../components/PageHelmet";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext"; // Import useWorkspace
 import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest for accepting invite
-import PageHelmet from "../../components/PageHelmet";
 
 const Login: FC = () => {
   const { login, isAuthenticated } = useAuth();
@@ -97,7 +97,7 @@ const Login: FC = () => {
           });
           navigate(`/workspaces/${result.workspaceId}`); // Navigate to the joined workspace
           return; // Stop further navigation
-        } catch (inviteError: any) {
+        } catch (inviteError: unknown) {
           sessionStorage.removeItem("pendingInvitationToken"); // Clear token even on error
           console.error(
             "Error accepting pending invitation after login:",
@@ -106,9 +106,9 @@ const Login: FC = () => {
           toast({
             title: "Failed to Accept Invitation",
             description:
-              inviteError.response?.data?.error ||
-              inviteError.message ||
-              "Could not apply pending invitation.",
+              inviteError instanceof Error
+                ? inviteError.message
+                : "Could not apply pending invitation.",
             status: "error",
             duration: 5000,
           });
@@ -154,14 +154,14 @@ const Login: FC = () => {
           Login
         </Heading>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => { void handleSubmit(e); }}>
           <VStack spacing={4}>
             <FormControl isInvalid={!!errors.email}>
               <FormLabel>Email</FormLabel>
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); }}
                 placeholder="Your email"
               />
               <FormErrorMessage>{errors.email}</FormErrorMessage>
@@ -173,7 +173,7 @@ const Login: FC = () => {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); }}
                   placeholder="Your password"
                 />
                 <InputRightElement>
@@ -183,7 +183,7 @@ const Login: FC = () => {
                     }
                     icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
                     variant="ghost"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => { setShowPassword(!showPassword); }}
                     size="sm"
                   />
                 </InputRightElement>
@@ -204,7 +204,7 @@ const Login: FC = () => {
         </form>
 
         <Text textAlign="center">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Text as={RouterLink} to="/register" color="blue.500">
             Register
           </Text>

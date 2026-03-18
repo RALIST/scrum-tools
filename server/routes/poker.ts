@@ -1,8 +1,8 @@
-import express, { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import * as pokerDbFunctions from '../db/poker.js'; // Import DB functions (needs .js)
-import * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
-import { PokerRoom, PokerRoomDetails } from '../types/db.js'; // Import types (needs .js)
+import express, { type Router, type Request, type Response, type NextFunction } from 'express';
+import type * as pokerDbFunctions from '../db/poker.js'; // Import DB functions (needs .js)
+import type * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
+import type { PokerRoom, PokerRoomDetails } from '../types/db.js'; // Import types (needs .js)
 
 // Define types for injected DB modules
 type PokerDbModule = typeof pokerDbFunctions;
@@ -31,14 +31,13 @@ export default function setupPokerRoutes(
             if (userId && workspaceId) {
                 // Check if user is a member of the workspace
                 // Assert non-null for userId and workspaceId as they are checked in the if condition
-                const isMember: boolean = await workspaceDb.isWorkspaceMember(workspaceId!, userId!);
+                const isMember: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId);
                 if (!isMember) {
                     res.status(403).json({ error: 'User is not authorized to access rooms for this workspace.' });
                     return;
                 }
                 // Use injected dependency
-                // Assert non-null for workspaceId
-                rooms = await pokerDb.getWorkspaceRooms(workspaceId!);
+                rooms = await pokerDb.getWorkspaceRooms(workspaceId);
             }
             // Public/Anonymous Mode
             else {
@@ -70,7 +69,7 @@ export default function setupPokerRoutes(
                 workspaceId: room.workspace_id
             }));
             res.json(roomList);
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -78,7 +77,7 @@ export default function setupPokerRoutes(
     // Add 'next' to the parameters
     router.post('/rooms', async (req: Request, res: Response, next: NextFunction) => {
         // Get sequence key from body
-        const { roomId, name, password, sequence, workspaceId } = req.body;
+        const { roomId, name, password, sequence, workspaceId } = req.body as { roomId: string; name?: string; password?: string; sequence?: string; workspaceId?: string };
         const userId: string | undefined = req.user?.userId; // Get userId for workspace check
         const safe_sequence = sequence || "fibonacci"; // Default sequence if not provided
 
@@ -90,7 +89,7 @@ export default function setupPokerRoutes(
                     return;
                 }
                 // Assert non-null for userId and workspaceId
-                const isMember: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId!);
+                const isMember: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId);
                 if (!isMember) {
                     res.status(403).json({ error: 'User is not authorized to create a room in this workspace.' });
                     return;
@@ -116,7 +115,7 @@ export default function setupPokerRoutes(
                 hasPassword: !!hashedPassword,
                 sequence: sequence,
             });
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -124,7 +123,7 @@ export default function setupPokerRoutes(
     // Add 'next' to the parameters
     router.post('/rooms/:roomId/verify-password', async (req: Request<{ roomId: string }>, res: Response, next: NextFunction) => {
         const { roomId } = req.params;
-        const { password } = req.body;
+        const { password } = req.body as { password: string };
 
         try {
             // Use injected dependency
@@ -140,9 +139,9 @@ export default function setupPokerRoutes(
             }
 
             // room.password could be null, bcrypt handles it
-            const isValid: boolean = await bcrypt.compare(password, room.password!); // Use non-null assertion after check
+            const isValid: boolean = await bcrypt.compare(password, room.password); // Check above ensures room.password exists
             res.json({ valid: isValid });
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -160,6 +159,7 @@ export default function setupPokerRoutes(
             }
 
             // Omit the password field before sending
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...roomInfoToSend } = roomDetails;
 
             // Convert participants Map to Array for JSON response
@@ -171,7 +171,7 @@ export default function setupPokerRoutes(
 
 
             res.json(responsePayload);
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });

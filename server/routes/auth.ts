@@ -1,9 +1,9 @@
-import express, { Router, Request, Response, NextFunction } from 'express';
+import express, { type Router, type Request, type Response, type NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import * as userDbFunctions from '../db/users.js'; // Import DB functions (needs .js)
-import { User } from '../types/db.js'; // Import User type (needs .js)
-// Import the middleware we need (needs .js)
+import type * as userDbFunctions from '../db/users.js'; // Import DB functions (needs .js)
 import { authenticateToken } from '../middleware/auth.js';
+import type { User } from '../types/db.js'; // Import User type (needs .js)
+// Import the middleware we need (needs .js)
 
 // Define the type for the injected userDb module
 type UserDbModule = typeof userDbFunctions;
@@ -17,7 +17,7 @@ export default function setupAuthRoutes(userDb: UserDbModule): Router {
     // Register a new user
     router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { email, password, name } = req.body;
+        const { email, password, name } = req.body as { email: string; password: string; name: string };
 
         if (!email || !password || !name) {
           res.status(400).json({ error: 'Email, password, and name are required' });
@@ -46,8 +46,8 @@ export default function setupAuthRoutes(userDb: UserDbModule): Router {
           },
           token
         });
-      } catch (error: any) { // Type error
-        if (error.message === 'User already exists') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'User already exists') {
           res.status(409).json({ error: 'User already exists' });
           return;
         }
@@ -58,7 +58,7 @@ export default function setupAuthRoutes(userDb: UserDbModule): Router {
     // Login
     router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { email, password } = req.body;
+        const { email, password } = req.body as { email: string; password: string };
 
         if (!email || !password) {
           res.status(400).json({ error: 'Email and password are required' });
@@ -75,7 +75,11 @@ export default function setupAuthRoutes(userDb: UserDbModule): Router {
 
         // Use injected dependency
         // Use non-null assertion for password_hash as logic ensures user exists
-        const isPasswordValid: boolean = await userDb.verifyPassword(password, user.password_hash!);
+        if (!user.password_hash) {
+          res.status(401).json({ error: 'Invalid credentials' });
+          return;
+        }
+        const isPasswordValid: boolean = await userDb.verifyPassword(password, user.password_hash);
 
         if (!isPasswordValid) {
           res.status(401).json({ error: 'Invalid credentials' });
@@ -101,7 +105,7 @@ export default function setupAuthRoutes(userDb: UserDbModule): Router {
           },
           token,
         });
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -111,12 +115,17 @@ export default function setupAuthRoutes(userDb: UserDbModule): Router {
       // If authenticateToken middleware passes without error, the token is valid.
       // We get user info from the middleware via req.user.
       // It's good practice to send back some user info to confirm who is verified.
+      const userId = req.user?.userId;
+      const email = req.user?.email;
+      if (!userId || !email) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
       res.status(200).json({
           message: 'Token is valid',
           user: { // Send back user info attached by middleware
-              // Use non-null assertion as authenticateToken ensures req.user exists
-              id: req.user!.userId,
-              email: req.user!.email
+              id: userId,
+              email: email
               // We might need to fetch the name from DB if it's not in the token
           }
       });

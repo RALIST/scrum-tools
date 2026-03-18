@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   VStack,
   Button,
@@ -14,7 +13,8 @@ import {
   Box,
   Heading,
 } from "@chakra-ui/react";
-import { Workspace } from "../../contexts/WorkspaceContext"; // Assuming Workspace type is exported
+import type { FC } from "react";
+import type { Workspace } from "../../contexts/WorkspaceContext"; // Assuming Workspace type is exported
 
 // Assuming WorkspaceMember type is defined elsewhere or here
 interface WorkspaceMember {

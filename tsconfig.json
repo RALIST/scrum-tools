@@ -16,16 +16,19 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "verbatimModuleSyntax": true
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
+  "include": ["src"],
   "exclude": [
     "dist",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
     "**/*.spec.tsx",
-    "src/setupTests.ts" // Assuming this is only for test setup
+    "src/setupTests.ts"
   ],
   "references": [
     {

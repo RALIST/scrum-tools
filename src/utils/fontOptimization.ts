@@ -22,7 +22,7 @@ export const generateFontPreloads = (fonts: FontConfig[]): string => {
       return weights
         .map(
           weight =>
-            `<link rel="preload" href="/fonts/${font.family}-${weight}.woff2" as="font" type="font/woff2" crossorigin>`
+            `<link rel="preload" href="/fonts/${font.family}-${String(weight)}.woff2" as="font" type="font/woff2" crossorigin>`
         )
         .join('\n');
     })
@@ -43,11 +43,11 @@ export const generateFontFaceCSS = (fonts: FontConfig[]): string => {
           weight => `
 @font-face {
   font-family: '${font.family}';
-  font-weight: ${weight};
+  font-weight: ${String(weight)};
   font-style: normal;
   font-display: ${display};
-  src: url('/fonts/${font.family}-${weight}.woff2') format('woff2'),
-       url('/fonts/${font.family}-${weight}.woff') format('woff');
+  src: url('/fonts/${font.family}-${String(weight)}.woff2') format('woff2'),
+       url('/fonts/${font.family}-${String(weight)}.woff') format('woff');
 }
     `
         )
@@ -116,16 +116,16 @@ export const trackFontLoadingPerformance = () => {
           console.log(`Font loaded: ${font.family} ${font.weight} in ${loadTime.toFixed(2)}ms`);
           return { font: font.family, weight: font.weight, loadTime };
         })
-        .catch(error => {
+        .catch((error: unknown) => {
           console.warn(`Font failed to load: ${font.family} ${font.weight}`, error);
           return null;
         });
     });
 
-    Promise.all(fontLoadPromises).then(results => {
+    void Promise.all(fontLoadPromises).then(results => {
       const successful = results.filter(Boolean);
       console.group('🔤 Font Loading Performance');
-      console.log(`Loaded ${successful.length} fonts successfully`);
+      console.log(`Loaded ${String(successful.length)} fonts successfully`);
       successful.forEach(result => {
         if (result) {
           console.log(`  ${result.font} ${result.weight}: ${result.loadTime.toFixed(2)}ms`);

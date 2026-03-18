@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express'; // Import express for test app setup
 import setupRetroRoutes from '../routes/retro.js';
-import { jest, describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { vi, describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 import { pool } from '../db/pool.js';
 import { app as mainApp, server, io } from '../index.js'; // Import main app, server, io
@@ -9,7 +9,7 @@ const registerAndLoginUser = async (emailSuffix) => {
     const email = `retro_di_user_${emailSuffix}_${Date.now()}@example.com`;
     const password = 'password123';
     const name = `Retro DI User ${emailSuffix}`;
-    let regResponse = await request(mainApp) // Use mainApp for registration
+    const regResponse = await request(mainApp) // Use mainApp for registration
         .post('/api/auth/register')
         .send({ email, password, name });
     if (regResponse.statusCode === 409) {
@@ -25,13 +25,13 @@ const registerAndLoginUser = async (emailSuffix) => {
 
 // Create mock DB functions
 const mockRetroDb = {
-  createRetroBoard: jest.fn(),
-  getRetroBoard: jest.fn(),
-  verifyRetroBoardPassword: jest.fn(),
-  updateRetroBoardSettings: jest.fn(),
+  createRetroBoard: vi.fn(),
+  getRetroBoard: vi.fn(),
+  verifyRetroBoardPassword: vi.fn(),
+  updateRetroBoardSettings: vi.fn(),
 };
 const mockWorkspaceDb = {
-  isWorkspaceMember: jest.fn(),
+  isWorkspaceMember: vi.fn(),
 };
 
 // testApp setup moved inside describe block
@@ -40,7 +40,7 @@ describe('Retro Routes (/api/retro) with DI', () => {
   let testApp; // Declare testApp here
   // Variables needed across contexts
   let anonBoardId = `anon-retro-di-${Date.now()}`;
-  let anonBoardPassword = 'anonRetroPasswordDI';
+  const anonBoardPassword = 'anonRetroPasswordDI';
   let publicBoardId = `public-retro-di-${Date.now()}`;
   let createdAuthBoardId; // For authenticated tests
   let authUserInfo; // To store token and userId for authenticated tests

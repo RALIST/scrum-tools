@@ -17,11 +17,11 @@ const connectClient = (url, options = {}) => {
 describe('Retro Socket Events (/retro namespace)', () => {
   let httpServerAddr;
   let anonBoardId = `anon-retro-socket-${Date.now()}`;
-  let anonBoardPassword = 'retroSockPassword';
+  const anonBoardPassword = 'retroSockPassword';
   let publicBoardId = `public-retro-socket-${Date.now()}`;
   let authToken; // For authenticated tests
   let userId;
-  let testUserName = 'Retro Sock User Auth'; // Define username for auth tests
+  const testUserName = 'Retro Sock User Auth'; // Define username for auth tests
   let createdAuthBoardId; // For authenticated tests
 
   // Setup: Start server, create boards via API, register user
@@ -349,7 +349,7 @@ describe('Retro Socket Events (/retro namespace)', () => {
       const client1 = await connectClient(url);
       const client2 = await connectClient(url);
       
-      await new Promise(async (resolve, reject) => {
+      await new Promise((resolve, reject) => {
           const userName1 = 'AnonVisUser1';
           const userName2 = 'AnonVisUser2';
           

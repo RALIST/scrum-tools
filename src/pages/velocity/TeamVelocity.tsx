@@ -1,5 +1,3 @@
-import { FC, useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Import useMutation
 import {
   Container,
   Heading,
@@ -14,17 +12,19 @@ import {
   AlertDescription,
   Center,
 } from '@chakra-ui/react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Import useMutation
+import { type FC, useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { AddSprintModal } from '../../components/modals';
 import PageContainer from '../../components/PageContainer';
 import PageHelmet from '../../components/PageHelmet';
 import SeoText from '../../components/SeoText';
-import { AddSprintModal } from '../../components/modals';
 import { VelocityStats, TeamSetupForm, WorkspaceTeamHeader } from '../../components/velocity';
-import { teamVelocitySeo, teamVelocitySeoSections } from '../../content/teamVelocitySeo';
 import config from '../../config';
+import { teamVelocitySeo, teamVelocitySeoSections } from '../../content/teamVelocitySeo';
 import { useAuth } from '../../contexts/AuthContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { apiRequest, ApiOptions } from '../../utils/apiUtils';
-import { WorkspaceVelocityTeam } from '../../hooks/useWorkspaceTools';
+import { type WorkspaceMemberResponse as WorkspaceMember, useWorkspace } from '../../contexts/WorkspaceContext';
+import type { WorkspaceVelocityTeam } from '../../hooks/useWorkspaceTools';
+import { apiRequest, type ApiOptions } from '../../utils/apiUtils';
 
 // Lazy load heavy chart component
 const VelocityChart = lazy(() => import('../../components/velocity/VelocityChart'));
@@ -60,13 +60,6 @@ interface TeamAverages {
 interface FormErrors {
   teamName?: string;
   teamPassword?: string;
-}
-
-interface WorkspaceMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
 }
 
 const TeamVelocity: FC = () => {
@@ -125,7 +118,7 @@ const TeamVelocity: FC = () => {
   }, [isAuthenticated, currentWorkspace, getWorkspaceMembers]);
 
   useEffect(() => {
-    loadWorkspaceMembers();
+    void loadWorkspaceMembers();
   }, [loadWorkspaceMembers]);
 
   // --- React Query for fetching team velocity data ---
@@ -143,7 +136,7 @@ const TeamVelocity: FC = () => {
     }
 
     const endpoint = `/velocity/teams/${effectiveTeamName}/velocity`;
-    let options: ApiOptions = { method: 'GET' };
+    const options: ApiOptions = { method: 'GET' };
 
     if (currentWorkspace) {
       options.headers = { 'workspace-id': currentWorkspace.id };
@@ -165,7 +158,7 @@ const TeamVelocity: FC = () => {
     isError: isDataError,
     error: dataError,
     isSuccess: isDataSuccess, // Use isSuccess flag
-  } = useQuery<{ sprints: SprintData[]; averages: TeamAverages }, Error>({
+  } = useQuery<{ sprints: SprintData[]; averages: TeamAverages }>({
     queryKey: teamVelocityQueryKey,
     queryFn: fetchTeamVelocityData,
     // Enable query only when in workspace mode AND team is considered loaded
@@ -209,8 +202,8 @@ const TeamVelocity: FC = () => {
       // Removed setIsTeamLoaded(true) call
       setFormErrors({}); // Clear errors
       // Save the returned data to local state for anonymous mode
-      setAnonVelocityData(data.sprints || []);
-      setAnonAverages(data.averages || null);
+      setAnonVelocityData(data.sprints);
+      setAnonAverages(data.averages);
     },
     onError: error => {
       console.error('Error creating/loading team:', error);
@@ -243,7 +236,7 @@ const TeamVelocity: FC = () => {
 
   // Effect to show toast on data loading error (for workspace query) and reset isTeamLoaded
   useEffect(() => {
-    if (isDataError && dataError && currentWorkspace) {
+    if (isDataError && currentWorkspace) {
       // Only handle query errors in workspace mode
       console.error('Error loading team data:', dataError);
       toast({
@@ -301,7 +294,7 @@ const TeamVelocity: FC = () => {
     setAnonVelocityData([]);
     setAnonAverages(null);
     // Resetting query data is still good practice if switching back from workspace mode
-    queryClient.resetQueries({ queryKey: teamVelocityQueryKey });
+    void queryClient.resetQueries({ queryKey: teamVelocityQueryKey });
   };
 
   // --- React Query Mutation for adding a sprint ---
@@ -313,7 +306,7 @@ const TeamVelocity: FC = () => {
     completedPoints: string;
   }
 
-  const addSprintMutation = useMutation<void, Error, AddSprintVariables>({
+  const addSprintMutation = useMutation<undefined, Error, AddSprintVariables>({
     mutationFn: async variables => {
       if (!effectiveTeamName) {
         throw new Error('Cannot add sprint without an effective team name.');
@@ -350,7 +343,7 @@ const TeamVelocity: FC = () => {
     onSuccess: () => {
       toast({ title: 'Sprint data added', status: 'success', duration: 2000 });
       // Invalidate the query to refetch data (important for workspace mode)
-      queryClient.invalidateQueries({ queryKey: teamVelocityQueryKey });
+      void queryClient.invalidateQueries({ queryKey: teamVelocityQueryKey });
       // Manually update local state for anonymous mode to avoid full page reload feel
       if (!currentWorkspace) {
         // Re-trigger the POST request to get updated data including the new sprint
@@ -474,7 +467,7 @@ const TeamVelocity: FC = () => {
                     </Suspense>
                   )}
                   {/* Show no data message if not loading and no data */}
-                  {velocityData.length === 0 && !isLoadingDisplayData && (
+                  {velocityData.length === 0 && (
                     <Alert status="info" borderRadius="md">
                       <AlertIcon />
                       <AlertDescription>

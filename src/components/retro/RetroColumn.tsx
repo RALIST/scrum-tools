@@ -1,8 +1,8 @@
-import React, { FC, useState } from "react"; // Import React for memo
 import { VStack, Heading, Box, useColorMode } from "@chakra-ui/react";
+import React, { type FC, useState } from "react"; // Import React for memo
+import type { RetroCard as RetroCardType } from "../../hooks/useRetroSocket";
 import RetroCard from "./RetroCard";
 import RetroCardInput from "./RetroCardInput";
-import { RetroCard as RetroCardType } from "../../hooks/useRetroSocket";
 
 interface RetroColumnProps {
   title: string;
@@ -91,7 +91,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
             id={card.id}
             text={card.text}
             authorName={card.author_name}
-            votes={card.votes || []}
+            votes={card.votes}
             hideCards={hideCards}
             hideAuthorNames={hideAuthorNames}
             currentUserName={userName}

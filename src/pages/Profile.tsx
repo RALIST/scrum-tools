@@ -1,4 +1,3 @@
-import { FC, useState } from 'react';
 import {
   Box,
   Heading,
@@ -23,10 +22,10 @@ import {
   AlertDialogOverlay,
   useDisclosure
 } from '@chakra-ui/react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { type FC, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHelmet from '../components/PageHelmet';
-import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Profile: FC = () => {
   const { user, logout } = useAuth();
@@ -39,7 +38,7 @@ const Profile: FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef(null);
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateProfile = () => {
     if (!name.trim()) {
       setNameError('Name is required');
       return;

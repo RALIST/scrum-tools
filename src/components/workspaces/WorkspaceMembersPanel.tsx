@@ -1,5 +1,3 @@
-import React, { FC, useState } from "react";
-import { useMutation } from "@tanstack/react-query"; // Import useMutation
 import {
   Box,
   Heading,
@@ -14,16 +12,18 @@ import {
   useToast, // For copy feedback
   useColorMode, // For invite link background
 } from "@chakra-ui/react";
+import { useMutation } from "@tanstack/react-query"; // Import useMutation
+import React, { type FC, useState } from "react";
 import { FaUserPlus } from "react-icons/fa";
-import WorkspaceMembersTable from "./WorkspaceMembersTable"; // Import the table component
 import { apiRequest } from "../../utils/apiUtils"; // For invite generation
+import WorkspaceMembersTable from "./WorkspaceMembersTable"; // Import the table component
 
 // Define Member type again or import if shared
 interface Member {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "member" | string;
+  role: string;
 }
 
 interface WorkspaceMembersPanelProps {
@@ -53,9 +53,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
 
   // --- React Query Mutation for generating invite link ---
   const generateInviteMutation = useMutation<
-    { token: string }, // Type of the data returned by the mutation function
-    Error, // Type of the error
-    void // Type of the variables passed to the mutation function (none needed)
+    { token: string } // Type of the data returned by the mutation function
   >({
     mutationFn: async () => {
       if (!workspaceId) {
@@ -147,7 +145,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
                 <Button
                   size="sm"
                   onClick={() => {
-                    navigator.clipboard.writeText(
+                    void navigator.clipboard.writeText(
                       `${window.location.origin}/join-workspace?token=${inviteToken}`
                     );
                     toast({

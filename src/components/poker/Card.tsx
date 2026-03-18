@@ -1,5 +1,5 @@
-import { FC, memo } from 'react';
 import { Button, useColorMode } from '@chakra-ui/react';
+import { type FC, memo } from 'react';
 
 interface CardProps {
   value: string;

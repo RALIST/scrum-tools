@@ -1,4 +1,3 @@
-import { FC, useCallback, memo, useMemo } from 'react';
 import {
   Table,
   Thead,
@@ -11,7 +10,8 @@ import {
   TableContainer,
   Box,
 } from '@chakra-ui/react';
-import { SEQUENCES, SequenceType } from '../../constants/poker'; // Re-added import
+import { type FC, useCallback, memo, useMemo } from 'react';
+import { SEQUENCES, type SequenceType } from '../../constants/poker'; // Re-added import
 
 // Define Participant type based on usage in PlanningPokerRoom
 interface Participant {
@@ -48,7 +48,7 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = memo(
     // Memoize sequence values to avoid repeated lookups
     const sequenceValues = useMemo(() => {
       if (!settings) return [];
-      return SEQUENCES[settings.sequence] || [];
+      return SEQUENCES[settings.sequence];
     }, [settings]);
 
     const getVoteColor = useCallback(

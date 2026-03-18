@@ -15,12 +15,12 @@ import React from "react";
 
 // --- Mock Components ---
 vi.mock("../../components/retro/RetroBoardView", () => ({
-  default: (props: any) => (
+  default: (props: Record<string, unknown>) => (
     <div data-testid="retro-board-view">{JSON.stringify(props)}</div>
   ),
 }));
 vi.mock("../../components/modals/JoinRetroBoardModal", () => ({
-  JoinRetroBoardModal: (props: any) => (
+  JoinRetroBoardModal: (props: { isOpen: boolean; hasPassword: boolean; onJoin: (name: string, password?: string) => void; onClose: () => void }) => (
     <div data-testid="join-retro-modal">
       Join Modal - isOpen: {props.isOpen.toString()}
       <button

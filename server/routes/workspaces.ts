@@ -1,11 +1,11 @@
-import express, { Router, Request, Response, NextFunction } from 'express';
+import express, { type Router, type Request, type Response, type NextFunction } from 'express';
+import type * as pokerDbFunctions from '../db/poker.js'; // Needs .js
+import type * as retroDbFunctions from '../db/retro.js'; // Needs .js
+import type * as userDbFunctions from '../db/users.js'; // Needs .js
+import type * as velocityDbFunctions from '../db/velocity.js'; // Needs .js
+import type * as workspaceDbFunctions from '../db/workspaces.js'; // Needs .js
 import { authenticateToken } from '../middleware/auth.js'; // Needs .js
-import * as workspaceDbFunctions from '../db/workspaces.js'; // Needs .js
-import * as userDbFunctions from '../db/users.js'; // Needs .js
-import * as pokerDbFunctions from '../db/poker.js'; // Needs .js
-import * as retroDbFunctions from '../db/retro.js'; // Needs .js
-import * as velocityDbFunctions from '../db/velocity.js'; // Needs .js
-import {
+import type {
     Workspace, WorkspaceRole, WorkspaceMemberDetails, User, PokerRoom, RetroBoard,
     WorkspaceVelocityTeam, ValidWorkspaceInvitation
 } from '../types/db.js'; // Needs .js
@@ -28,14 +28,21 @@ export default function setupWorkspaceRoutes(
     velocityDb: VelocityDbModule
 ): Router {
     const router: Router = express.Router();
+
+    function getAuthUserId(req: Request): string {
+        const userId = req.user?.userId;
+        if (!userId) throw new Error('Unauthorized: user not found on request');
+        return userId;
+    }
+
     // No need to destructure or access via .velocityUtils anymore
 
     // Create a new workspace
     router.post('/', authenticateToken, async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { name, description } = req.body;
+        const { name, description = null } = req.body as { name: string; description?: string | null };
         // Assert req.user exists because authenticateToken middleware runs first
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         if (!name) {
           res.status(400).json({ error: 'Workspace name is required' });
@@ -49,7 +56,7 @@ export default function setupWorkspaceRoutes(
           message: 'Workspace created successfully',
           workspace,
         });
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -58,12 +65,12 @@ export default function setupWorkspaceRoutes(
     router.get('/', authenticateToken, async (req: Request, res: Response, next: NextFunction) => {
       try {
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
         // Use injected dependency
         const workspaces: Array<Workspace & { role: WorkspaceRole }> = await workspaceDb.getUserWorkspaces(userId);
 
         res.json(workspaces);
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -80,7 +87,7 @@ export default function setupWorkspaceRoutes(
           return;
         }
         res.json(workspace);
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -89,9 +96,9 @@ export default function setupWorkspaceRoutes(
     router.put('/:id', authenticateToken, async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
       try {
         const workspaceId: string = req.params.id;
-        const { name, description } = req.body;
+        const { name, description = null } = req.body as { name: string; description?: string | null };
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const role: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -113,7 +120,7 @@ export default function setupWorkspaceRoutes(
           message: 'Workspace updated successfully',
           workspace,
         });
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -122,9 +129,9 @@ export default function setupWorkspaceRoutes(
     router.post('/:id/members', authenticateToken, async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
       try {
         const workspaceId: string = req.params.id;
-        const { email, role } = req.body;
+        const { email, role } = req.body as { email: string; role?: string };
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const userRole: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -144,13 +151,13 @@ export default function setupWorkspaceRoutes(
 
         // Use injected dependency
         // Assert user is not null
-        await workspaceDb.addWorkspaceMember(workspaceId, user!.id, role || 'member');
+        await workspaceDb.addWorkspaceMember(workspaceId, user.id, (role || 'member') as WorkspaceRole);
 
         res.status(201).json({
           message: 'Member added successfully',
         });
-      } catch (error: any) { // Type error
-        if (error.code === '23505') {
+      } catch (error: unknown) {
+        if (error instanceof Error && 'code' in error && (error as { code: string }).code === '23505') {
           res.status(409).json({ error: 'User is already a member of this workspace.' });
           return;
         }
@@ -164,7 +171,7 @@ export default function setupWorkspaceRoutes(
         const workspaceId: string = req.params.id;
         const memberId: string = req.params.memberId;
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const userRole: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -181,7 +188,7 @@ export default function setupWorkspaceRoutes(
           return;
         }
         // Assert workspace is not null
-        if (workspace!.owner_id === memberId) {
+        if (workspace.owner_id === memberId) {
           res.status(403).json({ error: 'Cannot remove the workspace owner.' });
           return;
         }
@@ -194,7 +201,7 @@ export default function setupWorkspaceRoutes(
         res.json({
           message: 'Member removed successfully',
         });
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -204,7 +211,7 @@ export default function setupWorkspaceRoutes(
       try {
         const workspaceId: string = req.params.id;
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const role: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -217,7 +224,7 @@ export default function setupWorkspaceRoutes(
         // Use injected dependency
         const members: WorkspaceMemberDetails[] = await workspaceDb.getWorkspaceMembers(workspaceId);
         res.json(members);
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -227,7 +234,7 @@ export default function setupWorkspaceRoutes(
       try {
         const workspaceId: string = req.params.id;
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const role: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -258,7 +265,7 @@ export default function setupWorkspaceRoutes(
           workspaceId: room.workspace_id
         }));
         res.json(roomList);
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -268,7 +275,7 @@ export default function setupWorkspaceRoutes(
       try {
         const workspaceId: string = req.params.id;
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const role: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -297,7 +304,7 @@ export default function setupWorkspaceRoutes(
           workspaceId: board.workspace_id
         }));
         res.json(boardList);
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -307,7 +314,7 @@ export default function setupWorkspaceRoutes(
       try {
         const workspaceId: string = req.params.id;
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         // Use injected dependency
         const role: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -322,7 +329,7 @@ export default function setupWorkspaceRoutes(
         // Type is already WorkspaceVelocityTeam, no mapping needed unless transforming
         const teamList = teams;
         res.json(teamList);
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -334,8 +341,8 @@ export default function setupWorkspaceRoutes(
       try {
         const workspaceId: string = req.params.id;
         // Assert req.user exists
-        const userId: string = req.user!.userId;
-        const { roleToAssign = 'member', expiresInDays = 7 } = req.body;
+        const userId = getAuthUserId(req);
+        const { roleToAssign = 'member', expiresInDays = 7 } = req.body as { roleToAssign?: string; expiresInDays?: number };
 
         // Use injected dependency
         const userRole: WorkspaceRole | null = await workspaceDb.getUserWorkspaceRole(workspaceId, userId);
@@ -347,7 +354,7 @@ export default function setupWorkspaceRoutes(
         const token: string = await workspaceDb.createInvitation(workspaceId, userId, roleToAssign as WorkspaceRole, expiresInDays);
         res.status(201).json({ token });
 
-      } catch (error: any) { // Type error
+      } catch (error: unknown) {
         next(error);
       }
     });
@@ -355,9 +362,9 @@ export default function setupWorkspaceRoutes(
     // Accept a workspace invitation
     router.post('/invitations/accept', authenticateToken, async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { token } = req.body;
+        const { token } = req.body as { token?: string };
         // Assert req.user exists
-        const userId: string = req.user!.userId;
+        const userId = getAuthUserId(req);
 
         if (!token) {
           res.status(400).json({ error: 'Invitation token is required.' });
@@ -372,7 +379,7 @@ export default function setupWorkspaceRoutes(
         }
 
         // Assert invitation is not null
-        const { id: invitationId, workspace_id: invWorkspaceId, role_to_assign: roleToAssign } = invitation!;
+        const { id: invitationId, workspace_id: invWorkspaceId, role_to_assign: roleToAssign } = invitation;
 
         // Use injected dependency
         const alreadyMember: boolean = await workspaceDb.isWorkspaceMember(invWorkspaceId, userId);
@@ -388,10 +395,11 @@ export default function setupWorkspaceRoutes(
         await workspaceDb.markInvitationAsUsed(invitationId, userId);
         res.status(200).json({ message: 'Successfully joined workspace!', workspaceId: invWorkspaceId });
 
-      } catch (error: any) { // Type error
-         if (error.code === '23505') {
+      } catch (error: unknown) {
+         if (error instanceof Error && 'code' in error && (error as { code: string }).code === '23505') {
             // Need to re-fetch invitation to get workspaceId if add failed but find succeeded
-            const invitation: ValidWorkspaceInvitation | null = await workspaceDb.findValidInvitationByToken(req.body.token).catch(() => null);
+            const bodyToken = (req.body as { token?: string }).token;
+            const invitation: ValidWorkspaceInvitation | null = bodyToken ? await workspaceDb.findValidInvitationByToken(bodyToken).catch(() => null) : null;
             res.status(409).json({ message: 'You are already a member of this workspace.', workspaceId: invitation?.workspace_id });
             return;
          }

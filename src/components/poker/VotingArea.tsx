@@ -1,6 +1,6 @@
-import { FC, memo, useCallback, useMemo } from 'react';
 import { VStack, Wrap, WrapItem, Stack, Button, useToast } from '@chakra-ui/react';
-import { SEQUENCES, SequenceType } from '../../constants/poker'; // Re-added import
+import { type FC, memo, useCallback, useMemo } from 'react';
+import { SEQUENCES, type SequenceType } from '../../constants/poker'; // Re-added import
 import { Card } from './Card';
 
 interface VotingAreaProps {
@@ -18,7 +18,7 @@ export const VotingArea: FC<VotingAreaProps> = memo(
 
     // Memoize sequence values to avoid repeated lookups
     const sequenceValues = useMemo(() => {
-      return SEQUENCES[sequence] || SEQUENCES['fibonacci'] || [];
+      return SEQUENCES[sequence];
     }, [sequence]);
 
     const handleCardSelectInternal = useCallback(
@@ -43,7 +43,7 @@ export const VotingArea: FC<VotingAreaProps> = memo(
               <Card
                 value={value}
                 isSelected={selectedCard === value}
-                onClick={() => handleCardSelectInternal(value)}
+                onClick={() => { handleCardSelectInternal(value); }}
                 disabled={isRevealed}
               />
             </WrapItem>

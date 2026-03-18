@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   Table,
   Thead,
@@ -11,6 +10,7 @@ import {
   Icon,
   Box,
 } from "@chakra-ui/react";
+import type { FC } from "react";
 import { FaUserMinus } from "react-icons/fa";
 
 // Define Member type based on usage in WorkspaceDetail
@@ -18,7 +18,7 @@ interface Member {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "member" | string; // Allow string for flexibility if other roles exist
+  role: string;
 }
 
 interface WorkspaceMembersTableProps {
@@ -64,7 +64,7 @@ const WorkspaceMembersTable: FC<WorkspaceMembersTableProps> = ({
                       colorScheme="red"
                       variant="ghost"
                       leftIcon={<Icon as={FaUserMinus} />}
-                      onClick={() => onRemoveMember(member)}
+                      onClick={() => { onRemoveMember(member); }}
                     >
                       Remove
                     </Button>

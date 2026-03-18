@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   Box,
   Button,
@@ -15,12 +15,12 @@ import {
   IconButton,
   useColorMode,
 } from "@chakra-ui/react";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { type FC, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
+import PageHelmet from "../../components/PageHelmet";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext"; // Import useWorkspace
 import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
-import PageHelmet from "../../components/PageHelmet";
 
 const Register: FC = () => {
   const { register, isAuthenticated } = useAuth();
@@ -116,7 +116,7 @@ const Register: FC = () => {
           });
           navigate(`/workspaces/${result.workspaceId}`); // Navigate to the joined workspace
           return; // Stop further navigation
-        } catch (inviteError: any) {
+        } catch (inviteError: unknown) {
           sessionStorage.removeItem("pendingInvitationToken"); // Clear token even on error
           console.error(
             "Error accepting pending invitation after registration:",
@@ -125,9 +125,9 @@ const Register: FC = () => {
           toast({
             title: "Failed to Accept Invitation",
             description:
-              inviteError.response?.data?.error ||
-              inviteError.message ||
-              "Could not apply pending invitation.",
+              inviteError instanceof Error
+                ? inviteError.message
+                : "Could not apply pending invitation.",
             status: "error",
             duration: 5000,
           });
@@ -173,14 +173,14 @@ const Register: FC = () => {
           Register
         </Heading>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => { void handleSubmit(e); }}>
           <VStack spacing={4}>
             <FormControl isInvalid={!!errors.name}>
               <FormLabel>Name</FormLabel>
               <Input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); }}
                 placeholder="Your name"
               />
               <FormErrorMessage>{errors.name}</FormErrorMessage>
@@ -191,7 +191,7 @@ const Register: FC = () => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); }}
                 placeholder="Your email"
               />
               <FormErrorMessage>{errors.email}</FormErrorMessage>
@@ -203,7 +203,7 @@ const Register: FC = () => {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); }}
                   placeholder="Create a password"
                 />
                 <InputRightElement>
@@ -213,7 +213,7 @@ const Register: FC = () => {
                     }
                     icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
                     variant="ghost"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => { setShowPassword(!showPassword); }}
                     size="sm"
                   />
                 </InputRightElement>
@@ -226,7 +226,7 @@ const Register: FC = () => {
               <Input
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => { setConfirmPassword(e.target.value); }}
                 placeholder="Confirm your password"
               />
               <FormErrorMessage>{errors.confirmPassword}</FormErrorMessage>

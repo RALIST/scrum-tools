@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'; // Remove jest import
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'; // Remove jest import
 import bcrypt from 'bcryptjs';
 import { executeQuery } from '../db/dbUtils.js'; // Keep this for cleanup
 import * as velocityDb from '../db/velocity.js'; // Import functions to test

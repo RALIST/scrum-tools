@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
 import { useToast } from '@chakra-ui/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import useQuery and client
+import { useEffect } from 'react';
 import { apiRequest } from '../utils/apiUtils';
 
 export interface WorkspaceRetroBoard {
@@ -72,7 +72,7 @@ export const useWorkspaceTools = (workspaceId: string | undefined): UseWorkspace
     isLoading: isLoadingPoker,
     isError: isPokerError,
     error: pokerError,
-  } = useQuery<WorkspacePokerRoom[], Error>({
+  } = useQuery<WorkspacePokerRoom[]>({
     queryKey: pokerRoomsQueryKey,
     queryFn: fetchPokerRooms,
     enabled: !!workspaceId,
@@ -89,7 +89,7 @@ export const useWorkspaceTools = (workspaceId: string | undefined): UseWorkspace
     isLoading: isLoadingRetro,
     isError: isRetroError,
     error: retroError,
-  } = useQuery<WorkspaceRetroBoard[], Error>({
+  } = useQuery<WorkspaceRetroBoard[]>({
     queryKey: retroBoardsQueryKey,
     queryFn: fetchRetroBoards,
     enabled: !!workspaceId,
@@ -106,7 +106,7 @@ export const useWorkspaceTools = (workspaceId: string | undefined): UseWorkspace
     isLoading: isLoadingVelocity,
     isError: isVelocityError,
     error: velocityError,
-  } = useQuery<WorkspaceVelocityTeam[], Error>({
+  } = useQuery<WorkspaceVelocityTeam[]>({
     queryKey: velocityTeamsQueryKey,
     queryFn: fetchVelocityTeams,
     enabled: !!workspaceId,
@@ -136,9 +136,9 @@ export const useWorkspaceTools = (workspaceId: string | undefined): UseWorkspace
   // --- Refresh Function ---
   const refreshTools = () => {
     // Invalidate all queries related to this workspace's tools
-    queryClient.invalidateQueries({ queryKey: ['workspacePokerRooms', { workspaceId }] });
-    queryClient.invalidateQueries({ queryKey: ['workspaceRetroBoards', { workspaceId }] });
-    queryClient.invalidateQueries({ queryKey: ['workspaceVelocityTeams', { workspaceId }] });
+    void queryClient.invalidateQueries({ queryKey: ['workspacePokerRooms', { workspaceId }] });
+    void queryClient.invalidateQueries({ queryKey: ['workspaceRetroBoards', { workspaceId }] });
+    void queryClient.invalidateQueries({ queryKey: ['workspaceVelocityTeams', { workspaceId }] });
   };
 
   // Remove old useEffect and fetchTools function

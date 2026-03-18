@@ -1,4 +1,3 @@
-import { FC, useState, useEffect } from "react"; // Import useState and useEffect
 import {
   Modal,
   ModalOverlay,
@@ -9,6 +8,7 @@ import {
   Button,
   Input,
 } from "@chakra-ui/react";
+import { type FC, useState, useEffect } from "react"; // Import useState and useEffect
 
 interface ChangeNameModalProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ const ChangeNameModal: FC<ChangeNameModalProps> = ({
           <Input
             placeholder="Enter new name"
             value={internalUserName} // Use internal state
-            onChange={(e) => setInternalUserName(e.target.value)} // Update internal state
+            onChange={(e) => { setInternalUserName(e.target.value); }} // Update internal state
           />
         </ModalBody>
         <ModalFooter>

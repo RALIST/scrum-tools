@@ -1,4 +1,12 @@
-import React, { FC, useMemo, useCallback } from "react"; // Import React and useCallback
+import {
+  ViewIcon,
+  ViewOffIcon,
+  TimeIcon,
+  SettingsIcon,
+  EditIcon,
+  CheckIcon,
+  CopyIcon,
+} from "@chakra-ui/icons";
 import {
   Box,
   Heading,
@@ -14,22 +22,14 @@ import {
   useClipboard,
   useToast,
 } from "@chakra-ui/react";
-import {
-  ViewIcon,
-  ViewOffIcon,
-  TimeIcon,
-  SettingsIcon,
-  EditIcon,
-  CheckIcon,
-  CopyIcon,
-} from "@chakra-ui/icons";
+import React, { type FC, useMemo, useCallback } from "react"; // Import React and useCallback
 import config from "../../config";
 
 // Helper function moved outside
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  return `${String(minutes)}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
 interface RetroHeaderProps {

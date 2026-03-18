@@ -4,27 +4,27 @@ import { app as mainApp, server, io } from '../index.js'; // Import main app for
 import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
 import bcrypt from 'bcryptjs'; // Import bcrypt
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
-import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import setupVelocityRoutes from '../routes/velocity.js';
 
 // --- Mock DB Objects ---
 const mockVelocityDb = {
-    createTeam: jest.fn(),
-    getTeam: jest.fn(), // Replaced getTeamByName
-    createSprint: jest.fn(),
-    updateSprintVelocity: jest.fn(),
-    getSprintById: jest.fn(),
-    getTeamVelocity: jest.fn(),
-    getTeamAverageVelocity: jest.fn(),
-    getTeamByWorkspace: jest.fn(),
-    getTeamVelocityByWorkspace: jest.fn(),
-    getTeamAverageVelocityByWorkspace: jest.fn(),
-    getTeamById: jest.fn(),
-    getWorkspaceVelocityTeams: jest.fn(), // Added missing function
+    createTeam: vi.fn(),
+    getTeam: vi.fn(), // Replaced getTeamByName
+    createSprint: vi.fn(),
+    updateSprintVelocity: vi.fn(),
+    getSprintById: vi.fn(),
+    getTeamVelocity: vi.fn(),
+    getTeamAverageVelocity: vi.fn(),
+    getTeamByWorkspace: vi.fn(),
+    getTeamVelocityByWorkspace: vi.fn(),
+    getTeamAverageVelocityByWorkspace: vi.fn(),
+    getTeamById: vi.fn(),
+    getWorkspaceVelocityTeams: vi.fn(), // Added missing function
 };
 const mockWorkspaceDb = {
     // Only need isWorkspaceMember for velocity routes authorization checks
-    isWorkspaceMember: jest.fn(),
+    isWorkspaceMember: vi.fn(),
 };
 // --- End Mock DB Objects ---
 
@@ -33,7 +33,7 @@ const registerAndLoginUser = async (emailSuffix) => {
     const email = `velocity_di_user_${emailSuffix}_${Date.now()}@example.com`;
     const password = 'password123';
     const name = `Velocity DI User ${emailSuffix}`;
-    let regResponse = await request(mainApp) // Use mainApp for registration/login
+    const regResponse = await request(mainApp) // Use mainApp for registration/login
         .post('/api/auth/register')
         .send({ email, password, name });
     if (regResponse.statusCode === 409) {
@@ -57,13 +57,13 @@ let otherTestWorkspaceId; // For access control tests
 describe('Velocity Routes (/api/velocity) with DI', () => {
   let testApp; // Declare testApp here
   // Variables needed across contexts
-  let anonymousTeamId = 'test-anon-team-id';
-  let anonymousTeamName = 'Anon Team DI Test';
-  let anonymousTeamPassword = 'anonPasswordDI';
-  let createdAnonSprintId = 'test-anon-sprint-id';
-  let workspaceTeamId = 'test-ws-team-id';
-  let workspaceTeamName = 'WS Team DI Test';
-  let createdWsSprintId = 'test-ws-sprint-id';
+  const anonymousTeamId = 'test-anon-team-id';
+  const anonymousTeamName = 'Anon Team DI Test';
+  const anonymousTeamPassword = 'anonPasswordDI';
+  const createdAnonSprintId = 'test-anon-sprint-id';
+  const workspaceTeamId = 'test-ws-team-id';
+  const workspaceTeamName = 'WS Team DI Test';
+  const createdWsSprintId = 'test-ws-sprint-id';
   // authUserInfo, otherAuthUserInfo, testWorkspaceId, otherTestWorkspaceId are now defined globally
 
   // Setup: Register users and create workspaces using mainApp for context

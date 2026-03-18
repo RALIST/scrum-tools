@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from "react"; // Import useState, useEffect
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   Modal,
   ModalOverlay,
@@ -17,8 +17,8 @@ import {
   IconButton,
   // Text, // Removed
 } from "@chakra-ui/react";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { SEQUENCE_LABELS, SequenceType } from "../../constants/poker"; // Re-added
+import { type FC, useState, useEffect } from "react"; // Import useState, useEffect
+import { SEQUENCE_LABELS, type SequenceType } from "../../constants/poker"; // Re-added
 
 interface RoomSettingsModalProps {
   isOpen: boolean;
@@ -88,12 +88,12 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
               <FormLabel>Estimation Sequence</FormLabel>
               <Select
                 value={internalSettings.sequence || currentSequence} // Use internal state
-                onChange={(e) =>
+                onChange={(e) => {
                   handleSettingsChange(
                     "sequence",
                     e.target.value as SequenceType // Cast is okay here
-                  )
-                }
+                  );
+                }}
               >
                 {Object.entries(SEQUENCE_LABELS).map(([key, label]) => (
                   <option key={key} value={key}>
@@ -109,12 +109,12 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
                   type={internalShowPassword ? "text" : "password"}
                   placeholder="Leave empty to keep current" // Changed placeholder
                   value={internalSettings.password || ""} // Use internal state
-                  onChange={(e) =>
+                  onChange={(e) => {
                     handleSettingsChange(
                       "password",
                       e.target.value // Send empty string if cleared
-                    )
-                  }
+                    );
+                  }}
                 />
                 <InputRightElement>
                   <IconButton
@@ -122,9 +122,9 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
                       internalShowPassword ? "Hide password" : "Show password"
                     }
                     icon={internalShowPassword ? <ViewOffIcon /> : <ViewIcon />}
-                    onClick={() =>
-                      setInternalShowPassword(!internalShowPassword)
-                    }
+                    onClick={() => {
+                      setInternalShowPassword(!internalShowPassword);
+                    }}
                     size="sm"
                     variant="ghost"
                   />

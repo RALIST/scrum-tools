@@ -1,9 +1,9 @@
+import { useToast } from '@chakra-ui/react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Socket as ClientSocket } from 'socket.io-client'; // Keep type import
-import { useToast } from '@chakra-ui/react';
-import { SequenceType } from '../constants/poker'; // Re-added import
-import { useSocketManager } from './useSocketManager'; // Import the new hook
+import type { SequenceType } from '../constants/poker'; // Re-added import
 import { createHookLogger } from '../utils/logger'; // Import the new logger
+import { useSocketManager } from './useSocketManager'; // Import the new hook
 
 // Create logger instance for this hook
 const logger = createHookLogger('usePokerSocket');
@@ -91,7 +91,7 @@ export const usePokerSocket = ({
       // Correct usage: emit('event', data, callback)
       socketInstance.emit('joinRoom', joinData, (ack: { error?: string }) => {
         // Pass callback as 3rd arg
-        if (ack?.error) {
+        if (ack.error) {
           logger.debug(`Server acknowledged joinRoom with immediate error: ${ack.error}`);
           setIsJoining(false);
           if (onJoinError) onJoinError(ack.error);
@@ -164,7 +164,7 @@ export const usePokerSocket = ({
     namespace: '/poker',
     autoConnect: !!roomId,
     // Pass wrapped callbacks that access the latest socket state
-    onConnect: () => handleManagerConnectInternal(socket),
+    onConnect: () => { handleManagerConnectInternal(socket); },
     onDisconnect: handleManagerDisconnect,
     onError: handleManagerError,
   });

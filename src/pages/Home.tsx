@@ -1,5 +1,5 @@
-import { FC } from 'react'
 import { Box, Heading, SimpleGrid, Text, Button, VStack, useColorMode } from '@chakra-ui/react'
+import type { FC } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import PageContainer from '../components/PageContainer'
 import PageHelmet from '../components/PageHelmet'
@@ -99,7 +99,7 @@ const Home: FC = () => {
                             color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
                             px={{ base: 2, md: 0 }}
                         >
-                            Boost your team's agile workflow with our secure, real-time collaboration tools
+                            Boost your team&apos;s agile workflow with our secure, real-time collaboration tools
                         </Text>
                     </Box>
 

@@ -1,12 +1,12 @@
-import { Namespace, Socket } from 'socket.io'; // Import Namespace
-import * as retroDbFunctions from '../db/retro.js'; // Import DB functions (needs .js)
-import {
+import type { Namespace, Socket } from 'socket.io'; // Import Namespace
+import type * as retroDbFunctions from '../db/retro.js'; // Import DB functions (needs .js)
+import type { RetroBoardDetails, RetroCard } from '../types/db.js'; // Import DB types (needs .js)
+import type {
     RetroClientToServerEvents, RetroServerToClientEvents, RetroInterServerEvents, RetroSocketData,
     RetroJoinBoardPayload, RetroToggleCardsVisibilityPayload, RetroAddCardPayload, RetroEditCardPayload,
     RetroDeleteCardPayload, RetroToggleVotePayload, RetroUpdateSettingsPayload, RetroChangeNamePayload,
     RetroStartTimerPayload, RetroStopTimerPayload, SocketErrorPayload
 } from '../types/sockets.js'; // Import socket types (needs .js)
-import { RetroBoardDetails, RetroCard } from '../types/db.js'; // Import DB types (needs .js)
 
 // Define the type for the injected retroDb module
 type RetroDbModule = typeof retroDbFunctions;
@@ -77,12 +77,12 @@ const handleRetroSocketEvents = (
 
 
              socket.emit('retroBoardJoined', board);
-         } catch (error: any) {
+         } catch {
             socket.emit('error', { message: 'Failed to join retro board' } as SocketErrorPayload);
         }
     });
 
-    socket.on('toggleCardsVisibility', async (payload: RetroToggleCardsVisibilityPayload) => {
+    socket.on('toggleCardsVisibility', (payload: RetroToggleCardsVisibilityPayload) => {
         const { boardId, hideCards } = payload;
         try {
             // debugLog('Toggling cards visibility', { boardId, hideCards })
@@ -96,7 +96,7 @@ const handleRetroSocketEvents = (
             // Broadcast to all clients in the room
             // debugLog('Broadcasting visibility change', { roomName, hideCards })
             io.to(roomName).emit('cardsVisibilityChanged', { hideCards: currentState }); // Broadcast confirmed state
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to toggle cards visibility' } as SocketErrorPayload);
         }
     });
@@ -120,7 +120,7 @@ const handleRetroSocketEvents = (
             const roomName: string = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName });
             io.to(roomName).emit('retroBoardUpdated', board);
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to add card' } as SocketErrorPayload);
         }
     });
@@ -138,7 +138,7 @@ const handleRetroSocketEvents = (
             const roomName: string = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to edit card' } as SocketErrorPayload);
         }
     });
@@ -152,8 +152,12 @@ const handleRetroSocketEvents = (
             // No need to check if board exists here, as we emit even if it's null (meaning board was deleted)
             const roomName: string = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
-            io.to(roomName).emit('retroBoardUpdated', board!); // Assert non-null as board should exist if delete didn't fail catastrophically
-        } catch (error: any) {
+            if (!board) {
+                socket.emit('error', { message: 'Board not found after deleting card.' } as SocketErrorPayload);
+                return;
+            }
+            io.to(roomName).emit('retroBoardUpdated', board);
+        } catch {
             socket.emit('error', { message: 'Failed to delete card' } as SocketErrorPayload);
         }
     });
@@ -177,7 +181,7 @@ const handleRetroSocketEvents = (
             const roomName: string = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to toggle vote' } as SocketErrorPayload);
         }
     });
@@ -195,7 +199,7 @@ const handleRetroSocketEvents = (
             const roomName: string = `retro:${boardId}`;
             // debugLog('Emitting settings update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to update settings' } as SocketErrorPayload);
         }
     });
@@ -229,7 +233,7 @@ const handleRetroSocketEvents = (
             const roomName: string = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', updatedBoard);
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to change name' } as SocketErrorPayload);
         }
     });
@@ -248,26 +252,26 @@ const handleRetroSocketEvents = (
 
             // Start a new timer interval
             if (activeTimers.has(boardId)) {
-                clearInterval(activeTimers.get(boardId)!); // Use non-null assertion as we check with .has()
+                clearInterval(activeTimers.get(boardId));
             }
 
             let timeLeft: number = board.default_timer;
-            activeTimers.set(boardId, setInterval(async () => {
+            activeTimers.set(boardId, setInterval(() => {
                 timeLeft--
-                await retroDb.updateRetroTimer(boardId, timeLeft); // Use injected retroDb
+                void retroDb.updateRetroTimer(boardId, timeLeft); // Use injected retroDb
                 io.to(roomName).emit('timerUpdate', { timeLeft })
 
                 if (timeLeft <= 0) {
-                    clearInterval(activeTimers.get(boardId)!); // Use non-null assertion
+                    clearInterval(activeTimers.get(boardId));
                     activeTimers.delete(boardId)
-                    await retroDb.stopRetroTimer(boardId); // Use injected retroDb
+                    void retroDb.stopRetroTimer(boardId); // Use injected retroDb
                     io.to(roomName).emit('timerStopped')
                 }
             }, 1000))
 
             // debugLog('Emitting timer start', { roomName, timeLeft: board.default_timer })
             io.to(roomName).emit('timerStarted', { timeLeft: board.default_timer });
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to start timer' } as SocketErrorPayload);
         }
     });
@@ -281,13 +285,13 @@ const handleRetroSocketEvents = (
 
             // Clear the timer interval
             if (activeTimers.has(boardId)) {
-                clearInterval(activeTimers.get(boardId)!); // Use non-null assertion
+                clearInterval(activeTimers.get(boardId));
                 activeTimers.delete(boardId)
             }
 
             // debugLog('Emitting timer stop', { roomName })
             io.to(roomName).emit('timerStopped');
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to stop timer' } as SocketErrorPayload);
         }
     });

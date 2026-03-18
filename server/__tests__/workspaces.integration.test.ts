@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { app as mainApp, server, io } from '../index.js'; // Import main app for setup, io/server for teardown
 import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
-import { jest, describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
 // Import DB functions needed for direct setup/cleanup
 import { createWorkspace, addWorkspaceMember } from '../db/workspaces.js';
 // Removed unused velocityUtils import for integration test
@@ -11,7 +11,7 @@ const registerAndLoginUser = async (emailSuffix) => {
     const email = `ws_integ_user_${emailSuffix}_${Date.now()}@example.com`;
     const password = 'password123';
     const name = `WS Integ User ${emailSuffix}`;
-    let regResponse = await request(mainApp)
+    const regResponse = await request(mainApp)
         .post('/api/auth/register')
         .send({ email, password, name });
     if (regResponse.statusCode === 409) {
@@ -43,18 +43,14 @@ describe('Workspaces Routes (Integration Tests)', () => {
     // Create workspace and add member directly via DB functions
     const workspaceName = `Test Integ Workspace ${Date.now()}`;
     const description = 'Initial workspace for integ tests';
-    try {
-      // Use the real createTeam function as the dependency
-      // createWorkspace now uses internal pool and velocityUtils.createTeam
-      const workspace = await createWorkspace(workspaceName, description, ownerInfo.userId);
-      expect(workspace).toBeDefined();
-      testWorkspaceId = workspace.id;
+    // Use the real createTeam function as the dependency
+    // createWorkspace now uses internal pool and velocityUtils.createTeam
+    const workspace = await createWorkspace(workspaceName, description, ownerInfo.userId);
+    expect(workspace).toBeDefined();
+    testWorkspaceId = workspace.id;
 
-      // Add nonAdminInfo as a member directly
-      await addWorkspaceMember(testWorkspaceId, nonAdminInfo.userId, 'member'); // addWorkspaceMember no longer takes pool
-    } catch (err) {
-      throw err; // Fail fast if setup fails
-    }
+    // Add nonAdminInfo as a member directly
+    await addWorkspaceMember(testWorkspaceId, nonAdminInfo.userId, 'member'); // addWorkspaceMember no longer takes pool
   });
 
   afterAll(async () => {

@@ -1,15 +1,15 @@
-import { FC, useCallback, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query'; // Import useQuery
 import { VStack, useToast, Spinner, Center, Text, useDisclosure } from '@chakra-ui/react';
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
+import { type FC, useCallback, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { JoinRetroBoardModal } from '../../components/modals';
+import RetroBoardView from '../../components/retro/RetroBoardView';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   useRetroSocket,
-  RetroBoard as RetroBoardType, // Import type from hook
+  type RetroBoard as RetroBoardType, // Import type from hook
 } from '../../hooks/useRetroSocket';
 import { useRetroUser } from '../../hooks/useRetroUser';
-import { useAuth } from '../../contexts/AuthContext';
-import RetroBoardView from '../../components/retro/RetroBoardView';
 import { apiRequest, AuthError } from '../../utils/apiUtils'; // Import apiRequest
 
 const RetroBoard: FC = () => {
@@ -99,7 +99,7 @@ const RetroBoard: FC = () => {
     isLoading: isLoadingInitialData, // Loading state from the query
     isError: isInitialError, // Error state from the query
     error: initialLoadError, // Error object from the query
-  } = useQuery<RetroBoardType, Error>({
+  } = useQuery<RetroBoardType>({
     // Specify types
     queryKey: initialBoardQueryKey,
     queryFn: fetchInitialBoardData,
@@ -110,7 +110,7 @@ const RetroBoard: FC = () => {
 
   // Effect to show toast on initial load error
   useEffect(() => {
-    if (isInitialError && initialLoadError) {
+    if (isInitialError) {
       const description =
         initialLoadError instanceof AuthError
           ? 'Authentication error loading board.'
@@ -157,7 +157,7 @@ const RetroBoard: FC = () => {
       }
     } else {
       // If auto-join conditions not met, show modal (if not already joined/connecting)
-      if (!isConnectingOrJoining && !hasJoined) {
+      if (!isConnectingOrJoining) {
         if (!isJoinModalOpen) {
           onJoinModalOpen();
         }
@@ -255,7 +255,7 @@ const RetroBoard: FC = () => {
   }
 
   // Handle initial load error (using state from useQuery)
-  if (isInitialError && !isLoadingInitialData) {
+  if (isInitialError) {
     const errorMessage =
       initialLoadError instanceof Error ? initialLoadError.message : 'Unknown error';
     return (
@@ -272,7 +272,7 @@ const RetroBoard: FC = () => {
     return (
       <JoinRetroBoardModal
         isOpen={true}
-        onClose={() => navigate('/retro')}
+        onClose={() => { navigate('/retro'); }}
         onJoin={handleJoinBoard}
         hasPassword={initialBoardData.hasPassword} // Use initial data here
         initialName={isAuthenticated ? user?.name : userName}

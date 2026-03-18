@@ -1,7 +1,7 @@
-import express, { Router, Request, Response, NextFunction } from 'express';
-import * as retroDbFunctions from '../db/retro.js'; // Import DB functions (needs .js)
-import * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
-import { RetroBoardDetails, RetroBoardSettings } from '../types/db.js'; // Import types (needs .js)
+import express, { type Router, type Request, type Response, type NextFunction } from 'express';
+import type * as retroDbFunctions from '../db/retro.js'; // Import DB functions (needs .js)
+import type * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
+import type { RetroBoardDetails, RetroBoardSettings } from '../types/db.js'; // Import types (needs .js)
 
 // Define types for injected DB modules
 type RetroDbModule = typeof retroDbFunctions;
@@ -25,7 +25,7 @@ export default function setupRetroRoutes(
     // POST /
     router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         const boardId: string = Math.random().toString(36).substring(2, 8);
-        const { name, settings = {}, workspaceId } = req.body; // Expect settings object again
+        const { name, settings = {}, workspaceId } = req.body as { name?: string; settings?: RetroBoardSettings; workspaceId?: string }; // Expect settings object again
         const defaultName: string = `Retro ${formatDate(new Date())}`;
 
         const userId: string | undefined = req.user?.userId; // Get userId from auth middleware
@@ -37,7 +37,7 @@ export default function setupRetroRoutes(
                     return;
                 }
                 // Assert non-null for userId and workspaceId
-                const isMember: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId!);
+                const isMember: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId);
                 if (!isMember) {
                     res.status(403).json({ error: 'User is not authorized to create a retro board in this workspace.' });
                     return;
@@ -46,9 +46,9 @@ export default function setupRetroRoutes(
             // Use injected dependency
             // Use injected dependency
             // Type settings explicitly
-            await retroDb.createRetroBoard(boardId, name || defaultName, workspaceId, settings as RetroBoardSettings); // Pass settings object directly
+            await retroDb.createRetroBoard(boardId, name || defaultName, workspaceId, settings); // Pass settings object directly
             res.json({ success: true, boardId });
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -73,7 +73,7 @@ export default function setupRetroRoutes(
                     return;
                 }
                 // Assert non-null for userId and board.workspace_id
-                const isMember: boolean = await workspaceDb.isWorkspaceMember(board.workspace_id!, userId!);
+                const isMember: boolean = await workspaceDb.isWorkspaceMember(board.workspace_id, userId);
                 if (!isMember) {
                     res.status(403).json({ error: 'User is not authorized to access this retro board.' });
                     return;
@@ -81,7 +81,7 @@ export default function setupRetroRoutes(
             }
             // The 'board' object from getRetroBoard already has 'hasPassword' and omits the actual password hash.
             res.json(board); // Send the object directly
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -89,13 +89,13 @@ export default function setupRetroRoutes(
     // POST /:boardId/verify-password
     router.post('/:boardId/verify-password', async (req: Request<{ boardId: string }>, res: Response, next: NextFunction) => {
         const { boardId } = req.params;
-        const { password } = req.body;
+        const { password } = req.body as { password?: string };
 
         try {
             // Use injected dependency
             const isValid: boolean = await retroDb.verifyRetroBoardPassword(boardId, password);
             res.json({ valid: isValid });
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -103,7 +103,7 @@ export default function setupRetroRoutes(
     // PUT /:boardId/settings
     router.put('/:boardId/settings', async (req: Request<{ boardId: string }>, res: Response, next: NextFunction) => {
         const { boardId } = req.params;
-        const {settings } = req.body; // Expect settings object again
+        const { settings } = req.body as { settings: RetroBoardSettings }; // Expect settings object again
         const {
             defaultTimer,
             hideCardsByDefault,
@@ -127,7 +127,7 @@ export default function setupRetroRoutes(
                     return;
                 }
                 // Assert non-null for userId and existingBoard.workspace_id
-                const isMember: boolean = await workspaceDb.isWorkspaceMember(existingBoard.workspace_id!, userId!);
+                const isMember: boolean = await workspaceDb.isWorkspaceMember(existingBoard.workspace_id, userId);
                 if (!isMember) {
                     res.status(403).json({ error: 'User is not authorized to update settings for this retro board.' });
                     return;
@@ -145,7 +145,7 @@ export default function setupRetroRoutes(
             // Fetch the updated board to return the latest state
             const updatedBoard: RetroBoardDetails | null = await retroDb.getRetroBoard(boardId);
             res.json(updatedBoard);
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });

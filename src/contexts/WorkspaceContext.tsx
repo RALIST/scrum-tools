@@ -3,12 +3,12 @@ import {
   useContext,
   useState,
   useEffect,
-  ReactNode,
+  type ReactNode,
   useCallback,
   useMemo, // Import useMemo
 } from "react";
-import { useAuth } from "./AuthContext";
 import config from "../config";
+import { useAuth } from "./AuthContext";
 
 export interface Workspace {
   // Add export here
@@ -17,6 +17,13 @@ export interface Workspace {
   description: string | null;
   owner_id: string;
   created_at: string;
+  role: string;
+}
+
+export interface WorkspaceMemberResponse {
+  id: string;
+  name: string;
+  email: string;
   role: string;
 }
 
@@ -39,11 +46,12 @@ interface WorkspaceContextType {
     workspaceId: string,
     memberId: string
   ) => Promise<void>;
-  getWorkspaceMembers: (workspaceId: string) => Promise<any[]>;
+  getWorkspaceMembers: (workspaceId: string) => Promise<WorkspaceMemberResponse[]>;
   isLoading: boolean;
-  refreshWorkspaces: () => Promise<void>;
+  refreshWorkspaces: () => Promise<Workspace[]>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
   undefined
 );
@@ -99,10 +107,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch workspaces: ${response.status}`);
+        throw new Error(`Failed to fetch workspaces: ${String(response.status)}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as Workspace[];
       setWorkspaces(data);
 
       if (data.length > 0) {
@@ -114,7 +122,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
           return data;
         } else {
-          updateCurrentWorkspace(data[0] || null);
+          updateCurrentWorkspace(data[0] ?? null);
         }
       }
 
@@ -129,7 +137,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!isAuthenticated || isAuthLoading) return;
-    if (!workspaces) refreshWorkspaces();
+    if (!workspaces) void refreshWorkspaces();
   }, [workspaces, isAuthenticated, isAuthLoading, refreshWorkspaces]); // Existing effect to load workspaces
 
   // Effect to clear workspace when user logs out
@@ -161,11 +169,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to create workspace");
+          const errorData = (await response.json()) as { error?: string };
+          throw new Error(errorData.error ?? "Failed to create workspace");
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as { workspace: Workspace };
         await refreshWorkspaces();
         return data.workspace;
       } catch (error) {
@@ -194,11 +202,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to update workspace");
+          const errorData = (await response.json()) as { error?: string };
+          throw new Error(errorData.error ?? "Failed to update workspace");
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as { workspace: Workspace };
         await refreshWorkspaces();
 
         // Update currentWorkspace if it's the one being edited
@@ -214,8 +222,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
       }
     },
-    [token, refreshWorkspaces, currentWorkspace, updateCurrentWorkspace]
-  ); // Add dependencies (updateCurrentWorkspace instead of setCurrentWorkspace)
+    [token, refreshWorkspaces, currentWorkspace]
+  );
 
   const addWorkspaceMember = useCallback(
     async (workspaceId: string, email: string, role?: string) => {
@@ -236,8 +244,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         );
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to add member");
+          const errorData = (await response.json()) as { error?: string };
+          throw new Error(errorData.error ?? "Failed to add member");
         }
       } catch (error) {
         console.error("Error adding member:", error);
@@ -266,8 +274,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         );
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to remove member");
+          const errorData = (await response.json()) as { error?: string };
+          throw new Error(errorData.error ?? "Failed to remove member");
         }
       } catch (error) {
         console.error("Error removing member:", error);
@@ -295,11 +303,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         );
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to get members");
+          const errorData = (await response.json()) as { error?: string };
+          throw new Error(errorData.error ?? "Failed to get members");
         }
 
-        return await response.json();
+        return (await response.json()) as WorkspaceMemberResponse[];
       } catch (error) {
         console.error("Error getting members:", error);
         throw error;
@@ -336,6 +344,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWorkspace = () => {
   const context = useContext(WorkspaceContext);
   if (context === undefined) {

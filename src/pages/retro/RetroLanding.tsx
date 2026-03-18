@@ -1,6 +1,3 @@
-import { FC, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import mutation hooks
 import {
   Box,
   Heading,
@@ -27,10 +24,13 @@ import {
   Spacer,
   Spinner,
 } from "@chakra-ui/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import mutation hooks
+import { type FC, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import PageHelmet from "../../components/PageHelmet";
 import SeoText from "../../components/SeoText";
-import { retroBoardSeoSections } from "../../content/retroBoardSeo";
 import config from "../../config";
+import { retroBoardSeoSections } from "../../content/retroBoardSeo";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { apiRequest } from "../../utils/apiUtils";
@@ -141,16 +141,16 @@ const RetroLanding: FC = () => {
     isLoading: isLoadingBoards, // Use a specific name for loading boards
     isError: isBoardsError,
     error: boardsError,
-  } = useQuery<RetroBoard[], Error>({
+  } = useQuery<RetroBoard[]>({
     queryKey: workspaceBoardsQueryKey,
     queryFn: fetchWorkspaceBoards,
     // Only run query if authenticated and in a workspace context
-    enabled: !!isAuthenticated && !!currentWorkspace?.id,
+    enabled: isAuthenticated && !!currentWorkspace?.id,
   });
 
   // Effect to show toast on board loading error
   useEffect(() => {
-    if (isBoardsError && boardsError) {
+    if (isBoardsError) {
       console.error("Error loading workspace boards:", boardsError);
       toast({
         title: "Error Loading Workspace Boards",
@@ -165,9 +165,7 @@ const RetroLanding: FC = () => {
 
   // --- React Query Mutation for creating a board ---
   const createBoardMutation = useMutation<
-    CreateBoardResponse, // Type of the data returned by the mutation function
-    Error, // Type of the error
-    void // Type of the variables passed to the mutation function (none needed here as settings are from state)
+    CreateBoardResponse // Type of the data returned by the mutation function
   >({
     mutationFn: async () => {
       const includeAuth = !!(isAuthenticated && createSettings.workspaceId);
@@ -189,7 +187,7 @@ const RetroLanding: FC = () => {
     },
     onSuccess: (data) => {
       // Invalidate the workspace boards query to refetch the list
-      queryClient.invalidateQueries({ queryKey: workspaceBoardsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: workspaceBoardsQueryKey });
 
       toast({
         title: "Board Created",
@@ -328,7 +326,7 @@ const RetroLanding: FC = () => {
                           <Button
                             size="sm"
                             colorScheme="blue"
-                            onClick={() => navigate(`/retro/${board.id}`)}
+                            onClick={() => { navigate(`/retro/${board.id}`); }}
                           >
                             Open
                           </Button>
@@ -362,8 +360,8 @@ const RetroLanding: FC = () => {
                 <Input
                   placeholder="Enter board ID"
                   value={joinBoardId}
-                  onChange={(e) => setJoinBoardId(e.target.value)}
-                  onKeyPress={(e) => {
+                  onChange={(e) => { setJoinBoardId(e.target.value); }}
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleJoinBoard();
                     }
@@ -392,18 +390,18 @@ const RetroLanding: FC = () => {
                   {isAuthenticated && (
                     <>
                       <FormControl
-                        isRequired={isAuthenticated && !!currentWorkspace}
+                        isRequired={!!currentWorkspace}
                       >
                         <FormLabel>Board Name</FormLabel>
                         <Input
                           placeholder="Enter board name"
                           value={createSettings.boardName}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setCreateSettings((prev) => ({
                               ...prev,
                               boardName: e.target.value,
-                            }))
-                          }
+                            }));
+                          }}
                         />
                       </FormControl>
 
@@ -412,12 +410,12 @@ const RetroLanding: FC = () => {
                           <FormLabel>Workspace (Optional)</FormLabel>
                           <Select
                             value={createSettings.workspaceId || ""}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setCreateSettings((prev) => ({
                                 ...prev,
                                 workspaceId: e.target.value || undefined,
-                              }))
-                            }
+                              }));
+                            }}
                           >
                             <option value="">No Workspace (Public)</option>
                             {workspaces.map((workspace) => (
@@ -441,12 +439,12 @@ const RetroLanding: FC = () => {
                       type="password"
                       placeholder="Leave empty for no password"
                       value={createSettings.password || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setCreateSettings((prev) => ({
                           ...prev,
                           password: e.target.value || undefined,
-                        }))
-                      }
+                        }));
+                      }}
                     />
                   </FormControl>
 
@@ -459,12 +457,12 @@ const RetroLanding: FC = () => {
                         <input
                           type="checkbox"
                           checked={createSettings.hideCardsByDefault}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setCreateSettings((prev) => ({
                               ...prev,
                               hideCardsByDefault: e.target.checked,
-                            }))
-                          }
+                            }));
+                          }}
                         />
                       </Flex>
                       <Flex w="full">
@@ -473,12 +471,12 @@ const RetroLanding: FC = () => {
                         <input
                           type="checkbox"
                           checked={createSettings.hideAuthorNames}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setCreateSettings((prev) => ({
                               ...prev,
                               hideAuthorNames: e.target.checked,
-                            }))
-                          }
+                            }));
+                          }}
                         />
                       </Flex>
                     </VStack>

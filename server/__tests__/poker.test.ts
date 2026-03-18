@@ -4,7 +4,7 @@ import { app as mainApp, server, io } from '../index.js'; // Import main app for
 import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
 import bcrypt from 'bcryptjs'; // Import bcrypt
 // Import necessary functions from Jest globals for ESM
-import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 // Import the route setup function
@@ -13,16 +13,16 @@ import setupPokerRoutes from '../routes/poker.js';
 
 // --- Mock DB Objects ---
 const mockPokerDb = {
-    createRoom: jest.fn(),
-    getRoom: jest.fn(),
-    // verifyPassword: jest.fn(), // verify-password route uses getRoom
-    getRooms: jest.fn(), // Renamed from getPublicRooms to match route code
-    getWorkspaceRooms: jest.fn(),
-    getPokerRoomInfo: jest.fn(), // Used by original /info route, now getRoom is used
+    createRoom: vi.fn(),
+    getRoom: vi.fn(),
+    // verifyPassword: vi.fn(), // verify-password route uses getRoom
+    getRooms: vi.fn(), // Renamed from getPublicRooms to match route code
+    getWorkspaceRooms: vi.fn(),
+    getPokerRoomInfo: vi.fn(), // Used by original /info route, now getRoom is used
 };
 const mockWorkspaceDb = {
     // Only need isWorkspaceMember for poker routes authorization checks
-    isWorkspaceMember: jest.fn(),
+    isWorkspaceMember: vi.fn(),
 };
 // --- End Mock DB Objects ---
 
@@ -34,7 +34,7 @@ const registerAndLoginUser = async (emailSuffix) => {
     const email = `poker_di_user_${emailSuffix}_${Date.now()}@example.com`;
     const password = 'password123';
     const name = `Poker DI User ${emailSuffix}`;
-    let regResponse = await request(mainApp) // Use mainApp for registration/login
+    const regResponse = await request(mainApp) // Use mainApp for registration/login
         .post('/api/auth/register')
         .send({ email, password, name });
     if (regResponse.statusCode === 409) {
@@ -56,10 +56,10 @@ let testWorkspaceId;
 describe('Poker Routes (/api/poker) with DI', () => {
   let testApp; // Declare testApp here
   // Variables needed across contexts
-  let anonRoomId = 'test-anon-poker-room-id'; // Use fixed IDs for mocked tests
-  let anonRoomPassword = 'anonPokerPasswordDI';
-  let publicRoomId = 'test-public-poker-room-id';
-  let createdAuthRoomId = 'test-auth-poker-room-id';
+  const anonRoomId = 'test-anon-poker-room-id'; // Use fixed IDs for mocked tests
+  const anonRoomPassword = 'anonPokerPasswordDI';
+  const publicRoomId = 'test-public-poker-room-id';
+  const createdAuthRoomId = 'test-auth-poker-room-id';
   // authUserInfo and testWorkspaceId are now defined globally
 
   // Setup: Register user and create workspace using mainApp for context

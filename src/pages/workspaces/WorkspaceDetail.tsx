@@ -1,4 +1,3 @@
-import { FC, useState, useCallback, Suspense, lazy } from 'react';
 import {
   Box,
   Tabs,
@@ -15,21 +14,20 @@ import {
   AlertTitle,
   AlertDescription,
 } from '@chakra-ui/react';
-import { useParams } from 'react-router-dom';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { useAuth } from '../../contexts/AuthContext';
-import PageHelmet from '../../components/PageHelmet';
+import { type FC, useState, useCallback, Suspense, lazy } from 'react';
 import { FaUsers, FaThLarge } from 'react-icons/fa';
-
-// Import custom hooks
+import { useParams } from 'react-router-dom';
+import PageHelmet from '../../components/PageHelmet';
+import WorkspaceDetailHeader from '../../components/workspaces/WorkspaceDetailHeader';
+import WorkspaceMembersPanel from '../../components/workspaces/WorkspaceMembersPanel';
+import WorkspaceToolsPanel from '../../components/workspaces/WorkspaceToolsPanel';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useWorkspaceData } from '../../hooks/useWorkspaceData';
 import { useWorkspaceMembers } from '../../hooks/useWorkspaceMembers';
 import { useWorkspaceTools } from '../../hooks/useWorkspaceTools';
 
 // Import components
-import WorkspaceDetailHeader from '../../components/workspaces/WorkspaceDetailHeader';
-import WorkspaceToolsPanel from '../../components/workspaces/WorkspaceToolsPanel';
-import WorkspaceMembersPanel from '../../components/workspaces/WorkspaceMembersPanel';
 
 // Lazy load modal components for better code splitting
 const EditWorkspaceModal = lazy(
@@ -52,7 +50,7 @@ interface Member {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'member' | string;
+  role: string;
 }
 
 const WorkspaceDetail: FC = () => {
@@ -161,7 +159,7 @@ const WorkspaceDetail: FC = () => {
         title={`${workspace.name} - Workspace | Scrum Tools`}
         description={`Manage your "${workspace.name}" workspace, team members, and Scrum tools.`}
         keywords="scrum workspace, team management, agile teams, collaboration"
-        canonicalUrl={`/workspaces/${workspaceId}`}
+        canonicalUrl={`/workspaces/${workspaceId ?? ''}`}
       />
 
       <WorkspaceDetailHeader

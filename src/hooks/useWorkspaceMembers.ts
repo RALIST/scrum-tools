@@ -1,14 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@chakra-ui/react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-
-// Assuming Member type is defined elsewhere or imported
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'member' | string;
-}
+import type { WorkspaceMemberResponse as Member } from '../contexts/WorkspaceContext';
 
 interface UseWorkspaceMembersResult {
   members: Member[];
@@ -37,7 +30,7 @@ export const useWorkspaceMembers = (workspaceId: string | undefined): UseWorkspa
     setError(null);
     try {
       const membersList = await getWorkspaceMembers(workspaceId);
-      setMembers(membersList || []); // Ensure it's an array
+      setMembers(membersList); // Set from API response
     } catch (err) {
       console.error('Error loading members:', err);
       setError(err instanceof Error ? err : new Error('Failed to load members'));
@@ -56,7 +49,7 @@ export const useWorkspaceMembers = (workspaceId: string | undefined): UseWorkspa
 
   // Fetch members when workspaceId changes
   useEffect(() => {
-    fetchMembers();
+    void fetchMembers();
   }, [fetchMembers]); // Depend on the memoized fetch function
 
   return { members, isLoading, error, refreshMembers: fetchMembers };

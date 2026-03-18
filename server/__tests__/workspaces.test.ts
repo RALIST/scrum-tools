@@ -2,7 +2,7 @@ import request from 'supertest';
 import express from 'express'; // Import express for test app setup
 import { app as mainApp, server, io } from '../index.js'; // Import main app for setup, io/server for teardown
 import { pool } from '../db/pool.js'; // Ensure initializePool is not imported
-import { jest, describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { vi, describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 // Import the route setup function
@@ -10,31 +10,31 @@ import setupWorkspaceRoutes from '../routes/workspaces.js';
 
 // --- Mock DB Objects ---
 const mockWorkspaceDb = {
-    createWorkspace: jest.fn(),
-    getUserWorkspaces: jest.fn(),
-    getWorkspaceById: jest.fn(),
-    getUserWorkspaceRole: jest.fn(),
-    updateWorkspace: jest.fn(),
-    addWorkspaceMember: jest.fn(),
-    getWorkspaceMembers: jest.fn(),
-    removeWorkspaceMember: jest.fn(),
-    isWorkspaceMember: jest.fn(),
-    createInvitation: jest.fn(),
-    findValidInvitationByToken: jest.fn(),
-    markInvitationAsUsed: jest.fn(),
+    createWorkspace: vi.fn(),
+    getUserWorkspaces: vi.fn(),
+    getWorkspaceById: vi.fn(),
+    getUserWorkspaceRole: vi.fn(),
+    updateWorkspace: vi.fn(),
+    addWorkspaceMember: vi.fn(),
+    getWorkspaceMembers: vi.fn(),
+    removeWorkspaceMember: vi.fn(),
+    isWorkspaceMember: vi.fn(),
+    createInvitation: vi.fn(),
+    findValidInvitationByToken: vi.fn(),
+    markInvitationAsUsed: vi.fn(),
 };
 const mockUserDb = {
-    getUserByEmail: jest.fn(),
+    getUserByEmail: vi.fn(),
 };
 const mockPokerDb = {
-    getWorkspaceRooms: jest.fn(),
+    getWorkspaceRooms: vi.fn(),
 };
 const mockRetroDb = {
-    getWorkspaceRetroBoards: jest.fn(),
+    getWorkspaceRetroBoards: vi.fn(),
 };
 // Revert mockVelocityDb to direct function mock
 const mockVelocityDb = {
-    getWorkspaceVelocityTeams: jest.fn(),
+    getWorkspaceVelocityTeams: vi.fn(),
 };
 // --- End Mock DB Objects ---
 
@@ -43,7 +43,7 @@ const registerAndLoginUser = async (emailSuffix) => {
     const email = `workspace_route_user_${emailSuffix}_${Date.now()}@example.com`;
     const password = 'password123';
     const name = `Workspace Route User ${emailSuffix}`;
-    let regResponse = await request(mainApp) // Use mainApp for registration/login
+    const regResponse = await request(mainApp) // Use mainApp for registration/login
         .post('/api/auth/register')
         .send({ email, password, name });
     if (regResponse.statusCode === 409) {

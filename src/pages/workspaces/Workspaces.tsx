@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { AddIcon } from "@chakra-ui/icons";
 import {
   Box,
   Heading,
@@ -25,10 +25,10 @@ import {
   Badge,
   useColorMode,
 } from "@chakra-ui/react";
-import { AddIcon } from "@chakra-ui/icons";
+import { type FC, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { useWorkspace } from "../../contexts/WorkspaceContext";
 import PageHelmet from "../../components/PageHelmet";
+import { useWorkspace, type Workspace } from "../../contexts/WorkspaceContext";
 
 const Workspaces: FC = () => {
   const { workspaces, createWorkspace, isLoading, setCurrentWorkspace } =
@@ -77,7 +77,7 @@ const Workspaces: FC = () => {
     }
   };
 
-  const handleSelectWorkspace = (workspace: any) => {
+  const handleSelectWorkspace = (workspace: Workspace) => {
     setCurrentWorkspace(workspace);
   };
 
@@ -152,7 +152,7 @@ const Workspaces: FC = () => {
                     to={`/workspaces/${workspace.id}`}
                     colorScheme="blue"
                     size="sm"
-                    onClick={() => handleSelectWorkspace(workspace)}
+                    onClick={() => { handleSelectWorkspace(workspace); }}
                   >
                     Open
                   </Button>
@@ -175,7 +175,7 @@ const Workspaces: FC = () => {
                 <FormLabel>Workspace Name</FormLabel>
                 <Input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); }}
                   placeholder="Enter workspace name"
                 />
               </FormControl>
@@ -184,7 +184,7 @@ const Workspaces: FC = () => {
                 <FormLabel>Description</FormLabel>
                 <Textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => { setDescription(e.target.value); }}
                   placeholder="Enter workspace description"
                   resize="vertical"
                   rows={3}
@@ -198,7 +198,7 @@ const Workspaces: FC = () => {
             </Button>
             <Button
               colorScheme="blue"
-              onClick={handleCreateWorkspace}
+              onClick={() => { void handleCreateWorkspace(); }}
               isLoading={isSubmitting}
             >
               Create

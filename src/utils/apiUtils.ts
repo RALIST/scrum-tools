@@ -2,7 +2,7 @@ import config from '../config';
 
 export interface ApiOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  body?: any;
+  body?: unknown;
   headers?: Record<string, string>;
   includeAuth?: boolean;
   queryParams?: Record<string, string | number | boolean>; // Add queryParams option
@@ -63,21 +63,17 @@ export const apiRequest = async <T>(endpoint: string, options: ApiOptions = {}):
   }
   
   if (!response.ok) {
-    // Explicitly type errorData and ensure 'error' property exists
-    let errorData: { error?: string } = {}; 
+    let errorData: { error?: string } = {};
     try {
-        // Try to parse JSON error response from the server
-        const parsedError = await response.json();
-        // Ensure the parsed data has an 'error' property (or adapt as needed based on your API error structure)
-        errorData = typeof parsedError === 'object' && parsedError !== null && 'error' in parsedError 
-                    ? parsedError 
+        const parsedError: unknown = await response.json();
+        errorData = typeof parsedError === 'object' && parsedError !== null && 'error' in parsedError
+                    ? (parsedError as { error?: string })
                     : { error: 'Unknown error structure' };
-    } catch (e) {
-        // If response is not JSON, use status text
+    } catch {
         errorData = { error: response.statusText };
     }
     // Throw a generic error for other non-OK responses
-    throw new Error(errorData.error || `API request failed with status ${response.status}`);
+    throw new Error(errorData.error || `API request failed with status ${String(response.status)}`);
   }
 
   // Handle cases where the response might be OK but have no content (e.g., 204 No Content)
@@ -86,7 +82,7 @@ export const apiRequest = async <T>(endpoint: string, options: ApiOptions = {}):
   }
 
   // Otherwise, parse and return JSON
-  return response.json();
+  return await response.json() as T;
 };
 
 /**

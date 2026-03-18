@@ -1,4 +1,10 @@
-import React, { FC, useMemo, useState, useRef, useEffect } from "react"; // Import React
+import {
+  DeleteIcon,
+  TriangleUpIcon,
+  EditIcon,
+  CheckIcon,
+  CloseIcon,
+} from "@chakra-ui/icons";
 import {
   Card,
   CardBody,
@@ -13,13 +19,7 @@ import {
   Textarea,
   ButtonGroup,
 } from "@chakra-ui/react";
-import {
-  DeleteIcon,
-  TriangleUpIcon,
-  EditIcon,
-  CheckIcon,
-  CloseIcon,
-} from "@chakra-ui/icons";
+import React, { type FC, useMemo, useState, useRef, useEffect } from "react"; // Import React
 
 interface RetroCardProps {
   id: string;
@@ -64,6 +64,7 @@ const RetroCard: FC<RetroCardProps> = ({
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(editText.length, editText.length);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
   const handleStartEdit = () => {
@@ -100,7 +101,7 @@ const RetroCard: FC<RetroCardProps> = ({
               <Textarea
                 ref={textareaRef}
                 value={editText}
-                onChange={(e) => setEditText(e.target.value)}
+                onChange={(e) => { setEditText(e.target.value); }}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter your text..."
                 size="sm"
@@ -153,7 +154,7 @@ const RetroCard: FC<RetroCardProps> = ({
                 size="sm"
                 variant="ghost"
                 leftIcon={<TriangleUpIcon />}
-                onClick={() => onVote(id)}
+                onClick={() => { onVote(id); }}
                 colorScheme={votes.includes(currentUserName) ? "blue" : "gray"}
                 isDisabled={shouldHideContent || isEditing}
                 minW="70px"
@@ -193,7 +194,7 @@ const RetroCard: FC<RetroCardProps> = ({
                     icon={<DeleteIcon />}
                     colorScheme="red"
                     variant="ghost"
-                    onClick={() => onDelete(id)}
+                    onClick={() => { onDelete(id); }}
                   />
                 </ButtonGroup>
               ))}

@@ -1,4 +1,4 @@
-import winston, { Logform } from 'winston'; // Import Logform for types
+import winston, { type Logform } from 'winston'; // Import Logform for types
 
 const { combine, timestamp, printf, colorize, align } = winston.format;
 
@@ -6,11 +6,11 @@ const { combine, timestamp, printf, colorize, align } = winston.format;
 // Define the log format using TransformableInfo type
 const logFormat = printf((info: Logform.TransformableInfo): string => {
   const { level, message, timestamp: ts, stack, ...metadata } = info;
-  let msg = `${ts} [${level}]: ${message}`;
+  let msg = `${ts as string} [${level}]: ${message as string}`;
   // Include metadata if present
-  if (metadata && Object.keys(metadata).length > 0) {
+  if (Object.keys(metadata).length > 0) {
     // Avoid logging the 'level', 'message', 'timestamp' properties from metadata itself
-    const metaString = JSON.stringify(metadata, (key, value) => {
+    const metaString = JSON.stringify(metadata, (key, value: unknown) => {
         if (key === 'level' || key === 'message' || key === 'timestamp') {
             return undefined; // Exclude these properties
         }
@@ -22,7 +22,7 @@ const logFormat = printf((info: Logform.TransformableInfo): string => {
   }
   // Include stack trace for errors
   if (stack) {
-    msg += `\n${stack}`;
+    msg += `\n${stack as string}`;
   }
   return msg;
 });

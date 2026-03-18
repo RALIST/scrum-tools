@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { CheckCircleIcon } from '@chakra-ui/icons'
 import {
     Box,
     Container,
@@ -9,7 +9,7 @@ import {
     ListIcon,
     Stack
 } from '@chakra-ui/react'
-import { CheckCircleIcon } from '@chakra-ui/icons'
+import type { FC } from 'react'
 
 interface SeoSection {
     title: string
@@ -25,8 +25,8 @@ const SeoText: FC<SeoTextProps> = ({ sections }) => {
     return (
         <Container maxW="container.lg">
             <Stack spacing={12}>
-                {sections.map((section, index) => (
-                    <Box key={index}>
+                {sections.map((section) => (
+                    <Box key={section.title}>
                         <Heading as="h2" size="lg" mb={6}>
                             {section.title}
                         </Heading>
@@ -34,8 +34,8 @@ const SeoText: FC<SeoTextProps> = ({ sections }) => {
                             {section.description}
                         </Text>
                         <List spacing={3}>
-                            {section.items.map((item, itemIndex) => (
-                                <ListItem key={itemIndex}>
+                            {section.items.map((item) => (
+                                <ListItem key={item}>
                                     <ListIcon as={CheckCircleIcon} color="green.500" />
                                     {item}
                                 </ListItem>

@@ -20,7 +20,7 @@ export const initializePool = (): void => {
         user: process.env.DB_USER || '',
         host: process.env.DB_HOST || 'localhost',
         database: process.env.DB_NAME || '',
-        password: String(process.env.DB_PASSWORD || ''),
+        password: process.env.DB_PASSWORD || '',
         port: parseInt(process.env.DB_PORT || '5432'),
         max: 20,
         idleTimeoutMillis: 30000,
@@ -36,8 +36,8 @@ export const initializePool = (): void => {
           }
           client.release();
       })
-      .catch((err: Error) => { // Type the error
-        logger.error('Error connecting to the database:', { stack: err.stack });
+      .catch((err: unknown) => { // Type the error
+        logger.error('Error connecting to the database:', { stack: err instanceof Error ? err.stack : String(err) });
       });
 };
 

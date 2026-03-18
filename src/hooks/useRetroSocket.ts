@@ -1,10 +1,10 @@
+import { useToast } from '@chakra-ui/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Socket as ClientSocket } from 'socket.io-client'; // Keep type import
-import { useToast } from '@chakra-ui/react';
 // Removed apiRequest, AuthError imports
 // Removed useAuth import
-import { useSocketManager } from './useSocketManager'; // Import the new hook
 import { createHookLogger } from '../utils/logger'; // Import the new logger
+import { useSocketManager } from './useSocketManager'; // Import the new hook
 
 // Create logger instance for this hook
 const logger = createHookLogger('useRetroSocket');
@@ -99,7 +99,7 @@ export const useRetroSocket = ({
       setIsJoining(true);
       const joinData = { boardId, name, password };
       socketInstance.emit('joinRetroBoard', joinData, (ack: { error?: string }) => {
-        if (ack?.error) {
+        if (ack.error) {
           logger.debug(`Server acknowledged joinRetroBoard with immediate error: ${ack.error}`);
           setIsJoining(false);
           joinParamsRef.current = null;
@@ -244,7 +244,7 @@ export const useRetroSocket = ({
   const handleRetroError = useCallback(
     (errorData: { message: string }) => {
       const errorMessage =
-        (typeof errorData === 'object' && errorData?.message) || 'An unknown retro error occurred';
+        (typeof errorData === 'object' && errorData.message) || 'An unknown retro error occurred';
       logger.debug('Retro Namespace Error:', errorMessage);
       if (
         errorMessage.toLowerCase().includes('password') ||
@@ -299,15 +299,13 @@ export const useRetroSocket = ({
 
     return () => {
       logger.debug('Detaching retro event listeners');
-      if (currentSocket) {
-        currentSocket.off('retroBoardJoined', handleRetroBoardJoined);
-        currentSocket.off('retroBoardUpdated', handleRetroBoardUpdated);
-        currentSocket.off('cardsVisibilityChanged', handleCardsVisibilityChanged);
-        currentSocket.off('timerStarted', handleTimerStarted);
-        currentSocket.off('timerStopped', handleTimerStopped);
-        currentSocket.off('timerUpdate', handleTimerUpdate);
-        currentSocket.off('error', handleRetroError);
-      }
+      currentSocket.off('retroBoardJoined', handleRetroBoardJoined);
+      currentSocket.off('retroBoardUpdated', handleRetroBoardUpdated);
+      currentSocket.off('cardsVisibilityChanged', handleCardsVisibilityChanged);
+      currentSocket.off('timerStarted', handleTimerStarted);
+      currentSocket.off('timerStopped', handleTimerStopped);
+      currentSocket.off('timerUpdate', handleTimerUpdate);
+      currentSocket.off('error', handleRetroError);
     };
     // Rerun when socket instance changes or handlers change
   }, [

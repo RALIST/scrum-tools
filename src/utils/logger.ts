@@ -44,7 +44,7 @@ class Logger {
     return `${timestamp} ${level} ${logPrefix} ${message}`;
   }
 
-  private logToConsole(level: LogLevel, message: string, data?: any, prefix?: string): void {
+  private logToConsole(level: LogLevel, message: string, data?: unknown, prefix?: string): void {
     if (!this.shouldLog(level)) return;
 
     const formattedMessage = this.formatMessage(
@@ -66,7 +66,7 @@ class Logger {
     }
   }
 
-  private getConsoleMethod(level: LogLevel): (...args: any[]) => void {
+  private getConsoleMethod(level: LogLevel): (...args: unknown[]) => void {
     switch (level) {
       case LogLevel.ERROR:
         return console.error;
@@ -81,23 +81,23 @@ class Logger {
     }
   }
 
-  error(message: string, data?: any): void {
+  error(message: string, data?: unknown): void {
     this.logToConsole(LogLevel.ERROR, message, data);
   }
 
-  warn(message: string, data?: any): void {
+  warn(message: string, data?: unknown): void {
     this.logToConsole(LogLevel.WARN, message, data);
   }
 
-  info(message: string, data?: any): void {
+  info(message: string, data?: unknown): void {
     this.logToConsole(LogLevel.INFO, message, data);
   }
 
-  debug(message: string, data?: any): void {
+  debug(message: string, data?: unknown): void {
     this.logToConsole(LogLevel.DEBUG, message, data);
   }
 
-  trace(message: string, data?: any): void {
+  trace(message: string, data?: unknown): void {
     this.logToConsole(LogLevel.TRACE, message, data);
   }
 

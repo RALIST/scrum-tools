@@ -1,4 +1,3 @@
-import { FC, useState, useEffect } from "react";
 import {
   Modal,
   ModalOverlay,
@@ -15,7 +14,8 @@ import {
   VStack,
   useToast,
 } from "@chakra-ui/react";
-import { Workspace } from "../../../contexts/WorkspaceContext"; // Assuming Workspace type is exported
+import { type FC, useState, useEffect } from "react";
+import type { Workspace } from "../../../contexts/WorkspaceContext"; // Assuming Workspace type is exported
 
 interface EditWorkspaceModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ interface EditWorkspaceModalProps {
     id: string,
     name: string,
     description: string
-  ) => Promise<Workspace | void>; // Allow void return if context handles update internally
+  ) => Promise<Workspace | undefined>; // Allow undefined return if context handles update internally
 }
 
 const EditWorkspaceModal: FC<EditWorkspaceModalProps> = ({
@@ -100,7 +100,7 @@ const EditWorkspaceModal: FC<EditWorkspaceModalProps> = ({
               <FormLabel>Workspace Name</FormLabel>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); }}
                 placeholder="Enter workspace name"
               />
             </FormControl>
@@ -108,7 +108,7 @@ const EditWorkspaceModal: FC<EditWorkspaceModalProps> = ({
               <FormLabel>Description</FormLabel>
               <Textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); }}
                 placeholder="Enter workspace description"
                 resize="vertical"
                 rows={3}
@@ -122,7 +122,7 @@ const EditWorkspaceModal: FC<EditWorkspaceModalProps> = ({
           </Button>
           <Button
             colorScheme="blue"
-            onClick={handleSaveChanges}
+            onClick={() => { void handleSaveChanges(); }}
             isLoading={isSubmitting}
           >
             Save Changes

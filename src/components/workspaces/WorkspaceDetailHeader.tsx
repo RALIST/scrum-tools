@@ -1,4 +1,3 @@
-import { FC } from 'react';
 import {
   Heading,
   Text,
@@ -8,8 +7,9 @@ import {
   Badge,
   Icon,
 } from '@chakra-ui/react';
+import type { FC } from 'react';
 import { FaEdit } from 'react-icons/fa';
-import { Workspace } from '../../contexts/WorkspaceContext'; // Assuming Workspace type is exported
+import type { Workspace } from '../../contexts/WorkspaceContext'; // Assuming Workspace type is exported
 
 interface WorkspaceDetailHeaderProps {
   workspace: Workspace; // Pass the whole workspace object

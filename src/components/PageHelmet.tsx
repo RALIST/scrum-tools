@@ -1,4 +1,4 @@
-import { FC, memo, useMemo } from 'react';
+import { type FC, memo, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 
 interface PageHelmetProps {

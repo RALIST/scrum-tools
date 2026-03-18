@@ -1,4 +1,3 @@
-import React, { FC, useRef } from "react";
 import {
   AlertDialog,
   AlertDialogBody,
@@ -9,6 +8,7 @@ import {
   Button,
   useToast,
 } from "@chakra-ui/react";
+import React, { type FC, useRef } from "react";
 
 // Assuming Member type is defined elsewhere or passed explicitly
 interface Member {
@@ -84,7 +84,7 @@ const RemoveMemberDialog: FC<RemoveMemberDialogProps> = ({
             </Button>
             <Button
               colorScheme="red"
-              onClick={handleRemove}
+              onClick={() => { void handleRemove(); }}
               ml={3}
               isLoading={isRemoving}
             >

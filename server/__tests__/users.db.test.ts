@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals'; // Added afterAll
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest'; // Added afterAll
 import bcrypt from 'bcryptjs'; // Keep import for generating real hash in test
 import { v4 as uuidv4 } from 'uuid';
 

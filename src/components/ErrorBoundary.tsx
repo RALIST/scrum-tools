@@ -1,4 +1,3 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
 import {
   Box,
   Heading,
@@ -11,6 +10,7 @@ import {
   AlertDescription,
   useColorMode,
 } from '@chakra-ui/react';
+import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { createLogger } from '../utils/logger';
 
 // Create logger for error boundary
@@ -214,6 +214,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onRetry, onReload 
 export default ErrorBoundary;
 
 // Higher-order component for wrapping components with error boundary
+// eslint-disable-next-line react-refresh/only-export-components
 export const withErrorBoundary = <P extends object>(
   Component: React.ComponentType<P>,
   fallback?: ReactNode,
@@ -231,6 +232,7 @@ export const withErrorBoundary = <P extends object>(
 };
 
 // Hook for error boundary functionality in functional components
+// eslint-disable-next-line react-refresh/only-export-components
 export const useErrorHandler = () => {
   return (error: Error, errorInfo?: ErrorInfo) => {
     logger.error('Manual error reported:', { error: error.message, stack: error.stack, errorInfo });

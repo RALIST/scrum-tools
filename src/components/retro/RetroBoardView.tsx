@@ -1,4 +1,3 @@
-import React, { FC, useMemo, Suspense, lazy } from 'react';
 import {
   Box,
   SimpleGrid,
@@ -9,10 +8,11 @@ import {
   Spinner,
   Center,
 } from '@chakra-ui/react';
+import React, { type FC, useMemo, Suspense, lazy } from 'react';
 import { Helmet } from 'react-helmet-async';
+import type { RetroBoard, RetroCard } from '../../hooks/useRetroSocket';
 import { RetroHeader, RetroColumn } from '.'; // Assuming index.ts exports these
 // Import the correct type name 'RetroBoard' and also 'RetroCard'
-import { RetroBoard, RetroCard } from '../../hooks/useRetroSocket';
 
 // Lazy load modal components
 const RetroBoardSettingsModal = lazy(() => import('../modals/RetroBoardSettingsModal'));
@@ -89,13 +89,13 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
 
   // Memoize column cards calculation
   const columnCards = useMemo(() => {
-    return COLUMNS.reduce(
+    return COLUMNS.reduce<{ [key: string]: typeof board.cards }>(
       (acc, column) => {
         // Add explicit type for 'card' using the imported RetroCard type
         acc[column.id] = board.cards.filter((card: RetroCard) => card.column_id === column.id);
         return acc;
       },
-      {} as { [key: string]: typeof board.cards }
+      {}
     );
   }, [board.cards]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -150,7 +150,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
                   hideAuthorNames={board.hide_author_names}
                   userName={userName || ''} // Provide fallback for null userName
                   isTimerRunning={isTimerRunning}
-                  onAddCard={text => onAddCard(column.id, text)} // Pass columnId
+                  onAddCard={(text) => { onAddCard(column.id, text); }} // Pass columnId
                   onDeleteCard={onDeleteCard}
                   onVoteCard={onVoteCard}
                   onEditCard={onEditCard}

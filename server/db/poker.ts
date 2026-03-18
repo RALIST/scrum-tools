@@ -1,6 +1,5 @@
-import { QueryResult } from 'pg'; // Import QueryResult type
+import type { PokerRoom, PokerParticipant, PokerRoomDetails } from '../types/db.js'; // Import types (needs .js extension)
 import { executeQuery } from './dbUtils.js'; // Import executeQuery directly (needs .js extension)
-import { PokerRoom, PokerParticipant, PokerRoomDetails } from '../types/db.js'; // Import types (needs .js extension)
 
 export const createRoom = async (
     roomId: string,
@@ -24,7 +23,7 @@ export const getRooms = async (): Promise<PokerRoom[]> => {
         GROUP BY r.id
         ORDER BY r.created_at DESC -- Optional: order public rooms
     `;
-    const result: QueryResult<PokerRoom> = await executeQuery(queryText); // Use imported executeQuery
+    const result = await executeQuery<PokerRoom>(queryText); // Use imported executeQuery
     // Assuming PokerRoom type expects sequence as string from DB
     return result.rows;
 };
@@ -40,7 +39,7 @@ export const getWorkspaceRooms = async (workspaceId: string): Promise<PokerRoom[
         ORDER BY r.created_at DESC
     `;
     const params = [workspaceId];
-    const result: QueryResult<PokerRoom> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<PokerRoom>(queryText, params); // Use imported executeQuery
     // Assuming PokerRoom type expects sequence as string from DB
     return result.rows;
 };
@@ -50,24 +49,25 @@ export const getPokerRoomInfo = async (roomId: string): Promise<{ id: string; ha
     // Select only necessary fields: id and whether a password exists
     const queryText = 'SELECT id, password IS NOT NULL as "hasPassword" FROM rooms WHERE id = $1';
     const params = [roomId];
-    const result: QueryResult<{ id: string; hasPassword: boolean }> = await executeQuery(queryText, params); // Use imported executeQuery
+    const result = await executeQuery<{ id: string; hasPassword: boolean }>(queryText, params); // Use imported executeQuery
     // Return the first row found, or null if no room matches the ID
-    return result.rows.length > 0 ? result.rows[0] : null;
+    return result.rows[0] ?? null;
 };
 
 
 export const getRoom = async (roomId: string): Promise<PokerRoomDetails | null> => {
     const roomQuery = 'SELECT * FROM rooms WHERE id = $1';
-    const roomResult: QueryResult<PokerRoom> = await executeQuery(roomQuery, [roomId]); // Use imported executeQuery
+    const roomResult = await executeQuery<PokerRoom>(roomQuery, [roomId]); // Use imported executeQuery
 
     if (roomResult.rows.length === 0) {
         return null;
     }
 
     const participantsQuery = 'SELECT * FROM participants WHERE room_id = $1';
-    const participantsResult: QueryResult<PokerParticipant> = await executeQuery(participantsQuery, [roomId]); // Use imported executeQuery
+    const participantsResult = await executeQuery<PokerParticipant>(participantsQuery, [roomId]); // Use imported executeQuery
 
-    const roomData: PokerRoom = roomResult.rows[0];
+    const roomData = roomResult.rows[0];
+    if (!roomData) throw new Error('Expected room row not found');
 
     // Removed parsing logic. Assume roomData.sequence is the string key.
     // The PokerRoomDetails type will need adjustment in types/db.ts
@@ -132,24 +132,24 @@ export const updateRoomSettings = async (
 ): Promise<void> => {
 
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramCount = 1;
 
     if (sequence !== undefined) {
-        updates.push(`sequence = $${paramCount}`);
+        updates.push(`sequence = $${String(paramCount)}`);
         values.push(sequence); // Push the string key
         paramCount++;
     }
 
     if (password !== undefined) {
-        updates.push(`password = $${paramCount}`);
+        updates.push(`password = $${String(paramCount)}`);
         values.push(password); // Password should be hashed *before* calling this function
         paramCount++;
     }
 
     if (updates.length > 0) {
         values.push(roomId);
-        const queryText = `UPDATE rooms SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+        const queryText = `UPDATE rooms SET ${updates.join(', ')} WHERE id = $${String(paramCount)}`;
         await executeQuery(queryText, values); // Use imported executeQuery
     }
 };

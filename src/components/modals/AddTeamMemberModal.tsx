@@ -1,4 +1,3 @@
-import { FC, useState } from 'react'
 import {
     Modal,
     ModalOverlay,
@@ -13,6 +12,7 @@ import {
     Input,
     FormErrorMessage,
 } from '@chakra-ui/react'
+import { type FC, useState } from 'react'
 
 interface AddTeamMemberModalProps {
     isOpen: boolean
@@ -61,7 +61,7 @@ const AddTeamMemberModal: FC<AddTeamMemberModalProps> = ({
                                 setError('')
                             }}
                             placeholder="Enter team member name"
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     handleSubmit()
                                 }

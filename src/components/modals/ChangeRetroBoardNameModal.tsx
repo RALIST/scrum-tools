@@ -1,4 +1,3 @@
-import { FC, useState } from "react";
 import {
   Modal,
   ModalOverlay,
@@ -12,6 +11,7 @@ import {
   Input,
   useToast,
 } from "@chakra-ui/react";
+import { type FC, useState } from "react";
 
 interface ChangeRetroBoardNameModalProps {
   isOpen: boolean;
@@ -57,8 +57,8 @@ const ChangeRetroBoardNameModal: FC<ChangeRetroBoardNameModalProps> = ({
             <Input
               placeholder="Enter your name"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyPress={(e) => {
+              onChange={(e) => { setNewName(e.target.value); }}
+              onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleChangeName();
                 }

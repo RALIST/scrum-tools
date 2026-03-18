@@ -1,6 +1,6 @@
-import React, { FC } from "react"; // Import React
-import { Box, Input, Button, useToast } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
+import { Box, Input, Button, useToast } from "@chakra-ui/react";
+import React, { type FC } from "react"; // Import React
 
 interface RetroCardInputProps {
   isTimerRunning: boolean;
@@ -39,8 +39,8 @@ const RetroCardInput: FC<RetroCardInputProps> = ({
       <Input
         placeholder={isTimerRunning ? "Add a new card" : "Timer is paused"}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyPress={(e) => {
+        onChange={(e) => { onChange(e.target.value); }}
+        onKeyDown={(e) => {
           if (e.key === "Enter" && isTimerRunning) {
             handleSubmit();
           }

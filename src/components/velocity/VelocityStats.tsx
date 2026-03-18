@@ -1,4 +1,3 @@
-import { FC } from 'react'
 import {
     Grid,
     GridItem,
@@ -9,6 +8,7 @@ import {
     StatNumber,
     StatHelpText,
 } from '@chakra-ui/react'
+import type { FC } from 'react'
 
 interface TeamAverages {
     average_velocity: number

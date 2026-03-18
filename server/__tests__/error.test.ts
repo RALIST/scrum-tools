@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { app } from '../index.js'; // Import only app
 
-import { describe, it, expect } from '@jest/globals'; // Remove unused afterAll
+import { describe, it, expect } from 'vitest'; // Remove unused afterAll
 describe('Error Handler Middleware', () => {
 
   it('should return 500 and generic message for unexpected errors', async () => {

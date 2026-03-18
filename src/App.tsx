@@ -1,17 +1,17 @@
-import { FC, Suspense, lazy } from 'react';
 import { Box } from '@chakra-ui/react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { type FC, Suspense, lazy } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
-import Home from './pages/Home';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import PageContainer from './components/PageContainer';
-import ErrorBoundary from './components/ErrorBoundary';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DeveloperTools from './components/DeveloperTools';
+import ErrorBoundary from './components/ErrorBoundary';
+import Footer from './components/Footer';
+import Navbar from './components/Navbar';
+import PageContainer from './components/PageContainer';
+import PrivateRoute from './components/PrivateRoute';
 import RouteLoadingSpinner from './components/RouteLoadingSpinner';
 import { AuthProvider } from './contexts/AuthContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
-import PrivateRoute from './components/PrivateRoute';
+import Home from './pages/Home';
 
 // Lazy load major route components for code splitting
 const DailyStandup = lazy(() => import('./pages/DailyStandup'));

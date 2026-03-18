@@ -1,9 +1,10 @@
-import pg, { PoolClient, QueryResult } from 'pg'; // Import pg types
-import { pool as defaultPool } from './pool.js'; // Rename default import (needs .js)
-import { v4 as uuidv4 } from 'uuid';
-import * as velocityDb from './velocity.js'; // Import velocityDb namespace (needs .js)
 import crypto from 'crypto'; // Import the full crypto module
-import { Workspace, WorkspaceRole, WorkspaceMemberDetails, ValidWorkspaceInvitation } from '../types/db.js'; // Import types (needs .js)
+import type {PoolClient, QueryResult} from 'pg';
+import type pg from 'pg'; // Import pg types
+import { v4 as uuidv4 } from 'uuid';
+import type { Workspace, WorkspaceRole, WorkspaceMemberDetails, ValidWorkspaceInvitation } from '../types/db.js'; // Import types (needs .js)
+import { pool as defaultPool } from './pool.js'; // Rename default import (needs .js)
+import * as velocityDb from './velocity.js'; // Import velocityDb namespace (needs .js)
 
 // Create a new workspace
 export const createWorkspace = async (
@@ -42,8 +43,10 @@ export const createWorkspace = async (
     // Commit transaction
     await client.query('COMMIT');
     
-    return result.rows[0];
-  } catch (error: any) { // Type error
+    const workspace = result.rows[0];
+    if (!workspace) throw new Error('Expected workspace row not found after insert');
+    return workspace;
+  } catch (error: unknown) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
@@ -146,7 +149,9 @@ export const updateWorkspace = async (
       [name, description, workspaceId]
     );
     
-    return result.rows[0];
+    const workspace = result.rows[0];
+    if (!workspace) throw new Error('Expected workspace row not found after update');
+    return workspace;
   } finally {
     client.release();
   }
@@ -157,7 +162,7 @@ export const isWorkspaceMember = async (workspaceId: string, userId: string): Pr
   const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
   try {
     // Query doesn't need a specific result type, just checking rows.length
-    const result: QueryResult<any> = await client.query(
+    const result: QueryResult<{ workspace_id: string; user_id: string }> = await client.query(
       'SELECT * FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
       [workspaceId, userId]
     );
@@ -177,7 +182,7 @@ export const getUserWorkspaceRole = async (workspaceId: string, userId: string):
       [workspaceId, userId]
     );
     
-    return result.rows.length > 0 ? result.rows[0].role : null;
+    return result.rows[0]?.role ?? null;
   } finally {
     client.release();
   }
@@ -206,7 +211,9 @@ export const createInvitation = async (
     `;
     const params = [workspaceId, token, roleToAssign, expiresAt, createdBy];
     const result: QueryResult<{ token: string }> = await client.query(queryText, params);
-    return result.rows[0].token;
+    const row = result.rows[0];
+    if (!row) throw new Error('Expected invitation row not found after insert');
+    return row.token;
   } finally {
     client.release();
   }

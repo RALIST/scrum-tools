@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   VStack,
   Button,
@@ -12,6 +11,7 @@ import {
   HStack,
   FormErrorMessage,
 } from "@chakra-ui/react";
+import type { FC } from "react";
 
 interface FormErrors {
   teamName?: string;
@@ -57,7 +57,7 @@ export const TeamSetupForm: FC<TeamSetupFormProps> = ({
                 <FormLabel>Team Name</FormLabel>
                 <Input
                   value={teamName}
-                  onChange={(e) => onNameChange(e.target.value)}
+                  onChange={(e) => { onNameChange(e.target.value); }}
                   placeholder="Enter team name"
                   isDisabled={isTeamLoaded}
                 />
@@ -70,7 +70,7 @@ export const TeamSetupForm: FC<TeamSetupFormProps> = ({
                 <Input
                   type="password"
                   value={teamPassword || ""} // Handle potential undefined
-                  onChange={(e) => onPasswordChange(e.target.value)}
+                  onChange={(e) => { onPasswordChange(e.target.value); }}
                   placeholder="Enter team password"
                   isDisabled={isTeamLoaded}
                 />

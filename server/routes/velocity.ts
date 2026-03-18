@@ -1,9 +1,9 @@
-import express, { Router, Request, Response, NextFunction } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import * as velocityDbFunctions from '../db/velocity.js'; // Import DB functions (needs .js)
-import * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
-import {
+import express, { type Router, type Request, type Response, type NextFunction } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import type * as velocityDbFunctions from '../db/velocity.js'; // Import DB functions (needs .js)
+import type * as workspaceDbFunctions from '../db/workspaces.js'; // Import DB functions (needs .js)
+import type {
     VelocityTeam, VelocitySprint, SprintVelocity, TeamVelocityData,
     TeamAverageVelocity
 } from '../types/db.js'; // Import types (needs .js)
@@ -22,7 +22,7 @@ export default function setupVelocityRoutes(
     // Create or Load a team - supports both authenticated (workspace) and anonymous modes
     router.post('/teams', async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { name, password, workspaceId } = req.body;
+            const { name, password, workspaceId } = req.body as { name: string; password?: string; workspaceId?: string };
             const userId: string | undefined = req.user?.userId; // User ID from optional token
 
             // Use Omit to exclude password from the team type returned to client
@@ -38,14 +38,13 @@ export default function setupVelocityRoutes(
                 }
                 // Use injected dependency
                 // Assert non-null for userId and workspaceId
-                const hasAccess: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId!);
+                const hasAccess: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId);
                 if (!hasAccess) {
                     res.status(403).json({ error: 'Forbidden: Access denied to this workspace.' });
                     return;
                 }
                 // Use injected dependency
-                // Assert non-null for workspaceId
-                team = await velocityDb.getTeamByWorkspace(name, workspaceId!);
+                team = await velocityDb.getTeamByWorkspace(name, workspaceId);
                 if (!team) {
                     res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
                     return;
@@ -62,7 +61,7 @@ export default function setupVelocityRoutes(
                         averageData = await velocityDb.getTeamAverageVelocity(name, password);
                     }
 
-                } catch (error: any) { // Type error
+                } catch (error: unknown) {
                     const knownAuthErrors = [
                         "Invalid password for anonymous team",
                         "Password required for this anonymous team",
@@ -70,7 +69,7 @@ export default function setupVelocityRoutes(
                         "Password or workspace context required for this team.",
                         "Cannot access workspace team using a password."
                     ];
-                    if (knownAuthErrors.includes(error.message)) {
+                    if (error instanceof Error && knownAuthErrors.includes(error.message)) {
                         res.status(401).json({ error: 'Invalid team name or password' });
                         return;
                     }
@@ -87,6 +86,7 @@ export default function setupVelocityRoutes(
                     // createTeam returns the full team, but we only need the Omit<...> version
                     const createdTeam = await velocityDb.createTeam(id, name, password, null, null, null);
                     if (createdTeam) {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         const { password: _p, ...teamData } = createdTeam;
                         team = teamData;
                     } else {
@@ -106,7 +106,7 @@ export default function setupVelocityRoutes(
                 averages: averageData // Already defaulted above
             });
 
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -127,31 +127,28 @@ export default function setupVelocityRoutes(
 
             // Use injected dependency
             // Assert non-null for userId and workspaceId
-            const hasAccess: boolean = await workspaceDb.isWorkspaceMember(workspaceId!, userId!);
+            const hasAccess: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId);
             if (!hasAccess) {
                 res.status(403).json({ error: 'Forbidden: Access denied to this workspace' });
                 return;
             }
 
             // Use injected dependency
-            // Assert non-null for workspaceId
-            const team: Omit<VelocityTeam, 'password'> | null = await velocityDb.getTeamByWorkspace(name, workspaceId!);
+            const team: Omit<VelocityTeam, 'password'> | null = await velocityDb.getTeamByWorkspace(name, workspaceId);
             if (!team) {
                  res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
                  return;
             }
 
-            // Assert non-null for workspaceId
-            const velocityData: TeamVelocityData[] | null = await velocityDb.getTeamVelocityByWorkspace(name, workspaceId!);
-            // Assert non-null for workspaceId
-            const averageData: TeamAverageVelocity | null = await velocityDb.getTeamAverageVelocityByWorkspace(name, workspaceId!);
+            const velocityData: TeamVelocityData[] | null = await velocityDb.getTeamVelocityByWorkspace(name, workspaceId);
+            const averageData: TeamAverageVelocity | null = await velocityDb.getTeamAverageVelocityByWorkspace(name, workspaceId);
 
             res.json({
                 sprints: velocityData || [],
                 averages: averageData ?? { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' } // Use nullish coalescing and string type
             });
 
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -161,7 +158,7 @@ export default function setupVelocityRoutes(
         try {
             const { name } = req.params;
             // Read password from body instead of query for anonymous mode
-            const { sprintName, startDate, endDate, workspaceId, password } = req.body;
+            const { sprintName, startDate, endDate, workspaceId, password } = req.body as { sprintName: string; startDate: string | Date; endDate: string | Date; workspaceId?: string; password?: string };
             const userId: string | undefined = req.user?.userId;
 
             let team: VelocityTeam | Omit<VelocityTeam, 'password'> | null = null; // Can be full team or partial
@@ -170,14 +167,13 @@ export default function setupVelocityRoutes(
             if (userId && workspaceId) {
                  // Use injected dependency
                 // Assert non-null for userId and workspaceId
-                const hasAccess: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId!);
+                const hasAccess: boolean = await workspaceDb.isWorkspaceMember(workspaceId, userId);
                 if (!hasAccess) {
                     res.status(403).json({ error: 'Forbidden: Access denied to this workspace' });
                     return;
                 }
                 // Use injected dependency
-                // Assert non-null for workspaceId
-                team = await velocityDb.getTeamByWorkspace(name, workspaceId!);
+                team = await velocityDb.getTeamByWorkspace(name, workspaceId);
                 if (!team) {
                     res.status(404).json({ error: `Team '${name}' not found in this workspace.` });
                     return;
@@ -194,7 +190,7 @@ export default function setupVelocityRoutes(
                         return;
                     }
                     // If team is found and password is valid (or not needed), execution continues
-                } catch (error: any) {
+                } catch (error: unknown) {
                     // Catch specific errors thrown by getTeam for invalid password/context
                     const knownAuthErrors = [
                         "Invalid password for anonymous team",
@@ -203,7 +199,7 @@ export default function setupVelocityRoutes(
                         "Password or workspace context required for this team.", // Should not happen here
                         "Cannot access workspace team using a password." // Should not happen here
                     ];
-                     if (knownAuthErrors.includes(error.message)) {
+                     if (error instanceof Error && knownAuthErrors.includes(error.message)) {
                         // Return 401 for authentication/authorization issues from getTeam
                         res.status(401).json({ error: 'Invalid team name or password' }); // Generic message for security
                         return;
@@ -216,16 +212,13 @@ export default function setupVelocityRoutes(
                 }
             }
 
-            if (!team) {
-                 res.status(500).json({ error: 'Failed to identify team for sprint creation' });
-                 return;
-            }
+            // team is guaranteed non-null at this point by the workspace/anonymous branches above
 
             // --- Create Sprint ---
             const id: string = uuidv4();
-            const sprint: VelocitySprint = await velocityDb.createSprint(id, team!.id, sprintName, startDate, endDate);
+            const sprint: VelocitySprint = await velocityDb.createSprint(id, team.id, sprintName, startDate, endDate);
             res.status(201).json({ id: sprint.id });
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });
@@ -234,10 +227,10 @@ export default function setupVelocityRoutes(
     router.put('/sprints/:sprintId/velocity', async (req: Request<{ sprintId: string }>, res: Response, next: NextFunction) => {
         try {
             const { sprintId } = req.params;
-            const { committedPoints, completedPoints } = req.body;
+            const { committedPoints, completedPoints } = req.body as { committedPoints: number | null; completedPoints: number | null };
             // Read password from body instead of query for anonymous mode
             // committedPoints and completedPoints are already read from body
-            const { password } = req.body;
+            const { password } = req.body as { password?: string };
             const workspaceIdHeader = req.headers['workspace-id'];
             const workspaceId: string | undefined = Array.isArray(workspaceIdHeader) ? workspaceIdHeader[0] : workspaceIdHeader;
             const userId: string | undefined = req.user?.userId;
@@ -251,8 +244,7 @@ export default function setupVelocityRoutes(
             }
 
             // Fetch the team associated with the sprint
-            // Assert non-null for sprint.team_id
-            const team: VelocityTeam | null = await velocityDb.getTeamById(sprint!.team_id);
+            const team: VelocityTeam | null = await velocityDb.getTeamById(sprint.team_id);
             if (!team) {
                 // This indicates a data integrity issue, return 500
                 res.status(500).json({ error: 'Internal server error: Could not find team associated with sprint.' });
@@ -260,8 +252,7 @@ export default function setupVelocityRoutes(
             }
 
             // --- Refined Authorization Logic ---
-            // Assert non-null for team
-            const isWorkspaceTeam: boolean = !!team!.workspace_id;
+            const isWorkspaceTeam: boolean = !!team.workspace_id;
 
             if (isWorkspaceTeam) {
                 // Workspace Team Authorization
@@ -269,13 +260,11 @@ export default function setupVelocityRoutes(
                     res.status(401).json({ error: 'Authentication required to update this sprint.' });
                     return;
                 }
-                // Assert non-null for team.workspace_id
-                if (!workspaceId || workspaceId !== team!.workspace_id) {
+                if (!workspaceId || workspaceId !== team.workspace_id) {
                     res.status(403).json({ error: 'Forbidden: Sprint does not belong to the specified workspace.' });
                     return;
                 }
-                // Assert non-null for team.workspace_id and userId
-                const hasAccess: boolean = await workspaceDb.isWorkspaceMember(team!.workspace_id!, userId!);
+                const hasAccess: boolean = await workspaceDb.isWorkspaceMember(team.workspace_id, userId);
                 if (!hasAccess) {
                     res.status(403).json({ error: 'Forbidden: Access denied to this workspace.' });
                     return;
@@ -288,14 +277,12 @@ export default function setupVelocityRoutes(
                     return;
                 }
                 // Check password using bcrypt compare against team.password (hash)
-                // Assert non-null for team
-                if (team!.password) { // Check if team has a password hash
+                if (team.password) { // Check if team has a password hash
                     if (!password) {
                         res.status(401).json({ error: 'Password required for this team.' });
                         return;
                     }
-                    // Assert non-null for password and team.password
-                    const isValid: boolean = await bcrypt.compare(password!, team!.password!);
+                    const isValid: boolean = await bcrypt.compare(password, team.password);
                     if (!isValid) {
                         res.status(401).json({ error: 'Invalid password.' });
                         return;
@@ -311,7 +298,7 @@ export default function setupVelocityRoutes(
             // --- End Authorization Check ---
             const velocity: SprintVelocity = await velocityDb.updateSprintVelocity(sprintId, committedPoints, completedPoints);
             res.json(velocity);
-        } catch (error: any) { // Type error
+        } catch (error: unknown) {
             next(error);
         }
     });

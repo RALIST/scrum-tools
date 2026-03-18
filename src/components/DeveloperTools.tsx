@@ -1,5 +1,5 @@
-import { FC, useEffect } from 'react';
 import { Box, Button, VStack, Heading, useToast } from '@chakra-ui/react';
+import { type FC, useEffect } from 'react';
 import { createLogger, LogLevel } from '../utils/logger';
 
 // Create a component-specific logger
@@ -23,7 +23,7 @@ const DeveloperTools: FC<DeveloperToolsProps> = ({ isVisible = false }) => {
     logger.warn('Test warning message', { timestamp: new Date().toISOString() });
     logger.info('Test info message', { userAgent: navigator.userAgent });
     logger.debug('Test debug message', { location: window.location.href });
-    logger.trace('Test trace message', { memory: (performance as any).memory });
+    logger.trace('Test trace message', { memory: (performance as unknown as { memory: unknown }).memory });
 
     toast({
       title: 'Log Test Complete',
@@ -46,7 +46,7 @@ const DeveloperTools: FC<DeveloperToolsProps> = ({ isVisible = false }) => {
   };
 
   const toggleConsole = () => {
-    const isEnabled = logger['config']?.enableConsole ?? true; // Access private property for demo
+    const isEnabled = logger.config.enableConsole; // Access public property for demo
     logger.setConsoleEnabled(!isEnabled);
 
     toast({
@@ -82,19 +82,19 @@ const DeveloperTools: FC<DeveloperToolsProps> = ({ isVisible = false }) => {
         </Button>
 
         <VStack spacing={2} align="stretch">
-          <Button size="xs" variant="outline" onClick={() => changeLogLevel(LogLevel.ERROR)}>
+          <Button size="xs" variant="outline" onClick={() => { changeLogLevel(LogLevel.ERROR); }}>
             Error Level
           </Button>
-          <Button size="xs" variant="outline" onClick={() => changeLogLevel(LogLevel.WARN)}>
+          <Button size="xs" variant="outline" onClick={() => { changeLogLevel(LogLevel.WARN); }}>
             Warn Level
           </Button>
-          <Button size="xs" variant="outline" onClick={() => changeLogLevel(LogLevel.INFO)}>
+          <Button size="xs" variant="outline" onClick={() => { changeLogLevel(LogLevel.INFO); }}>
             Info Level
           </Button>
-          <Button size="xs" variant="outline" onClick={() => changeLogLevel(LogLevel.DEBUG)}>
+          <Button size="xs" variant="outline" onClick={() => { changeLogLevel(LogLevel.DEBUG); }}>
             Debug Level
           </Button>
-          <Button size="xs" variant="outline" onClick={() => changeLogLevel(LogLevel.TRACE)}>
+          <Button size="xs" variant="outline" onClick={() => { changeLogLevel(LogLevel.TRACE); }}>
             Trace Level
           </Button>
         </VStack>

@@ -1,6 +1,3 @@
-import { FC, useState, useEffect, useCallback, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-// Removed useQuery import
 import {
   Box,
   Heading,
@@ -13,20 +10,23 @@ import {
   Spinner,
   Center,
 } from "@chakra-ui/react";
-import PageContainer from "../../components/PageContainer";
+import { type FC, useState, useEffect, useCallback, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { RoomHeader } from "../../components/poker/RoomHeader";
-import { VotingArea } from "../../components/poker/VotingArea";
-import { ParticipantsTable } from "../../components/poker/ParticipantsTable";
+import { useParams, useNavigate } from "react-router-dom";
+// Removed useQuery import
 import {
   JoinRoomModal,
   ChangeNameModal,
   RoomSettingsModal,
 } from "../../components/modals";
-import { usePokerSocket } from "../../hooks/usePokerSocket";
+import PageContainer from "../../components/PageContainer";
+import { ParticipantsTable } from "../../components/poker/ParticipantsTable";
+import { RoomHeader } from "../../components/poker/RoomHeader";
+import { VotingArea } from "../../components/poker/VotingArea";
+import type { SequenceType } from "../../constants/poker"; // Re-added SequenceType
 import { useAuth } from "../../contexts/AuthContext";
+import { usePokerSocket } from "../../hooks/usePokerSocket";
 import { apiRequest } from "../../utils/apiUtils"; // Keep apiRequest for original /info call
-import { SequenceType } from "../../constants/poker"; // Re-added SequenceType
 
 const LOCAL_STORAGE_USERNAME_KEY = "planningPokerUsername";
 
@@ -156,11 +156,11 @@ const PlanningPokerRoom: FC = () => {
         setIsPasswordProtected(roomInfo.hasPassword);
         setRoomExists(true);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (!isActive) return;
         console.error(`[PlanningPokerRoom] Error fetching room info:`, err);
         setRoomExists(false);
-        if (err.message?.includes("404")) {
+        if (err instanceof Error && err.message.includes("404")) {
           toast({ title: "Room not found", status: "error", duration: 3000 });
         } else {
           toast({
@@ -191,7 +191,7 @@ const PlanningPokerRoom: FC = () => {
       return;
     }
 
-    if (!isConnectingOrJoining && (!isAuthenticated || isPasswordProtected)) {
+    if (!isAuthenticated || isPasswordProtected) {
       console.log("[PlanningPokerRoom] Conditions met for showing join modal.");
       if (!isJoinModalOpen) onJoinModalOpen();
     } else {
@@ -291,13 +291,13 @@ const PlanningPokerRoom: FC = () => {
   }
 
   // Handle room not found
-  if (roomExists === false) {
+  if (!roomExists) {
     return (
       <Center minH="calc(100vh - 60px)">
         <VStack spacing={4}>
           <Heading size="md">Room Not Found</Heading>
           <Text>The requested poker room does not exist.</Text>
-          <Button onClick={() => navigate("/planning-poker")}>
+          <Button onClick={() => { navigate("/planning-poker"); }}>
             Back to Poker Rooms
           </Button>
         </VStack>
@@ -364,7 +364,7 @@ const PlanningPokerRoom: FC = () => {
           )}
 
           {/* Main Content Area - Render only if joined */}
-          {isJoined && participants && settings && (
+          {isJoined && (
             <Box
               w="full"
               p={{ base: 4, md: 8 }}
@@ -405,14 +405,12 @@ const PlanningPokerRoom: FC = () => {
         )}
 
         {/* Settings Modal - Pass sequence key */}
-        {settings && (
-          <RoomSettingsModal
-            isOpen={isSettingsOpen}
-            onClose={onSettingsClose}
-            currentSequence={settings.sequence} // Pass key from hook state
-            onSave={handleUpdateSettings} // Callback expects key
-          />
-        )}
+        <RoomSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={onSettingsClose}
+          currentSequence={settings.sequence} // Pass key from hook state
+          onSave={handleUpdateSettings} // Callback expects key
+        />
       </Box>
     </PageContainer>
   );

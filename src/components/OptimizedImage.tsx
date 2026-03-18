@@ -1,5 +1,5 @@
-import { FC, useState } from 'react';
 import { Box, Image, Skeleton } from '@chakra-ui/react';
+import { type FC, useState } from 'react';
 
 interface OptimizedImageProps {
   src: string;
@@ -32,7 +32,7 @@ export const OptimizedImage: FC<OptimizedImageProps> = ({
   // Generate responsive image URLs (would integrate with build process)
   const getResponsiveImageUrls = (baseSrc: string) => {
     const ext = baseSrc.split('.').pop();
-    const nameWithoutExt = baseSrc.replace(`.${ext}`, '');
+    const nameWithoutExt = baseSrc.replace(`.${ext ?? ''}`, '');
 
     return {
       webp: `${nameWithoutExt}.webp`,

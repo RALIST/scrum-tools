@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals'; // Added afterAll
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest'; // Added afterAll
 import * as workspacesDb from '../db/workspaces.js';
 import * as velocityDb from '../db/velocity.js'; // Import velocityDb namespace
 import { pool } from '../db/pool.js'; // Import only pool

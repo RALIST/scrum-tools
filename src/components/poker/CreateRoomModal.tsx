@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   Button,
   Modal,
@@ -14,9 +13,10 @@ import {
   VStack,
   Text,
 } from "@chakra-ui/react";
-import { SEQUENCE_LABELS, SequenceType } from "../../constants/poker";
+import type { FC } from "react";
+import { SEQUENCE_LABELS, type SequenceType } from "../../constants/poker";
 import { useAuth } from "../../contexts/AuthContext";
-import { Workspace } from "../../contexts/WorkspaceContext"; // Assuming Workspace type is exported
+import type { Workspace } from "../../contexts/WorkspaceContext"; // Assuming Workspace type is exported
 
 interface CreateRoomSettings {
   password?: string;
@@ -60,7 +60,7 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
               <Input
                 placeholder="Enter room name (optional for public rooms)"
                 value={settings.roomName}
-                onChange={(e) => onSettingsChange({ roomName: e.target.value })}
+                onChange={(e) => { onSettingsChange({ roomName: e.target.value }); }}
               />
             </FormControl>
 
@@ -71,11 +71,11 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
                 <Select
                   name="workspaceId"
                   value={settings.workspaceId || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     onSettingsChange({
                       workspaceId: e.target.value || undefined,
-                    })
-                  }
+                    });
+                  }}
                 >
                   <option value="">No Workspace (Public Room)</option>
                   {workspaces.map((workspace) => (
@@ -94,9 +94,9 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
               <FormLabel>Estimation Sequence</FormLabel>
               <Select
                 value={settings.sequence}
-                onChange={(e) =>
-                  onSettingsChange({ sequence: e.target.value as SequenceType })
-                }
+                onChange={(e) => {
+                  onSettingsChange({ sequence: e.target.value as SequenceType });
+                }}
               >
                 {Object.entries(SEQUENCE_LABELS).map(([key, label]) => (
                   <option key={key} value={key}>
@@ -112,9 +112,9 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
                 type="password"
                 placeholder="Leave empty for no password"
                 value={settings.password || ""}
-                onChange={(e) =>
-                  onSettingsChange({ password: e.target.value || undefined })
-                }
+                onChange={(e) => {
+                  onSettingsChange({ password: e.target.value || undefined });
+                }}
               />
             </FormControl>
           </VStack>

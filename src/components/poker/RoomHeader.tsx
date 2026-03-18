@@ -1,4 +1,4 @@
-import { FC, useMemo, memo } from 'react'; // Import useMemo and memo
+import { CopyIcon, CheckIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons';
 import {
   Box,
   Heading,
@@ -12,7 +12,7 @@ import {
   Tooltip,
   Divider,
 } from '@chakra-ui/react';
-import { CopyIcon, CheckIcon, SettingsIcon, EditIcon } from '@chakra-ui/icons';
+import { type FC, useMemo, memo } from 'react'; // Import useMemo and memo
 import config from '../../config'; // Assuming config is accessible
 
 interface RoomHeaderProps {
@@ -43,7 +43,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
     const toast = useToast();
 
     // Memoize the shareable link to avoid recreation on every render
-    const shareableLink = useMemo(() => `${config.siteUrl}/planning-poker/${roomId}`, [roomId]);
+    const shareableLink = useMemo(() => `${config.siteUrl}/planning-poker/${roomId ?? ''}`, [roomId]);
     const { hasCopied, onCopy } = useClipboard(shareableLink);
 
     // Find the current user's name from the participants list if available

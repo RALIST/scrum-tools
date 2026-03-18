@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from "react";
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   Modal,
   ModalOverlay,
@@ -16,7 +16,7 @@ import {
   IconButton,
   useToast,
 } from "@chakra-ui/react";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { type FC, useState, useEffect } from "react";
 
 interface JoinRetroBoardModalProps {
   isOpen: boolean;
@@ -89,9 +89,9 @@ const JoinRetroBoardModal: FC<JoinRetroBoardModalProps> = ({
               <Input
                 placeholder="Enter your name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); }}
                 isDisabled={isNameDisabled} // Disable if needed
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && (!hasPassword || password)) {
                     handleJoin();
                   }
@@ -107,8 +107,8 @@ const JoinRetroBoardModal: FC<JoinRetroBoardModalProps> = ({
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter board password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={(e) => {
+                    onChange={(e) => { setPassword(e.target.value); }}
+                    onKeyDown={(e) => {
                       if (e.key === "Enter" && name) {
                         handleJoin();
                       }
@@ -120,7 +120,7 @@ const JoinRetroBoardModal: FC<JoinRetroBoardModalProps> = ({
                         showPassword ? "Hide password" : "Show password"
                       }
                       icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => { setShowPassword(!showPassword); }}
                       variant="ghost"
                       size="sm"
                     />

@@ -1,5 +1,5 @@
-import { FC, memo } from 'react';
 import { Box, Spinner, Text, VStack } from '@chakra-ui/react';
+import { type FC, memo } from 'react';
 
 const RouteLoadingSpinner: FC = memo(() => {
   return (

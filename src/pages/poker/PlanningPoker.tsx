@@ -1,6 +1,3 @@
-import { FC, useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Import mutation hooks
 import {
   Box,
   Heading,
@@ -14,18 +11,21 @@ import {
   Divider,
   Spinner,
 } from '@chakra-ui/react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Import mutation hooks
+import { type FC, useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageContainer from '../../components/PageContainer';
 import PageHelmet from '../../components/PageHelmet';
+import { PokerLandingActions } from '../../components/poker/PokerLandingActions';
+import { RoomListTable, type Room } from '../../components/poker/RoomListTable'; // Import Room type too
 import SeoText from '../../components/SeoText';
-import { planningPokerSeoSections } from '../../content/planningPokerSeo';
-import { SequenceType } from '../../constants/poker'; // Keep SequenceType
 import config from '../../config';
+import type { SequenceType } from '../../constants/poker'; // Keep SequenceType
+import { planningPokerSeoSections } from '../../content/planningPokerSeo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { apiRequest } from '../../utils/apiUtils';
 // Import new components
-import { RoomListTable, Room } from '../../components/poker/RoomListTable'; // Import Room type too
-import { PokerLandingActions } from '../../components/poker/PokerLandingActions';
 
 // Lazy load modal component
 const CreateRoomModal = lazy(() =>
@@ -97,7 +97,7 @@ const PlanningPoker: FC = () => {
     isLoading, // Use isLoading from useQuery
     isError,
     error,
-  } = useQuery<Room[], Error>({
+  } = useQuery<Room[]>({
     // Specify types for data and error
     queryKey: queryKey,
     queryFn: fetchRooms,
@@ -107,7 +107,7 @@ const PlanningPoker: FC = () => {
 
   // Effect to show toast on error
   useEffect(() => {
-    if (isError && error) {
+    if (isError) {
       console.error('Error loading rooms:', error);
       toast({
         title: 'Error Loading Rooms',
@@ -152,7 +152,7 @@ const PlanningPoker: FC = () => {
   const queryClient = useQueryClient(); // Get query client instance
 
   const createRoomMutation = useMutation<
-    void, // Type of the data returned by the mutation function (void in this case)
+    undefined, // Type of the data returned by the mutation function
     Error, // Type of the error
     { newRoomId: string } // Type of the variables passed to the mutation function
   >({
@@ -173,7 +173,7 @@ const PlanningPoker: FC = () => {
     },
     onSuccess: (_, variables) => {
       // Invalidate the rooms query to refetch the list
-      queryClient.invalidateQueries({ queryKey: queryKey });
+      void queryClient.invalidateQueries({ queryKey: queryKey });
 
       toast({
         title: 'Room Created',
@@ -247,7 +247,7 @@ const PlanningPoker: FC = () => {
                 isAuthenticated={isAuthenticated}
                 currentWorkspace={currentWorkspace}
                 rooms={rooms} // Pass the unified rooms list
-                onShowRoomList={() => setShowRoomList(true)}
+                onShowRoomList={() => { setShowRoomList(true); }}
                 onCreateModalOpen={onCreateModalOpen}
                 onJoinRoom={handleJoinRoom}
               />
@@ -267,7 +267,7 @@ const PlanningPoker: FC = () => {
                   <Heading size="md">
                     {currentWorkspace ? `Rooms in ${currentWorkspace.name}` : 'Public Rooms'}
                   </Heading>
-                  <Button size="sm" onClick={() => setShowRoomList(false)}>
+                  <Button size="sm" onClick={() => { setShowRoomList(false); }}>
                     Back
                   </Button>
                 </HStack>

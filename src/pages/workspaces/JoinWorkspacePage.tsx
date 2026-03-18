@@ -1,9 +1,3 @@
-import { FC, useEffect, useState } from "react";
-import {
-  useSearchParams,
-  useNavigate,
-  Link as RouterLink,
-} from "react-router-dom";
 import {
   Box,
   Heading,
@@ -19,10 +13,16 @@ import {
   useToast,
   HStack, // Add HStack import
 } from "@chakra-ui/react";
+import { type FC, useEffect, useState } from "react";
+import {
+  useSearchParams,
+  useNavigate,
+  Link as RouterLink,
+} from "react-router-dom";
+import PageContainer from "../../components/PageContainer";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { apiRequest } from "../../utils/apiUtils";
-import PageContainer from "../../components/PageContainer";
 
 const JoinWorkspacePage: FC = () => {
   const [searchParams] = useSearchParams();
@@ -35,7 +35,7 @@ const JoinWorkspacePage: FC = () => {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [_joinedWorkspaceId, setJoinedWorkspaceId] = useState<string | null>(
+  const [, setJoinedWorkspaceId] = useState<string | null>(
     null
   );
 
@@ -67,12 +67,12 @@ const JoinWorkspacePage: FC = () => {
         setTimeout(() => {
           navigate(`/workspaces/${result.workspaceId}`);
         }, 1500);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error accepting invitation:", err);
         const message =
-          err.response?.data?.error ||
-          err.message ||
-          "Failed to accept invitation.";
+          err instanceof Error
+            ? err.message
+            : "Failed to accept invitation.";
         setErrorMsg(message);
         setStatus("error");
         toast({
@@ -112,7 +112,7 @@ const JoinWorkspacePage: FC = () => {
         // navigate('/workspaces'); // Or find the workspace ID if stored
         return;
       }
-      acceptInvitation(token);
+      void acceptInvitation(token);
       // Mark as processed to avoid loops if user navigates back/forth
       sessionStorage.setItem("processedInvitationToken", token);
     }

@@ -1,6 +1,6 @@
-import { FC, memo } from 'react';
 import { Button, VStack, Box, Text, HStack, Badge } from '@chakra-ui/react';
-import { Room } from './RoomListTable';
+import { type FC, memo } from 'react';
+import type { Room } from './RoomListTable';
 
 interface PokerLandingActionsProps {
   isAuthenticated: boolean;
@@ -47,7 +47,7 @@ export const PokerLandingActions: FC<PokerLandingActionsProps> = memo(
                     <Text fontWeight="medium">{room.name}</Text>
                     <Badge colorScheme="blue">{room.sequence}</Badge>
                   </HStack>
-                  <Button size="sm" colorScheme="blue" onClick={() => onJoinRoom(room.id)}>
+                  <Button size="sm" colorScheme="blue" onClick={() => { onJoinRoom(room.id); }}>
                     Join
                   </Button>
                 </HStack>

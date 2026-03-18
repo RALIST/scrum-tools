@@ -1,4 +1,4 @@
-import { FC, useState } from 'react'
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
 import {
     Modal,
     ModalOverlay,
@@ -22,7 +22,7 @@ import {
     IconButton,
     useToast
 } from '@chakra-ui/react'
-import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons'
+import { type FC, useState } from 'react'
 
 interface BoardSettings {
     defaultTimer: number
@@ -83,10 +83,10 @@ const RetroBoardSettingsModal: FC<RetroBoardSettingsModalProps> = ({
                             <NumberInput
                                 min={60}
                                 value={newSettings.defaultTimer}
-                                onChange={(_, value) => setNewSettings((prev: BoardSettings) => ({
+                                onChange={(_, value) => { setNewSettings((prev: BoardSettings) => ({
                                     ...prev,
                                     defaultTimer: value
-                                }))}
+                                })); }}
                             >
                                 <NumberInputField />
                                 <NumberInputStepper>
@@ -100,10 +100,10 @@ const RetroBoardSettingsModal: FC<RetroBoardSettingsModalProps> = ({
                             <FormLabel mb={0}>Hide Cards by Default</FormLabel>
                             <Switch
                                 isChecked={newSettings.hideCardsByDefault}
-                                onChange={(e) => setNewSettings((prev: BoardSettings) => ({
+                                onChange={(e) => { setNewSettings((prev: BoardSettings) => ({
                                     ...prev,
                                     hideCardsByDefault: e.target.checked
-                                }))}
+                                })); }}
                             />
                         </FormControl>
 
@@ -111,10 +111,10 @@ const RetroBoardSettingsModal: FC<RetroBoardSettingsModalProps> = ({
                             <FormLabel mb={0}>Hide Author Names</FormLabel>
                             <Switch
                                 isChecked={newSettings.hideAuthorNames}
-                                onChange={(e) => setNewSettings((prev: BoardSettings) => ({
+                                onChange={(e) => { setNewSettings((prev: BoardSettings) => ({
                                     ...prev,
                                     hideAuthorNames: e.target.checked
-                                }))}
+                                })); }}
                             />
                         </FormControl>
 
@@ -125,16 +125,16 @@ const RetroBoardSettingsModal: FC<RetroBoardSettingsModalProps> = ({
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="Leave empty to remove password"
                                     value={newSettings.password}
-                                    onChange={(e) => setNewSettings((prev: BoardSettings) => ({
+                                    onChange={(e) => { setNewSettings((prev: BoardSettings) => ({
                                         ...prev,
                                         password: e.target.value
-                                    }))}
+                                    })); }}
                                 />
                                 <InputRightElement>
                                     <IconButton
                                         aria-label={showPassword ? "Hide password" : "Show password"}
                                         icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                                        onClick={() => setShowPassword(!showPassword)}
+                                        onClick={() => { setShowPassword(!showPassword); }}
                                         variant="ghost"
                                         size="sm"
                                     />

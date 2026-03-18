@@ -1,8 +1,9 @@
-import pg, { PoolClient, QueryResult } from 'pg'; // Import pg types
-import { pool } from './pool.js'; // Import pool directly (needs .js extension)
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import type {PoolClient, QueryResult} from 'pg';
+import type pg from 'pg'; // Import pg types
 import { v4 as uuidv4 } from 'uuid';
-import { User } from '../types/db.js'; // Import User interface (needs .js extension)
+import type { User } from '../types/db.js'; // Import User interface (needs .js extension)
+import { pool } from './pool.js'; // Import pool directly (needs .js extension)
 
 // Create a new user
 export const createUser = async (email: string, password: string, name: string): Promise<User> => {
@@ -31,7 +32,9 @@ export const createUser = async (email: string, password: string, name: string):
       [id, email, passwordHash, name]
     );
     
-    return result.rows[0];
+    const user = result.rows[0];
+    if (!user) throw new Error('Expected user row not found after insert');
+    return user;
   } finally {
     client.release();
   }

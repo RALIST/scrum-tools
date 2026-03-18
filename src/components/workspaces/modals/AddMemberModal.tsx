@@ -1,4 +1,3 @@
-import { FC, useState } from "react";
 import {
   Modal,
   ModalOverlay,
@@ -14,6 +13,7 @@ import {
   VStack,
   useToast,
 } from "@chakra-ui/react";
+import { type FC, useState } from "react";
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -85,7 +85,7 @@ const AddMemberModal: FC<AddMemberModalProps> = ({
               <FormLabel>Member Email</FormLabel>
               <Input
                 value={newMemberEmail}
-                onChange={(e) => setNewMemberEmail(e.target.value)}
+                onChange={(e) => { setNewMemberEmail(e.target.value); }}
                 placeholder="Enter member email"
                 type="email"
               />
@@ -98,7 +98,7 @@ const AddMemberModal: FC<AddMemberModalProps> = ({
           </Button>
           <Button
             colorScheme="blue"
-            onClick={handleAdd}
+            onClick={() => { void handleAdd(); }}
             isLoading={isAddingMember}
           >
             Add Member

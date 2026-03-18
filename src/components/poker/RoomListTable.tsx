@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   Table,
   Thead,
@@ -14,6 +13,7 @@ import {
   Badge,
   Text,
 } from "@chakra-ui/react";
+import type { FC } from "react";
 
 export interface Room {
   id: string;
@@ -41,7 +41,7 @@ export const RoomListTable: FC<RoomListTableProps> = ({
   showWorkspaceInfo = false,
   workspaceName,
 }) => {
-  if (!rooms || rooms.length === 0) {
+  if (rooms.length === 0) {
     return (
       <Box w="full">
         <HStack mb={3}>
@@ -91,7 +91,7 @@ export const RoomListTable: FC<RoomListTableProps> = ({
                     <Button
                       size="sm"
                       colorScheme="blue"
-                      onClick={() => onJoinRoom(room.id)}
+                      onClick={() => { onJoinRoom(room.id); }}
                     >
                       Join
                     </Button>

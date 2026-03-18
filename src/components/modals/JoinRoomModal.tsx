@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from "react"; // Import useState, useEffect
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   Modal,
   ModalOverlay,
@@ -13,7 +13,7 @@ import {
   InputRightElement,
   IconButton,
 } from "@chakra-ui/react";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { type FC, useState, useEffect } from "react"; // Import useState, useEffect
 
 interface JoinRoomModalProps {
   isOpen: boolean;
@@ -63,7 +63,7 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
             <Input
               placeholder="Enter your name"
               value={internalUserName} // Use internal state
-              onChange={(e) => setInternalUserName(e.target.value)} // Update internal state
+              onChange={(e) => { setInternalUserName(e.target.value); }} // Update internal state
               isDisabled={isNameDisabled}
             />
             {isPasswordProtected && (
@@ -72,7 +72,7 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
                   type={internalShowPassword ? "text" : "password"} // Use internal state
                   placeholder="Enter room password"
                   value={internalRoomPassword} // Use internal state
-                  onChange={(e) => setInternalRoomPassword(e.target.value)} // Update internal state
+                  onChange={(e) => { setInternalRoomPassword(e.target.value); }} // Update internal state
                 />
                 <InputRightElement>
                   <IconButton
@@ -80,9 +80,9 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
                       internalShowPassword ? "Hide password" : "Show password"
                     }
                     icon={internalShowPassword ? <ViewOffIcon /> : <ViewIcon />} // Use internal state
-                    onClick={() =>
-                      setInternalShowPassword(!internalShowPassword)
-                    } // Update internal state
+                    onClick={() => {
+                      setInternalShowPassword(!internalShowPassword);
+                    }} // Update internal state
                     size="sm"
                     variant="ghost"
                   />

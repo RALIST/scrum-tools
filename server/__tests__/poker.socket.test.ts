@@ -3,18 +3,18 @@ import { server as httpServer, io, app } from '../index.js'; // Import app and i
 import { pool } from '../db/pool.js';
 import request from 'supertest';
 // Import Jest functions
-import { describe, it, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 
 
 describe('Planning Poker Socket Events (/poker namespace)', () => {
   let clientSocket1, clientSocket2;
   let httpServerAddr;
-  let testRoomId = `poker-socket-test-${Date.now()}`;
-  let testRoomPassword = 'socktestpassword';
-  let publicRoomId = `public-poker-socket-${Date.now()}`;
+  const testRoomId = `poker-socket-test-${Date.now()}`;
+  const testRoomPassword = 'socktestpassword';
+  const publicRoomId = `public-poker-socket-${Date.now()}`;
   let authToken; // For authenticated tests if needed later
   let userId;
-  let testUserName = 'Poker Sock User Auth'; // Define username for auth tests
+  const testUserName = 'Poker Sock User Auth'; // Define username for auth tests
 
   // Setup: Start server, create rooms via API, register user
   beforeAll(async () => {

@@ -1,4 +1,9 @@
-import React, { FC } from "react";
+import {
+  MoonIcon,
+  SunIcon,
+  HamburgerIcon,
+  ChevronDownIcon,
+} from "@chakra-ui/icons";
 import {
   Box,
   Container,
@@ -20,16 +25,11 @@ import {
   Spacer,
   Badge,
 } from "@chakra-ui/react";
-import { Link as RouterLink } from "react-router-dom";
-import {
-  MoonIcon,
-  SunIcon,
-  HamburgerIcon,
-  ChevronDownIcon,
-} from "@chakra-ui/icons";
-import { useAuth } from "../contexts/AuthContext";
-import { useWorkspace, Workspace } from "../contexts/WorkspaceContext"; // Import Workspace type
+import React, { type FC } from "react";
 import { FaUsers } from "react-icons/fa";
+import { Link as RouterLink } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useWorkspace, type Workspace } from "../contexts/WorkspaceContext"; // Import Workspace type
 
 // --- Static Components (Moved Outside) ---
 
@@ -185,7 +185,7 @@ const WorkspaceMenu = React.memo<WorkspaceMenuProps>(
             workspaces.map((workspace) => (
               <MenuItem
                 key={workspace.id}
-                onClick={() => onWorkspaceSelect(workspace)} // Use the passed handler
+                onClick={() => { onWorkspaceSelect(workspace); }} // Use the passed handler
                 fontWeight={
                   workspace.id === currentWorkspace.id ? "bold" : "normal"
                 }

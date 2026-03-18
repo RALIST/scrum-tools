@@ -1,5 +1,5 @@
-import { FC, ReactNode } from 'react'
 import { Container } from '@chakra-ui/react'
+import type { FC, ReactNode } from 'react'
 
 interface PageContainerProps {
     children: ReactNode

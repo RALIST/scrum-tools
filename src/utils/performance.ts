@@ -44,7 +44,7 @@ export const trackPerformanceMetrics = (): Promise<PerformanceMetrics> => {
     if ('performance' in window) {
       const navigation = performance.getEntriesByType(
         'navigation'
-      )[0] as PerformanceNavigationTiming;
+      )[0] as PerformanceNavigationTiming | undefined;
 
       if (navigation) {
         metrics.domContentLoaded =
@@ -102,7 +102,7 @@ export const trackPerformanceMetrics = (): Promise<PerformanceMetrics> => {
     }
 
     // Wait a bit for metrics to be collected
-    setTimeout(() => resolve(metrics), 1000);
+    setTimeout(() => { resolve(metrics); }, 1000);
   });
 };
 
@@ -167,7 +167,7 @@ export const trackBundlePerformance = () => {
     jsResources.forEach(resource => {
       const size = resource.encodedBodySize || resource.transferSize || 0;
       const filename = resource.name.split('/').pop();
-      console.log(`  ${filename}: ${(size / 1024).toFixed(2)} KB`);
+      console.log(`  ${filename ?? 'unknown'}: ${(size / 1024).toFixed(2)} KB`);
     });
 
     console.groupEnd();
@@ -193,7 +193,7 @@ export const initPerformanceTracking = () => {
   // Track metrics after page load
   window.addEventListener('load', () => {
     setTimeout(() => {
-      logPerformanceMetrics();
+      void logPerformanceMetrics();
       trackBundlePerformance();
     }, 100);
   });

@@ -1,12 +1,12 @@
 import bcrypt from 'bcryptjs';
-import { Socket, Namespace } from 'socket.io'; // Import Namespace
-import * as pokerDbFunctions from '../db/poker.js'; // Import DB functions (needs .js)
-import {
+import type { Socket, Namespace } from 'socket.io'; // Import Namespace
+import type * as pokerDbFunctions from '../db/poker.js'; // Import DB functions (needs .js)
+import type { PokerRoomDetails } from '../types/db.js'; // Import DB types (needs .js)
+import type {
     PokerClientToServerEvents, PokerServerToClientEvents, PokerInterServerEvents, PokerSocketData,
     PokerJoinRoomPayload, PokerUpdateSettingsPayload, PokerChangeNamePayload, PokerVotePayload,
     PokerRevealVotesPayload, PokerResetVotesPayload, SocketErrorPayload, PokerParticipantInfo
 } from '../types/sockets.js'; // Import socket types (needs .js)
-import { PokerRoomDetails } from '../types/db.js'; // Import DB types (needs .js)
 
 // Define the type for the injected pokerDb module
 type PokerDbModule = typeof pokerDbFunctions;
@@ -37,7 +37,7 @@ const handlePokerSocketEvents = (
                     socket.emit('error', { message: 'Password required' } as SocketErrorPayload);
                     return;
                 }
-                const isValid: boolean = await bcrypt.compare(password, room.password!);
+                const isValid: boolean = await bcrypt.compare(password, room.password);
                 if (!isValid) {
                     socket.emit('error', { message: 'Invalid password' } as SocketErrorPayload);
                     return;
@@ -64,7 +64,7 @@ const handlePokerSocketEvents = (
                     hasPassword: !!room.password
                 }
             });
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to join room due to server error' } as SocketErrorPayload);
         }
     });
@@ -100,8 +100,9 @@ const handlePokerSocketEvents = (
                     hasPassword: !!updatedRoom.password
                 }
             });
-        } catch (error: any) {
-            socket.emit('error', { message: error.message || 'Failed to update settings' } as SocketErrorPayload);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to update settings';
+            socket.emit('error', { message } as SocketErrorPayload);
         }
     });
 
@@ -119,7 +120,7 @@ const handlePokerSocketEvents = (
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.participants.values()),
             });
-        } catch (error: any) {
+        } catch {
             // Send the specific error from the DB function if available, otherwise generic
             socket.emit('error', { message: 'Failed to change name' } as SocketErrorPayload);
         }
@@ -137,7 +138,7 @@ const handlePokerSocketEvents = (
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.participants.values()),
             });
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to record vote' } as SocketErrorPayload);
         }
     });
@@ -163,7 +164,7 @@ const handlePokerSocketEvents = (
             io.to(roomId).emit('participantUpdate', {
                 participants: Array.from(room.participants.values())
             });
-        } catch (error: any) {
+        } catch {
             socket.emit('error', { message: 'Failed to reset votes' } as SocketErrorPayload);
         }
     });
@@ -186,14 +187,15 @@ export const initializePokerSocket = (
                     await pokerDb.removeParticipant(roomId, socket.id);
                     const updatedRoom: PokerRoomDetails | null = await pokerDb.getRoom(roomId);
 
-                    if (updatedRoom && updatedRoom.participants) {
+                    if (updatedRoom) {
                          pokerIo.to(roomId).emit('participantUpdate', {
                             participants: Array.from(updatedRoom.participants.values()),
                         });
                     } else {
                         // Optionally: Add logic here to delete the room if it's empty
                     }
-                } catch (error: any) {
+                } catch {
+                    // Silently ignore disconnect cleanup errors
                 }
             } else {
                  // Fallback logic removed for simplicity, assuming socket.data.roomId is reliable

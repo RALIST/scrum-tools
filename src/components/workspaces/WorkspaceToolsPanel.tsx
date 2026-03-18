@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   Box,
   Heading,
@@ -11,8 +10,9 @@ import {
   Center,
   useColorMode,
 } from "@chakra-ui/react";
+import type { FC } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { WorkspaceToolsPanelProps } from "../../hooks/useWorkspaceTools";
+import type { WorkspaceToolsPanelProps } from "../../hooks/useWorkspaceTools";
 
 const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
   pokerRooms,

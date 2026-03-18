@@ -1,16 +1,16 @@
 import {
+  useQuery,
+  useMutation,
+  type UseMutationOptions,
+} from "@tanstack/react-query";
+import {
   createContext,
   useContext,
   useState,
   useEffect,
-  ReactNode,
+  type ReactNode,
   useCallback,
 } from "react";
-import {
-  useQuery,
-  useMutation,
-  UseMutationOptions,
-} from "@tanstack/react-query";
 import { apiRequest, AuthError } from "../utils/apiUtils";
 
 interface User {
@@ -42,6 +42,7 @@ interface AuthContextType {
   isLoading: boolean; // Represents initial token check loading
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
@@ -117,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isError: isVerifyError,
     error: verifyError,
     isSuccess: isVerifySuccess,
-  } = useQuery<{ user: User }, Error>({
+  } = useQuery<{ user: User }>({
     // Correct error type
     queryKey: verifyTokenQueryKey,
     queryFn: fetchVerifiedUser,
@@ -132,11 +133,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUserJSON = localStorage.getItem("user");
 
     if (storedToken) {
-      if (isVerifySuccess && verifiedUserData?.user) {
-        const fullUser = {
-          ...(storedUserJSON ? JSON.parse(storedUserJSON) : {}), // Safely parse stored user
+      if (isVerifySuccess) {
+        const storedUser = storedUserJSON ? (JSON.parse(storedUserJSON) as Partial<User>) : {};
+        const fullUser: User = {
+          ...storedUser,
           ...verifiedUserData.user,
-        };
+        } as User;
         setUser(fullUser);
         setToken(storedToken);
         // Update localStorage only if verified data differs significantly? Optional.
@@ -165,38 +167,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Expose functions that call mutateAsync and handle state updates
   const login = useCallback(
     async (variables: LoginVariables) => {
-      try {
-        const data = await loginMutation.mutateAsync(variables);
-        // Update state after successful mutation
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("token", data.token);
-        return data;
-      } catch (error) {
-        // Error is handled by mutation's onError (logs, calls logout)
-        // Re-throw for the component UI
-        throw error;
-      }
+      const data = await loginMutation.mutateAsync(variables);
+      // Update state after successful mutation
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
+      return data;
     },
     [loginMutation]
   );
 
   const register = useCallback(
     async (variables: RegisterVariables) => {
-      try {
-        const data = await registerMutation.mutateAsync(variables);
-        // Update state after successful mutation
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("token", data.token);
-        return data;
-      } catch (error) {
-        // Error is handled by mutation's onError (logs, calls logout)
-        // Re-throw for the component UI
-        throw error;
-      }
+      const data = await registerMutation.mutateAsync(variables);
+      // Update state after successful mutation
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
+      return data;
     },
     [registerMutation]
   );
@@ -219,6 +209,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

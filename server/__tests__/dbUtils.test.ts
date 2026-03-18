@@ -1,4 +1,4 @@
-import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 // Import the actual pool to spy on its methods
 import { pool } from '../db/pool.js'; // Import only pool (needs .js)
 import { executeQuery } from '../db/dbUtils.js'; // Import the function to test (needs .js)
@@ -14,8 +14,8 @@ describe('DB Utils (server/db/js)', () => {
 
     beforeEach(() => {
         // Reset and re-initialize mocks before each test
-        mockQuery = jest.fn();
-        mockRelease = jest.fn();
+        mockQuery = vi.fn();
+        mockRelease = vi.fn();
         mockClient = {
             query: mockQuery,
             release: mockRelease,
@@ -26,7 +26,7 @@ describe('DB Utils (server/db/js)', () => {
         // Cast mockClient to PoolClient for mockResolvedValue, as it expects the full type
         // Type assertion needed for mockResolvedValue
         // Type assertion still needed for mockResolvedValue
-        connectSpy = jest.spyOn(pool, 'connect').mockResolvedValue(mockClient);
+        connectSpy = vi.spyOn(pool, 'connect').mockResolvedValue(mockClient);
     });
 
     afterEach(() => {

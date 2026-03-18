@@ -1,7 +1,7 @@
+import { useToast } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@chakra-ui/react';
-import { useWorkspace, Workspace } from '../contexts/WorkspaceContext';
+import { useWorkspace, type Workspace } from '../contexts/WorkspaceContext';
 
 interface UseWorkspaceDataResult {
   workspace: Workspace | null;

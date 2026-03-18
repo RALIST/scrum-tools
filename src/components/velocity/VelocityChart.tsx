@@ -1,6 +1,4 @@
-import { FC } from 'react'
 import { Box, Card, CardBody } from '@chakra-ui/react'
-import { Line } from 'react-chartjs-2'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -11,6 +9,8 @@ import {
     Tooltip,
     Legend
 } from 'chart.js'
+import type { FC } from 'react'
+import { Line } from 'react-chartjs-2'
 
 // Register ChartJS components
 ChartJS.register(

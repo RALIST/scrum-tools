@@ -61,7 +61,7 @@ export const useSocketManager = ({
     const socketUrl = config.socketUrl;
 
     if (managers.has(socketUrl)) {
-      manager = managers.get(socketUrl)!;
+      manager = managers.get(socketUrl) as Manager;
       logger.debug('Reusing existing Manager instance');
     } else {
       logger.debug('Creating new Manager instance');
@@ -86,7 +86,7 @@ export const useSocketManager = ({
 
     const handleConnect = () => {
       // Log ID here, where it's guaranteed to be available
-      logger.debug(`Connected: ${newSocket.id}`);
+      logger.debug(`Connected: ${newSocket.id ?? 'unknown'}`);
       setIsConnected(true);
       setIsConnecting(false);
       onConnectRef.current?.();
@@ -94,7 +94,7 @@ export const useSocketManager = ({
 
     const handleDisconnect = (reason: ClientSocket.DisconnectReason) => {
       // Log ID here
-      logger.debug(`Disconnected: ${newSocket.id}`, { reason });
+      logger.debug(`Disconnected: ${newSocket.id ?? 'unknown'}`, { reason });
       setIsConnected(false);
       setIsConnecting(false);
       onDisconnectRef.current?.(reason);
@@ -102,7 +102,7 @@ export const useSocketManager = ({
 
     const handleConnectError = (err: Error) => {
       // Log ID here
-      logger.debug(`Connection Error: ${newSocket.id}`, err);
+      logger.debug(`Connection Error: ${newSocket.id ?? 'unknown'}`, err);
       setIsConnected(false);
       setIsConnecting(false);
       onErrorRef.current?.(err);
@@ -133,7 +133,7 @@ export const useSocketManager = ({
     // Cleanup function
     return () => {
       // Log ID here before cleanup
-      logger.debug(`Cleaning up socket: ${newSocket.id}`);
+      logger.debug(`Cleaning up socket: ${newSocket.id ?? 'unknown'}`);
       newSocket.off('connect', handleConnect);
       newSocket.off('disconnect', handleDisconnect);
       newSocket.off('connect_error', handleConnectError);
@@ -146,6 +146,7 @@ export const useSocketManager = ({
       setIsConnected(false);
       setIsConnecting(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespace, autoConnect]);
 
   return {

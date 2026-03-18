@@ -1,4 +1,3 @@
-import { FC } from "react";
 import {
   Box,
   Container,
@@ -8,6 +7,7 @@ import {
   Link,
   Spacer,
 } from "@chakra-ui/react";
+import type { FC } from "react";
 
 const Footer: FC = () => {
   const { colorMode } = useColorMode();

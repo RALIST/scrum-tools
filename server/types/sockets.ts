@@ -1,5 +1,5 @@
 // server/types/sockets.ts
-import { PokerParticipant, RetroBoardDetails, RetroBoardSettings } from './db.js'; // Import related DB types (needs .js extension)
+import type { PokerParticipant, RetroBoardDetails, RetroBoardSettings } from './db.js'; // Import related DB types (needs .js extension)
 
 // Define structure for error messages sent to client
 export interface SocketErrorPayload {
@@ -159,6 +159,7 @@ export interface PokerClientToServerEvents {
 }
 
 // Structure for Inter-Server events (if needed)
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PokerInterServerEvents {
   // Example: ping: () => void;
 }
@@ -196,6 +197,7 @@ export interface RetroClientToServerEvents {
   stopTimer: (payload: RetroStopTimerPayload) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RetroInterServerEvents {
   // Define if needed
 }

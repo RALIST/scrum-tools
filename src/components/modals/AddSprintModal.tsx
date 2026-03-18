@@ -1,4 +1,3 @@
-import { FC, useState } from "react";
 import {
   Modal,
   ModalOverlay,
@@ -18,6 +17,7 @@ import {
   GridItem,
   VStack,
 } from "@chakra-ui/react";
+import { type FC, useState } from "react";
 
 interface AddSprintModalProps {
   isOpen: boolean;

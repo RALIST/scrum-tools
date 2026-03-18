@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { QueryResult } from 'pg'; // Import QueryResult type
+import type { RetroBoard, RetroCard, RetroBoardDetails, RetroBoardSettings } from '../types/db.js'; // Needs .js extension
 import { executeQuery } from './dbUtils.js'; // Needs .js extension
-import { RetroBoard, RetroCard, RetroBoardDetails, RetroBoardSettings } from '../types/db.js'; // Needs .js extension
 
 export const createRetroBoard = async (
     boardId: string,
@@ -35,7 +34,7 @@ export const createRetroBoard = async (
 
 export const getRetroBoard = async (boardId: string): Promise<RetroBoardDetails | null> => {
     const boardQuery = 'SELECT * FROM retro_boards WHERE id = $1';
-    const boardResult: QueryResult<RetroBoard> = await executeQuery(boardQuery, [boardId]); // Use executeQuery
+    const boardResult = await executeQuery<RetroBoard>(boardQuery, [boardId]); // Use executeQuery
 
     if (boardResult.rows.length === 0) {
         return null;
@@ -50,12 +49,14 @@ export const getRetroBoard = async (boardId: string): Promise<RetroBoardDetails 
         ORDER BY c.created_at ASC
     `;
     // Type for cardsResult needs to account for the aggregated 'votes' column
-    const cardsResult: QueryResult<RetroCard & { votes: string[] }> = await executeQuery(cardsQuery, [boardId]); // Use executeQuery
+    const cardsResult = await executeQuery<RetroCard & { votes: string[] }>(cardsQuery, [boardId]); // Use executeQuery
 
-    const board: RetroBoard = boardResult.rows[0];
+    const board = boardResult.rows[0];
+    if (!board) throw new Error('Expected board row not found');
     // Ensure hasPassword reflects the presence of a password hash
     const hasPassword = !!board.password;
     // Destructure to exclude password from the returned object
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _password, ...boardDetails } = board;
 
     return {
@@ -81,7 +82,7 @@ export const getWorkspaceRetroBoards = async (workspaceId: string): Promise<Retr
         ORDER BY rb.created_at DESC
     `;
     // Type needs to account for aggregated 'card_count'
-    const boardsResult: QueryResult<RetroBoard & { card_count: string | number }> = await executeQuery(boardsQuery, [workspaceId]); // Use executeQuery
+    const boardsResult = await executeQuery<RetroBoard & { card_count: string | number }>(boardsQuery, [workspaceId]); // Use executeQuery
 
     return boardsResult.rows.map((board: RetroBoard & { card_count: string | number }) => ({
         ...board,
@@ -124,7 +125,7 @@ export const deleteRetroCard = async (cardId: string): Promise<void> => {
 export const toggleRetroCardVote = async (cardId: string, userName: string): Promise<void> => {
     // Check if vote exists using the new primary key (card_id, user_name)
     const checkVoteQuery = 'SELECT 1 FROM retro_card_votes WHERE card_id = $1 AND user_name = $2';
-    const voteResult: QueryResult<{ '1': number }> = await executeQuery(checkVoteQuery, [cardId, userName]); // Use executeQuery
+    const voteResult = await executeQuery<{ '1': number }>(checkVoteQuery, [cardId, userName]); // Use executeQuery
 
     if (voteResult.rows.length > 0) {
         // Remove vote using the new primary key
@@ -139,14 +140,14 @@ export const toggleRetroCardVote = async (cardId: string, userName: string): Pro
 
 export const verifyRetroBoardPassword = async (boardId: string, password?: string | null): Promise<boolean> => {
     const queryText = 'SELECT password FROM retro_boards WHERE id = $1';
-    const result: QueryResult<{ password?: string | null }> = await executeQuery(queryText, [boardId]); // Use executeQuery
+    const result = await executeQuery<{ password?: string | null }>(queryText, [boardId]); // Use executeQuery
 
     if (result.rows.length === 0) {
         return false; // Board not found
     }
 
     const board = result.rows[0]; // Type inferred
-    if (!board.password) {
+    if (!board?.password) {
         // If no password is set on board, allow access only if no password was provided for verification
         return !password;
     }
@@ -157,37 +158,37 @@ export const verifyRetroBoardPassword = async (boardId: string, password?: strin
 
 export const updateRetroBoardSettings = async (boardId: string, settings: RetroBoardSettings): Promise<void> => {
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramCount = 1;
 
     if (settings.defaultTimer !== undefined) {
-        updates.push(`default_timer = $${paramCount}`);
+        updates.push(`default_timer = $${String(paramCount)}`);
         values.push(settings.defaultTimer);
         paramCount++;
     }
 
     if (settings.hideCardsByDefault !== undefined) {
-        updates.push(`hide_cards_by_default = $${paramCount}`);
+        updates.push(`hide_cards_by_default = $${String(paramCount)}`);
         values.push(settings.hideCardsByDefault);
         paramCount++;
     }
 
     if (settings.hideAuthorNames !== undefined) {
-        updates.push(`hide_author_names = $${paramCount}`);
+        updates.push(`hide_author_names = $${String(paramCount)}`);
         values.push(settings.hideAuthorNames);
         paramCount++;
     }
 
     if (settings.password !== undefined) {
         const hashedPassword: string | null = settings.password ? await bcrypt.hash(settings.password, 10) : null;
-        updates.push(`password = $${paramCount}`);
+        updates.push(`password = $${String(paramCount)}`);
         values.push(hashedPassword);
         paramCount++;
     }
 
     if (updates.length > 0) {
         values.push(boardId);
-        const queryText = `UPDATE retro_boards SET ${updates.join(', ')} WHERE id = $${paramCount}`;
+        const queryText = `UPDATE retro_boards SET ${updates.join(', ')} WHERE id = $${String(paramCount)}`;
         await executeQuery(queryText, values); // Use executeQuery
     }
 };
@@ -195,7 +196,7 @@ export const updateRetroBoardSettings = async (boardId: string, settings: RetroB
 export const startRetroTimer = async (boardId: string): Promise<void> => {
     // Consider passing defaultTimer if already available in the calling context
     const getTimerQuery = 'SELECT default_timer FROM retro_boards WHERE id = $1';
-    const result: QueryResult<{ default_timer: number }> = await executeQuery(getTimerQuery, [boardId]); // Use executeQuery
+    const result = await executeQuery<{ default_timer: number }>(getTimerQuery, [boardId]); // Use executeQuery
     const defaultTimer: number = result.rows[0]?.default_timer || 300;
 
     const updateQuery = 'UPDATE retro_boards SET timer_running = true, time_left = $2 WHERE id = $1';

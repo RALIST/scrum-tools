@@ -1,5 +1,9 @@
-import { FC, useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import {
+  AddIcon,
+  DeleteIcon,
+  RepeatIcon,
+  ChevronDownIcon,
+} from "@chakra-ui/icons";
 import {
   Box,
   Container,
@@ -22,21 +26,17 @@ import {
   Badge,
   Spinner,
 } from "@chakra-ui/react";
-import {
-  AddIcon,
-  DeleteIcon,
-  RepeatIcon,
-  ChevronDownIcon,
-} from "@chakra-ui/icons";
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { type FC, useState, useEffect, useCallback } from "react";
+import { AddTeamMemberModal } from "../components/modals";
 import PageContainer from "../components/PageContainer";
 import PageHelmet from "../components/PageHelmet";
 import SeoText from "../components/SeoText";
-import { AddTeamMemberModal } from "../components/modals";
+import config from "../config";
 import {
   dailyStandupSeo,
   dailyStandupSeoSections,
 } from "../content/dailyStandupSeo";
-import config from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useWorkspace } from "../contexts/WorkspaceContext";
 import { apiRequest } from "../utils/apiUtils";
@@ -77,10 +77,9 @@ const DailyStandup: FC = () => {
 
   const moveToNextMember = useCallback(() => {
     let nextMember = currentMember + 1;
-    while (
-      nextMember < teamMembers.length &&
-      teamMembers[nextMember].timeLeft === 0
-    ) {
+    while (nextMember < teamMembers.length) {
+      const member = teamMembers[nextMember];
+      if (member && member.timeLeft !== 0) break;
       nextMember++;
     }
     if (nextMember < teamMembers.length) {
@@ -99,16 +98,17 @@ const DailyStandup: FC = () => {
       timerId = window.setInterval(() => {
         setTeamMembers((prev) => {
           const newMembers = [...prev];
-          if (newMembers[currentMember].timeLeft > 0) {
+          const current = newMembers[currentMember];
+          if (current && current.timeLeft > 0) {
             newMembers[currentMember] = {
-              ...newMembers[currentMember],
-              timeLeft: newMembers[currentMember].timeLeft - 1,
+              ...current,
+              timeLeft: current.timeLeft - 1,
             };
             return newMembers;
           }
           // Time's up for current member
           const audio = new Audio("/timer-end.mp3");
-          audio.play();
+          void audio.play();
           return newMembers;
         });
       }, 1000);
@@ -140,7 +140,7 @@ const DailyStandup: FC = () => {
         const key = `dailyStandupTeamMembers_${currentWorkspace.id}`;
         localStorage.setItem(key, JSON.stringify(teamMembers));
         console.log(
-          `Saved ${teamMembers.length} team members to workspace storage`
+          `Saved ${String(teamMembers.length)} team members to workspace storage`
         );
       } else {
         // Otherwise save to general storage
@@ -149,7 +149,7 @@ const DailyStandup: FC = () => {
           JSON.stringify(teamMembers)
         );
         console.log(
-          `Saved ${teamMembers.length} team members to general storage`
+          `Saved ${String(teamMembers.length)} team members to general storage`
         );
       }
     }
@@ -158,7 +158,7 @@ const DailyStandup: FC = () => {
   // Attempt to load team members from localStorage on initial render
   useEffect(() => {
     const loadSavedTeamMembers = () => {
-      let savedMembers = null;
+      let savedMembers: TeamMember[] | null = null;
 
       // Try to load workspace-specific team first if authenticated
       if (isAuthenticated && currentWorkspace) {
@@ -167,9 +167,9 @@ const DailyStandup: FC = () => {
 
         if (savedWorkspaceTeam) {
           try {
-            savedMembers = JSON.parse(savedWorkspaceTeam);
+            savedMembers = JSON.parse(savedWorkspaceTeam) as TeamMember[];
             console.log(
-              `Restored ${savedMembers.length} team members from workspace storage`
+              `Restored ${String(savedMembers.length)} team members from workspace storage`
             );
           } catch (e) {
             console.error("Error parsing saved workspace team members:", e);
@@ -185,9 +185,9 @@ const DailyStandup: FC = () => {
         );
         if (savedGeneralTeam) {
           try {
-            savedMembers = JSON.parse(savedGeneralTeam);
+            savedMembers = JSON.parse(savedGeneralTeam) as TeamMember[];
             console.log(
-              `Restored ${savedMembers.length} team members from general storage`
+              `Restored ${String(savedMembers.length)} team members from general storage`
             );
           } catch (e) {
             console.error("Error parsing saved general team members:", e);
@@ -231,15 +231,15 @@ const DailyStandup: FC = () => {
     isLoading, // Use isLoading from useQuery
     isError,
     error,
-  } = useQuery<WorkspaceMember[], Error>({
+  } = useQuery<WorkspaceMember[]>({
     queryKey: workspaceMembersQueryKey,
     queryFn: fetchWorkspaceMembers,
-    enabled: !!isAuthenticated && !!currentWorkspace?.id, // Only fetch if authenticated and in workspace
+    enabled: isAuthenticated && !!currentWorkspace?.id, // Only fetch if authenticated and in workspace
   });
 
   // Effect to show toast on error
   useEffect(() => {
-    if (isError && error) {
+    if (isError) {
       console.error("Error loading workspace members:", error);
       toast({
         title: "Error Loading Members",
@@ -271,7 +271,7 @@ const DailyStandup: FC = () => {
 
       toast({
         title: "Team loaded",
-        description: `${workspaceMembers.length} team members added from your workspace`,
+        description: `${String(workspaceMembers.length)} team members added from your workspace`,
         status: "success",
         duration: 3000,
       });
@@ -353,7 +353,7 @@ const DailyStandup: FC = () => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return `${String(mins)}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getTotalTime = () => {
@@ -493,7 +493,7 @@ const DailyStandup: FC = () => {
                           size="sm"
                           colorScheme="red"
                           variant="ghost"
-                          onClick={() => removeMember(member.id)}
+                          onClick={() => { removeMember(member.id); }}
                         />
                       </HStack>
                     </HStack>
