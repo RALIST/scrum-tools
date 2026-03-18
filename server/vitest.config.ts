@@ -5,6 +5,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 10000,
+    globalSetup: './vitest.globalSetup.ts',
+    setupFiles: ['./vitest.setup.ts'],
     include: ['__tests__/**/*.test.ts'],
     coverage: {
       provider: 'v8',
@@ -18,5 +20,6 @@ export default defineConfig({
       },
     },
     pool: 'forks',
+    fileParallelism: false,
   },
 });

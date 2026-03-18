@@ -36,6 +36,7 @@
     "knexfile.cjs",
     "data/migrations/**/*.cjs",
     "**/*.test.ts",
-    "**/*.test.js"
+    "**/*.test.js",
+    "vitest.*.ts"
   ]
 }

@@ -113,8 +113,12 @@ export default function setupWorkspaceRoutes(
           return;
         }
 
-        // Use injected dependency
-        const workspace: Workspace = await workspaceDb.updateWorkspace(workspaceId, name, description);
+        const workspace = await workspaceDb.updateWorkspace(workspaceId, name, description);
+
+        if (!workspace) {
+          res.status(404).json({ error: 'Workspace not found' });
+          return;
+        }
 
         res.json({
           message: 'Workspace updated successfully',

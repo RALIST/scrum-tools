@@ -32,12 +32,12 @@ const __dirname: string = dirname(__filename);
 
 const env: string = process.env.NODE_ENV || 'development';
 
-if (env == "development") {
-   dotenv.config({ path: join(__dirname, '../.env.development') }); // Look in parent dir
-} else if (env == "production") {
-   dotenv.config({ path: join(__dirname, '../.env') }); // Look in parent dir
-} else {
-   //console.warn('No environment variables loaded. Using default environment variables if available.');
+if (env === "development") {
+   dotenv.config({ path: join(__dirname, '../.env.development') });
+} else if (env === "production") {
+   dotenv.config({ path: join(__dirname, '../.env') });
+} else if (env === "test") {
+   dotenv.config({ path: join(__dirname, '.env.test') });
 }
 
 if (process.env.NODE_ENV == "production") {

@@ -318,7 +318,7 @@ describe('Workspace DB Functions (Integration Tests)', () => {
 
         it('should return null if workspace does not exist', async () => {
              const result = await workspacesDb.updateWorkspace('bad-ws-id', 'New Name', 'New Desc');
-             expect(result).toBeUndefined(); // Function might return undefined if update fails
+             expect(result).toBeNull();
         });
     });
 

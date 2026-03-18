@@ -3,11 +3,12 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 const env = process.env.NODE_ENV || 'development'; // Default to development if not set
-if (env == "development") {
+if (env === "development") {
    dotenv.config({ path: path.join(__dirname, '.env.development') });
-} else if (env == "production") {
+} else if (env === "production") {
    dotenv.config({ path: path.join(__dirname, '.env') });
-} else {
+} else if (env === "test") {
+   dotenv.config({ path: path.join(__dirname, '.env.test') });
 }
 
 // Knex configuration object
@@ -30,37 +31,31 @@ module.exports = {
     // }
   },
   production: {
-    client: 'pg', // Specify the PostgreSQL client
+    client: 'pg',
     connection: {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432', 10),
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME
+      database: process.env.DB_NAME,
     },
     migrations: {
-      directory: './data/migrations', // New directory for Knex migrations
-      tableName: 'knex_migrations' // Default Knex migrations table
+      directory: './data/migrations',
+      tableName: 'knex_migrations',
     },
-    // seeds: { // Optional: configure seeds if needed later
-    //   directory: './data/seeds'
-    // }
   },
-
-  // Add other environments like production if needed
-  // production: {
-  //   client: 'pg',
-  //   connection: {
-  //     host: process.env.DB_HOST,
-  //     port: parseInt(process.env.DB_PORT || '5432', 10),
-  //     user: process.env.DB_USER,
-  //     password: process.env.DB_PASSWORD,
-  //     database: process.env.DB_NAME,
-  //     ssl: { rejectUnauthorized: false } // Example for production SSL
-  //   },
-  //   migrations: {
-  //     directory: './data/migrations',
-  //     tableName: 'knex_migrations'
-  //   }
-  // }
+  test: {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    },
+    migrations: {
+      directory: './data/migrations',
+      tableName: 'knex_migrations',
+    },
+  },
 };

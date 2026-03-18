@@ -141,17 +141,15 @@ export const updateWorkspace = async (
     workspaceId: string,
     name: string,
     description: string | null
-): Promise<Workspace> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+): Promise<Workspace | null> => {
+  const client: PoolClient = await (defaultPool as pg.Pool).connect();
   try {
     const result: QueryResult<Workspace> = await client.query(
       'UPDATE workspaces SET name = $1, description = $2 WHERE id = $3 RETURNING *',
       [name, description, workspaceId]
     );
-    
-    const workspace = result.rows[0];
-    if (!workspace) throw new Error('Expected workspace row not found after update');
-    return workspace;
+
+    return result.rows[0] ?? null;
   } finally {
     client.release();
   }

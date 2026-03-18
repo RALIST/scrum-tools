@@ -131,7 +131,7 @@ describe('Workspaces Routes (Unit/Mock Tests)', () => { // Renamed describe bloc
 
       expect(res.statusCode).toEqual(500);
       expect(res.body).toHaveProperty('error', 'Internal Server Error');
-      expect(mockWorkspaceDb.createWorkspace).toHaveBeenCalledWith('Fail Create Workspace', undefined, ownerInfo.userId); // Removed pool expectation
+      expect(mockWorkspaceDb.createWorkspace).toHaveBeenCalledWith('Fail Create Workspace', null, ownerInfo.userId);
   });
 
   it('GET /api/workspaces - should return 500 if database fails', async () => {
@@ -184,7 +184,7 @@ describe('Workspaces Routes (Unit/Mock Tests)', () => { // Renamed describe bloc
       expect(res.statusCode).toEqual(500);
       expect(res.body).toHaveProperty('error', 'Internal Server Error');
       expect(mockWorkspaceDb.getUserWorkspaceRole).toHaveBeenCalledWith(testWorkspaceId, ownerInfo.userId); // Removed pool expectation
-      expect(mockWorkspaceDb.updateWorkspace).toHaveBeenCalledWith(testWorkspaceId, updatedName, undefined); // Removed pool expectation
+      expect(mockWorkspaceDb.updateWorkspace).toHaveBeenCalledWith(testWorkspaceId, updatedName, null);
   });
 
   it('PUT /api/workspaces/:id - should fail if non-admin tries to update', async () => {
