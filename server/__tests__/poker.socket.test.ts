@@ -59,11 +59,13 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
 
   // --- Anonymous Access Tests ---
   describe('Anonymous Access', () => {
-    beforeEach((done) => {
+    beforeEach(async () => {
       const url = `http://localhost:${httpServerAddr.port}/poker`;
       clientSocket1 = Client(url, { forceNew: true, transports: ['websocket'] });
-      clientSocket1.on('connect', done);
-      clientSocket1.on('connect_error', (err) => done(err)); // Fail test on connect error
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.on('connect', () => resolve());
+        clientSocket1.on('connect_error', (err) => reject(err));
+      });
     });
 
     afterEach(() => {
@@ -71,167 +73,179 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
       if (clientSocket2?.connected) clientSocket2.disconnect();
     });
 
-    it('should allow joining a public room', (done) => {
+    it('should allow joining a public room', async () => {
       const userName = 'AnonAlice';
-      clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
-      clientSocket1.on('roomJoined', (data) => {
-        expect(data.participants.some(p => p.name === userName)).toBe(true);
-        expect(data.settings.sequence).toEqual('fibonacci'); // Check sequence key
-        done();
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
+        clientSocket1.on('roomJoined', (data) => {
+          expect(data.participants.some(p => p.name === userName)).toBe(true);
+          expect(data.settings.sequence).toEqual('fibonacci');
+          resolve();
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
       });
-      clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
     });
 
-    it('should allow joining a password room with correct password', (done) => {
+    it('should allow joining a password room with correct password', async () => {
       const userName = 'AnonBob';
-      clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: testRoomPassword });
-      clientSocket1.on('roomJoined', (data) => {
-        expect(data.participants.some(p => p.name === userName)).toBe(true);
-        expect(data.settings.sequence).toEqual('tshirt'); // Check sequence key
-        done();
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: testRoomPassword });
+        clientSocket1.on('roomJoined', (data) => {
+          expect(data.participants.some(p => p.name === userName)).toBe(true);
+          expect(data.settings.sequence).toEqual('tshirt');
+          resolve();
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
       });
-      clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
     });
 
-    it('should reject joining a password room with incorrect password', (done) => {
+    it('should reject joining a password room with incorrect password', async () => {
       const userName = 'AnonCharlie';
-      clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: 'wrongpassword' });
-      clientSocket1.on('error', (err) => {
-        expect(err.message).toEqual('Invalid password');
-        done();
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: 'wrongpassword' });
+        clientSocket1.on('error', (err) => {
+          expect(err.message).toEqual('Invalid password');
+          resolve();
+        });
+        clientSocket1.on('roomJoined', () => reject(new Error('Should not have joined with wrong password')));
       });
-      clientSocket1.on('roomJoined', () => done(new Error('Should not have joined with wrong password')));
     });
 
-    it('should reject joining a non-existent room', (done) => {
-        const userName = 'AnonDavid';
+    it('should reject joining a non-existent room', async () => {
+      const userName = 'AnonDavid';
+      await new Promise<void>((resolve, reject) => {
         clientSocket1.emit('joinRoom', { roomId: 'non-existent', userName });
         clientSocket1.on('error', (err) => {
           expect(err.message).toEqual('Room not found');
-          done();
+          resolve();
         });
-        clientSocket1.on('roomJoined', () => done(new Error('Should not have joined non-existent room')));
+        clientSocket1.on('roomJoined', () => reject(new Error('Should not have joined non-existent room')));
       });
+    });
 
-    it('should allow joining a public room even if password provided (ignored)', (done) => {
+    it('should allow joining a public room even if password provided (ignored)', async () => {
       const userName = 'AnonEve';
-      clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName, password: 'somepassword' });
-      clientSocket1.on('roomJoined', (data) => {
-        expect(data.participants.some(p => p.name === userName)).toBe(true);
-        done();
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName, password: 'somepassword' });
+        clientSocket1.on('roomJoined', (data) => {
+          expect(data.participants.some(p => p.name === userName)).toBe(true);
+          resolve();
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Should have joined public room, but got error: ${err.message}`)));
       });
-      clientSocket1.on('error', (err) => done(new Error(`Should have joined public room, but got error: ${err.message}`)));
     });
 
-    it('should allow voting and update participants', (done) => {
-        const userName = 'AnonAlice';
-        const voteValue = '5';
+    it('should allow voting and update participants', async () => {
+      const userName = 'AnonAlice';
+      const voteValue = '5';
+      await new Promise<void>((resolve, reject) => {
         clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
         clientSocket1.once('roomJoined', () => {
-            clientSocket1.emit('vote', { roomId: publicRoomId, vote: voteValue });
-            clientSocket1.on('participantUpdate', (data) => {
-                const participant = data.participants.find(p => p.id === clientSocket1.id);
-                expect(participant).toBeDefined();
-                expect(participant.name).toEqual(userName);
-                expect(participant.vote).toEqual(voteValue); // Check vote value
-                done();
-            });
-             clientSocket1.on('error', (err) => done(new Error(`Vote error: ${err.message}`)));
-        });
-         clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
-      });
-
-    it('should handle error during vote (e.g., invalid room)', (done) => {
-      const voteValue = '8';
-      // Don't join a room first
-      clientSocket1.emit('vote', { roomId: 'non-existent-room', vote: voteValue });
-      expect.assertions(1); // Expect the assertion in the listener to run
-
-      clientSocket1.on('error', (err) => {
-
-        expect(err.message).toEqual('Failed to record vote');
-
-        done();
-      });
-      // Rely on Jest's default timeout
-    });
-
-      it('should reveal votes', (done) => {
-        const userName = 'AnonAlice';
-        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
-        clientSocket1.once('roomJoined', () => {
-            clientSocket1.emit('revealVotes', { roomId: publicRoomId });
-            clientSocket1.on('votesRevealed', () => done());
-             clientSocket1.on('error', (err) => done(new Error(`Reveal error: ${err.message}`)));
-        });
-         clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
-      });
-
-      it('should reset votes', (done) => {
-        const userName = 'AnonAlice';
-        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
-        clientSocket1.once('roomJoined', () => {
-            clientSocket1.emit('resetVotes', { roomId: publicRoomId });
-            clientSocket1.on('votesReset', () => {
-                 // Add check for participant update after reset
-                 clientSocket1.on('participantUpdate', (data) => {
-                    const participant = data.participants.find(p => p.id === clientSocket1.id);
-                    expect(participant).toBeDefined();
-                    expect(participant.vote).toBeNull(); // Vote should be null after reset
-                    done();
-                });
-            });
-             clientSocket1.on('error', (err) => done(new Error(`Reset error: ${err.message}`)));
-        });
-         clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
-      });
-
-    it('should handle error during resetVotes (e.g., invalid room)', (done) => {
-      // Don't join a room first
-      clientSocket1.emit('resetVotes', { roomId: 'non-existent-room' });
-      expect.assertions(1); // Expect the assertion in the listener to run
-
-      clientSocket1.on('error', (err) => {
-
-        expect(err.message).toEqual('Failed to reset votes'); // Reverted expectation
-
-        done();
-      });
-      // Rely on Jest's default timeout
-    });
-
-      it('should allow changing name', (done) => {
-          const initialName = 'AnonAlice';
-          const newName = 'AnonAlice B.';
-          clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName: initialName });
-          clientSocket1.once('roomJoined', () => {
-              clientSocket1.emit('changeName', { roomId: publicRoomId, newName: newName });
-              clientSocket1.on('participantUpdate', (data) => {
-                  const participant = data.participants.find(p => p.id === clientSocket1.id);
-                  expect(participant).toBeDefined();
-                  expect(participant.name).toEqual(newName);
-                  done();
-              });
-               clientSocket1.on('error', (err) => done(new Error(`Change name error: ${err.message}`)));
+          clientSocket1.emit('vote', { roomId: publicRoomId, vote: voteValue });
+          clientSocket1.on('participantUpdate', (data) => {
+            const participant = data.participants.find(p => p.id === clientSocket1.id);
+            expect(participant).toBeDefined();
+            expect(participant.name).toEqual(userName);
+            expect(participant.vote).toEqual(voteValue);
+            resolve();
           });
-           clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
+          clientSocket1.on('error', (err) => reject(new Error(`Vote error: ${err.message}`)));
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
       });
+    });
 
-    it('should handle error during changeName (e.g., invalid room)', (done) => {
-      const initialName = 'AnonAliceFail';
+    it('should handle error during vote (e.g., invalid room)', async () => {
+      const voteValue = '8';
+      await new Promise<void>((resolve, reject) => {
+        // Don't join a room first
+        clientSocket1.emit('vote', { roomId: 'non-existent-room', vote: voteValue });
+        clientSocket1.on('error', (err) => {
+          expect(err.message).toEqual('Failed to record vote');
+          resolve();
+        });
+        // Timeout fallback in case error event never fires
+        setTimeout(() => reject(new Error('Timeout: error event not received')), 3000);
+      });
+    });
+
+    it('should reveal votes', async () => {
+      const userName = 'AnonAlice';
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
+        clientSocket1.once('roomJoined', () => {
+          clientSocket1.emit('revealVotes', { roomId: publicRoomId });
+          clientSocket1.on('votesRevealed', () => resolve());
+          clientSocket1.on('error', (err) => reject(new Error(`Reveal error: ${err.message}`)));
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
+      });
+    });
+
+    it('should reset votes', async () => {
+      const userName = 'AnonAlice';
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
+        clientSocket1.once('roomJoined', () => {
+          clientSocket1.emit('resetVotes', { roomId: publicRoomId });
+          clientSocket1.on('votesReset', () => {
+            clientSocket1.on('participantUpdate', (data) => {
+              const participant = data.participants.find(p => p.id === clientSocket1.id);
+              expect(participant).toBeDefined();
+              expect(participant.vote).toBeNull();
+              resolve();
+            });
+          });
+          clientSocket1.on('error', (err) => reject(new Error(`Reset error: ${err.message}`)));
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
+      });
+    });
+
+    it('should handle error during resetVotes (e.g., invalid room)', async () => {
+      await new Promise<void>((resolve, reject) => {
+        // Don't join a room first
+        clientSocket1.emit('resetVotes', { roomId: 'non-existent-room' });
+        clientSocket1.on('error', (err) => {
+          expect(err.message).toEqual('Failed to reset votes');
+          resolve();
+        });
+        // Timeout fallback in case error event never fires
+        setTimeout(() => reject(new Error('Timeout: error event not received')), 3000);
+      });
+    });
+
+    it('should allow changing name', async () => {
+      const initialName = 'AnonAlice';
+      const newName = 'AnonAlice B.';
+      await new Promise<void>((resolve, reject) => {
+        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName: initialName });
+        clientSocket1.once('roomJoined', () => {
+          clientSocket1.emit('changeName', { roomId: publicRoomId, newName: newName });
+          clientSocket1.on('participantUpdate', (data) => {
+            const participant = data.participants.find(p => p.id === clientSocket1.id);
+            expect(participant).toBeDefined();
+            expect(participant.name).toEqual(newName);
+            resolve();
+          });
+          clientSocket1.on('error', (err) => reject(new Error(`Change name error: ${err.message}`)));
+        });
+        clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
+      });
+    });
+
+    it('should handle error during changeName (e.g., invalid room)', async () => {
       const newName = 'AnonAliceFail B.';
-      // Don't join a room first
-      clientSocket1.emit('changeName', { roomId: 'non-existent-room', newName: newName });
-       // Expect the assertion in the listener to run
-
-      clientSocket1.on('error', (err) => {
-
-        expect(err.message).toEqual('Failed to change name');
-
-        done();
-        // Removed duplicate done() call
+      await new Promise<void>((resolve, reject) => {
+        // Don't join a room first
+        clientSocket1.emit('changeName', { roomId: 'non-existent-room', newName: newName });
+        clientSocket1.on('error', (err) => {
+          expect(err.message).toEqual('Failed to change name');
+          resolve();
+        });
+        // Timeout fallback in case error event never fires
+        setTimeout(() => reject(new Error('Timeout: error event not received')), 3000);
       });
-      // Rely on Jest's default timeout
     });
 
     it('should update room settings (sequence and password)', async () => { // Made async for await request
@@ -397,38 +411,41 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
     // --- END NEW TEST ---
 
 
-      it('should remove participant on disconnect', (done) => {
+      it('should remove participant on disconnect', async () => {
           const userName1 = 'AnonAlice';
           const userName2 = 'AnonBob';
           const url = `http://localhost:${httpServerAddr.port}/poker`;
           clientSocket2 = Client(url, { forceNew: true, transports: ['websocket'] });
-          let client1Joined = false;
-          let client2Joined = false;
 
-          const checkDone = () => {
+          await new Promise<void>((resolve, reject) => {
+            let client1Joined = false;
+            let client2Joined = false;
+
+            const checkDone = () => {
               if (client1Joined && client2Joined) clientSocket1.disconnect();
-          };
+            };
 
-          clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName: userName1 });
-          clientSocket1.once('roomJoined', () => { client1Joined = true; checkDone(); });
+            clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName: userName1 });
+            clientSocket1.once('roomJoined', () => { client1Joined = true; checkDone(); });
 
-          clientSocket2.on('connect', () => {
+            clientSocket2.on('connect', () => {
               clientSocket2.emit('joinRoom', { roomId: publicRoomId, userName: userName2 });
               clientSocket2.once('roomJoined', () => {
-                  client2Joined = true;
-                  clientSocket2.on('participantUpdate', (data) => {
-                      const alice = data.participants.find(p => p.name === userName1);
-                      expect(alice).toBeUndefined();
-                      const bob = data.participants.find(p => p.name === userName2);
-                      expect(bob).toBeDefined();
-                      done();
-                  });
-                   clientSocket2.on('error', (err) => done(new Error(`Client 2 error: ${err.message}`)));
-                  checkDone();
+                client2Joined = true;
+                clientSocket2.on('participantUpdate', (data) => {
+                  const alice = data.participants.find(p => p.name === userName1);
+                  expect(alice).toBeUndefined();
+                  const bob = data.participants.find(p => p.name === userName2);
+                  expect(bob).toBeDefined();
+                  resolve();
+                });
+                clientSocket2.on('error', (err) => reject(new Error(`Client 2 error: ${err.message}`)));
+                checkDone();
               });
+            });
+            clientSocket1.on('error', (err) => reject(new Error(`Client 1 error: ${err.message}`)));
+            clientSocket2.on('connect_error', (err) => reject(new Error(`Client 2 connect error: ${err.message}`)));
           });
-           clientSocket1.on('error', (err) => done(new Error(`Client 1 error: ${err.message}`)));
-           clientSocket2.on('connect_error', (err) => done(new Error(`Client 2 connect error: ${err.message}`)));
       });
   });
 
@@ -436,40 +453,44 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
   describe('Authenticated Access', () => {
       // We already have authToken, userId, testUserName from the top-level beforeAll
 
-      beforeEach((done) => {
+      beforeEach(async () => {
         const url = `http://localhost:${httpServerAddr.port}/poker`;
-        // Pass auth token if socket authentication is implemented
         clientSocket1 = Client(url, {
             forceNew: true,
             transports: ['websocket'],
-            // auth: { token: authToken } // Keep commented as backend doesn't use socket auth
         });
-        clientSocket1.on('connect', done);
-        clientSocket1.on('connect_error', (err) => done(err));
+        await new Promise<void>((resolve, reject) => {
+          clientSocket1.on('connect', () => resolve());
+          clientSocket1.on('connect_error', (err) => reject(err));
+        });
       });
 
       afterEach(() => {
         if (clientSocket1?.connected) clientSocket1.disconnect();
       });
 
-      it('should allow an authenticated user to join a public room', (done) => {
-        const userName = testUserName; // Use name from registered user
-        clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
-        clientSocket1.on('roomJoined', (data) => {
+      it('should allow an authenticated user to join a public room', async () => {
+        const userName = testUserName;
+        await new Promise<void>((resolve, reject) => {
+          clientSocket1.emit('joinRoom', { roomId: publicRoomId, userName });
+          clientSocket1.on('roomJoined', (data) => {
             expect(data.participants.some(p => p.name === userName)).toBe(true);
-            done();
+            resolve();
+          });
+          clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
         });
-        clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
 
-       it('should allow an authenticated user to join a password room', (done) => {
+      it('should allow an authenticated user to join a password room', async () => {
         const userName = testUserName;
-        clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: testRoomPassword });
-        clientSocket1.on('roomJoined', (data) => {
+        await new Promise<void>((resolve, reject) => {
+          clientSocket1.emit('joinRoom', { roomId: testRoomId, userName, password: testRoomPassword });
+          clientSocket1.on('roomJoined', (data) => {
             expect(data.participants.some(p => p.name === userName)).toBe(true);
-            done();
+            resolve();
+          });
+          clientSocket1.on('error', (err) => reject(new Error(`Join error: ${err.message}`)));
         });
-        clientSocket1.on('error', (err) => done(new Error(`Join error: ${err.message}`)));
       });
 
       // Add more tests specific to authenticated users if functionality differs
@@ -477,22 +498,21 @@ describe('Planning Poker Socket Events (/poker namespace)', () => {
   });
 
   // --- Disconnect Test (Moved Inside Main Describe) ---
-  it('should handle disconnect gracefully even if user did not join a room', (done) => {
+  it('should handle disconnect gracefully even if user did not join a room', async () => {
     const url = `http://localhost:${httpServerAddr.port}/poker`;
     const tempSocket = Client(url, { forceNew: true, transports: ['websocket'] });
 
-    tempSocket.on('connect', () => {
+    await new Promise<void>((resolve, reject) => {
+      tempSocket.on('connect', () => {
         // Immediately disconnect without joining
         tempSocket.disconnect();
-        // We can't easily assert server-side logs here,
-        // but we can check that the disconnect doesn't crash the server.
-        // The test passes if done() is called without errors.
-        // Add a small delay to allow server-side disconnect logic to run.
-        setTimeout(done, 200);
-    });
+        // Small delay to allow server-side disconnect logic to run
+        setTimeout(() => resolve(), 200);
+      });
 
-    tempSocket.on('connect_error', (err) => done(err));
-    tempSocket.on('error', (err) => done(new Error(`Unexpected socket error: ${err.message}`)));
+      tempSocket.on('connect_error', (err) => reject(err));
+      tempSocket.on('error', (err) => reject(new Error(`Unexpected socket error: ${err.message}`)));
+    });
   });
   // --- End Disconnect Test ---
 
