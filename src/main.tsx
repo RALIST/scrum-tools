@@ -15,13 +15,14 @@ const queryClient = new QueryClient();
 initPerformanceTracking();
 initFontOptimization();
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- root element is guaranteed to exist in index.html
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {/* Add StrictMode */}
     <QueryClientProvider client={queryClient}>
       {/* Add QueryClientProvider */}
       <ChakraProvider theme={theme}>
-        <ColorModeScript initialColorMode={(theme.config as ThemeConfig).initialColorMode} />
+        <ColorModeScript initialColorMode={(theme['config'] as ThemeConfig).initialColorMode} />
         <App />
       </ChakraProvider>
     </QueryClientProvider>

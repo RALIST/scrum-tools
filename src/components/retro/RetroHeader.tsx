@@ -83,7 +83,7 @@ const RetroHeader: FC<RetroHeaderProps> = ({
         <Heading as="h1" size="xl">
           <HStack>
             <Text>{boardName}</Text>
-            <Tooltip label={"Copy link to room"}>
+            <Tooltip label="Copy link to room">
               <IconButton
                 title="Copy link"
                 aria-label="Copy link"

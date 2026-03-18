@@ -23,8 +23,7 @@ export const PokerLandingActions: FC<PokerLandingActionsProps> = memo(
     return (
       <VStack spacing={6} w={{ base: 'full', md: '500px' }}>
         {/* Quick Join for Workspace Rooms (now uses the filtered 'rooms' list) */}
-        {isAuthenticated && currentWorkspace && rooms.length > 0 && (
-          <Box w="full" mt={4}>
+        {isAuthenticated && currentWorkspace && rooms.length > 0 ? <Box w="full" mt={4}>
             <Text fontWeight="bold" mb={2}>
               Rooms in {currentWorkspace.name}:
             </Text>
@@ -65,8 +64,7 @@ export const PokerLandingActions: FC<PokerLandingActionsProps> = memo(
                 </Button>
               )}
             </VStack>
-          </Box>
-        )}
+          </Box> : null}
         {/* Main Actions */}
         <Button colorScheme="blue" size="lg" w="full" onClick={onCreateModalOpen}>
           Create New Room

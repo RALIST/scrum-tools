@@ -181,8 +181,7 @@ const WorkspaceMenu = React.memo<WorkspaceMenuProps>(
             Workspace Details
           </MenuItem>
           <Divider />
-          {workspaces &&
-            workspaces.map((workspace) => (
+          {workspaces ? workspaces.map((workspace) => (
               <MenuItem
                 key={workspace.id}
                 onClick={() => { onWorkspaceSelect(workspace); }} // Use the passed handler
@@ -197,7 +196,7 @@ const WorkspaceMenu = React.memo<WorkspaceMenuProps>(
                   </Badge>
                 )}
               </MenuItem>
-            ))}
+            )) : null}
           <Divider />
           <MenuItem as={RouterLink} to="/workspaces">
             All Workspaces
@@ -250,13 +249,11 @@ const Navbar: FC = () => {
             </Link>
             <HStack>
               {/* Use memoized WorkspaceMenu */}
-              {isAuthenticated && currentWorkspace && (
-                <WorkspaceMenu
+              {isAuthenticated && currentWorkspace ? <WorkspaceMenu
                   currentWorkspace={currentWorkspace}
                   workspaces={workspaces}
                   onWorkspaceSelect={onWorkspaceSelect}
-                />
-              )}
+                /> : null}
               <ThemeToggle /> {/* Use static component */}
               <Menu>
                 <MenuButton
@@ -327,13 +324,11 @@ const Navbar: FC = () => {
 
             <HStack spacing={4}>
               {/* Pass props to memoized components */}
-              {isAuthenticated && currentWorkspace && (
-                <WorkspaceMenu
+              {isAuthenticated && currentWorkspace ? <WorkspaceMenu
                   currentWorkspace={currentWorkspace}
                   workspaces={workspaces}
                   onWorkspaceSelect={onWorkspaceSelect}
-                />
-              )}
+                /> : null}
               <ThemeToggle /> {/* Use static component */}
               {isAuthenticated ? (
                 <UserMenu user={user} logout={logout} />

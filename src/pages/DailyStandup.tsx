@@ -115,7 +115,7 @@ const DailyStandup: FC = () => {
     }
 
     return () => {
-      if (timerId) {
+      if (timerId !== undefined) {
         clearInterval(timerId);
       }
     };
@@ -139,18 +139,14 @@ const DailyStandup: FC = () => {
         // If we have a workspace, save with workspace ID
         const key = `dailyStandupTeamMembers_${currentWorkspace.id}`;
         localStorage.setItem(key, JSON.stringify(teamMembers));
-        console.log(
-          `Saved ${String(teamMembers.length)} team members to workspace storage`
-        );
+        // Saved team members to workspace storage
       } else {
         // Otherwise save to general storage
         localStorage.setItem(
           "dailyStandupTeamMembers",
           JSON.stringify(teamMembers)
         );
-        console.log(
-          `Saved ${String(teamMembers.length)} team members to general storage`
-        );
+        // Saved team members to general storage
       }
     }
   }, [teamMembers, isAuthenticated, currentWorkspace]);
@@ -168,9 +164,7 @@ const DailyStandup: FC = () => {
         if (savedWorkspaceTeam) {
           try {
             savedMembers = JSON.parse(savedWorkspaceTeam) as TeamMember[];
-            console.log(
-              `Restored ${String(savedMembers.length)} team members from workspace storage`
-            );
+            // Restored team members from workspace storage
           } catch (e) {
             console.error("Error parsing saved workspace team members:", e);
             localStorage.removeItem(key);
@@ -186,9 +180,7 @@ const DailyStandup: FC = () => {
         if (savedGeneralTeam) {
           try {
             savedMembers = JSON.parse(savedGeneralTeam) as TeamMember[];
-            console.log(
-              `Restored ${String(savedMembers.length)} team members from general storage`
-            );
+            // Restored team members from general storage
           } catch (e) {
             console.error("Error parsing saved general team members:", e);
             localStorage.removeItem("dailyStandupTeamMembers");
@@ -406,8 +398,7 @@ const DailyStandup: FC = () => {
             shadow="md"
           >
             <VStack spacing={6}>
-              {isAuthenticated && workspaces && workspaces.length > 0 && (
-                <HStack width="100%" justify="space-between">
+              {isAuthenticated && workspaces && workspaces.length > 0 ? <HStack width="100%" justify="space-between">
                   <HStack>
                     <Text fontWeight="medium">Workspace:</Text>
                     <Menu>
@@ -417,7 +408,7 @@ const DailyStandup: FC = () => {
                         size="sm"
                         variant="outline"
                       >
-                        {currentWorkspace?.name || "Select Workspace"}
+                        {currentWorkspace?.name ?? "Select Workspace"}
                       </MenuButton>
                       <MenuList>
                         {workspaces.map((workspace) => (
@@ -453,9 +444,8 @@ const DailyStandup: FC = () => {
                       </MenuList>
                     </Menu>
                   </HStack>
-                  {isLoading && <Spinner size="sm" />}
-                </HStack>
-              )}
+                  {isLoading ? <Spinner size="sm" /> : null}
+                </HStack> : null}
 
               <HStack spacing={4}>
                 <Button

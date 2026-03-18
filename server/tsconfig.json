@@ -15,6 +15,7 @@
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true,
 
     "module": "NodeNext",

@@ -27,7 +27,7 @@ import type { WorkspaceVelocityTeam } from '../../hooks/useWorkspaceTools';
 import { apiRequest, type ApiOptions } from '../../utils/apiUtils';
 
 // Lazy load heavy chart component
-const VelocityChart = lazy(() => import('../../components/velocity/VelocityChart'));
+const VelocityChart = lazy(async () => import('../../components/velocity/VelocityChart'));
 
 // Chart loading component
 const ChartLoadingSpinner: FC = () => (
@@ -66,6 +66,7 @@ const TeamVelocity: FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth(); // Get loading state
   const { currentWorkspace, getWorkspaceMembers, isLoading: isWorkspaceLoading } = useWorkspace(); // Get loading state
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  // eslint-disable-next-line react/hook-use-state
   const [, setIsLoadingMembers] = useState(false);
 
   // State for anonymous team setup
@@ -222,8 +223,8 @@ const TeamVelocity: FC = () => {
   const isLoadingDisplayData = currentWorkspace
     ? isLoadingData // Use query loading state for workspace
     : createOrLoadTeamMutation.isPending; // Use mutation loading state initially for anonymous
-  const velocityData = currentWorkspace ? teamData?.sprints || [] : anonVelocityData;
-  const averages = currentWorkspace ? teamData?.averages || null : anonAverages;
+  const velocityData = currentWorkspace ? teamData?.sprints ?? [] : anonVelocityData;
+  const averages = currentWorkspace ? teamData?.averages ?? null : anonAverages;
 
   // Effect to handle successful data fetch for workspace mode and clear form errors
   useEffect(() => {
@@ -451,8 +452,7 @@ const TeamVelocity: FC = () => {
           {/* Display Area (Stats, Chart, No Data Message) */}
           {/* Show data area if in workspace OR anonymous team is loaded */}
           {/* Show data area if in workspace OR anonymous team mutation succeeded */}
-          {(!!currentWorkspace || createOrLoadTeamMutation.isSuccess) && (
-            <>
+          {(!!currentWorkspace || createOrLoadTeamMutation.isSuccess) ? <>
               {/* Use combined loading state */}
               {isLoadingDisplayData ? (
                 <Center h="100px">
@@ -460,7 +460,7 @@ const TeamVelocity: FC = () => {
                 </Center>
               ) : (
                 <>
-                  {averages && <VelocityStats averages={averages} />}
+                  {averages ? <VelocityStats averages={averages} /> : null}
                   {velocityData.length > 0 && (
                     <Suspense fallback={<ChartLoadingSpinner />}>
                       <VelocityChart velocityData={velocityData} />
@@ -477,8 +477,7 @@ const TeamVelocity: FC = () => {
                   )}
                 </>
               )}
-            </>
-          )}
+            </> : null}
 
           <Divider my={8} />
           <SeoText sections={teamVelocitySeoSections} />

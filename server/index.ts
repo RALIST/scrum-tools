@@ -30,7 +30,7 @@ import type {
 const __filename: string = fileURLToPath(import.meta.url);
 const __dirname: string = dirname(__filename);
 
-const env: string = process.env.NODE_ENV || 'development';
+const env: string = process.env.NODE_ENV ?? 'development';
 
 if (env === "development") {
    dotenv.config({ path: join(__dirname, '../.env.development') });
@@ -40,7 +40,7 @@ if (env === "development") {
    dotenv.config({ path: join(__dirname, '.env.test') });
 }
 
-if (process.env.NODE_ENV == "production") {
+if (process.env.NODE_ENV === "production") {
     logger.info('Running in production mode');
     logger.info('Environment variables loaded from .env file');
     logger.info("Database connection details:", {
@@ -66,7 +66,6 @@ app.use('/api/retro', optionalAuthenticateToken, setupRetroRoutes(retroDb, works
 // Inject velocityDb and workspaceDb
 app.use('/api/velocity', optionalAuthenticateToken, setupVelocityRoutes(velocityDb, workspaceDb)); // Pass velocityDb namespace
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const server: HttpServer = createServer(app);
 // Define the main IO server type (can be generic or more specific if needed)
 const io = new SocketIOServer(server, {
@@ -112,7 +111,7 @@ app.get('/api/test-auth', authenticateToken, (req: Request, res: Response) => {
   res.json({ message: 'Authenticated!', userId });
 });
 
-const PORT: string | number = process.env.PORT || 3001;
+const PORT: string | number = process.env.PORT ?? 3001;
 
 // Start the server only if this file is run directly (ES Module way)
 const mainArg = process.argv[1];

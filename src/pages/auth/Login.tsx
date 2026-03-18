@@ -29,7 +29,7 @@ const Login: FC = () => {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const toast = useToast();
   const navigate = useNavigate();
   const { colorMode } = useColorMode();
@@ -39,7 +39,7 @@ const Login: FC = () => {
   }
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: { email?: string; password?: string } = {};
 
     if (!email) {
       newErrors.email = "Email is required";

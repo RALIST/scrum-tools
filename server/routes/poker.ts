@@ -79,7 +79,7 @@ export default function setupPokerRoutes(
         // Get sequence key from body
         const { roomId, name, password, sequence, workspaceId } = req.body as { roomId: string; name?: string; password?: string; sequence?: string; workspaceId?: string };
         const userId: string | undefined = req.user?.userId; // Get userId for workspace check
-        const safe_sequence = sequence || "fibonacci"; // Default sequence if not provided
+        const safe_sequence = sequence ?? "fibonacci"; // Default sequence if not provided
 
         try {
             // If workspaceId is provided, ensure the user is authenticated and a member

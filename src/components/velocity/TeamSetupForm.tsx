@@ -69,7 +69,7 @@ export const TeamSetupForm: FC<TeamSetupFormProps> = ({
                 <FormLabel>Team Password</FormLabel>
                 <Input
                   type="password"
-                  value={teamPassword || ""} // Handle potential undefined
+                  value={teamPassword ?? ""} // Handle potential undefined
                   onChange={(e) => { onPasswordChange(e.target.value); }}
                   placeholder="Enter team password"
                   isDisabled={isTeamLoaded}

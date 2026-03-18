@@ -1,5 +1,4 @@
 import type {PoolClient, QueryResult, QueryResultRow} from 'pg';
-import type pg from 'pg'; // Import necessary types
 import { pool } from './pool.js'; // Import pool internally (needs .js extension)
 
 /**
@@ -18,7 +17,8 @@ export const executeQuery = async <R extends QueryResultRow = QueryResultRow>(
     existingClient: PoolClient | null = null
 ): Promise<QueryResult<R>> => {
     const isNewClient = !existingClient;
-    const client: PoolClient = existingClient || await (pool as pg.Pool).connect(); // Type client and assert pool type
+    if (!pool) throw new Error('Database pool is not initialized');
+    const client: PoolClient = existingClient ?? await pool.connect();
 
     try {
         const result = await client.query<R>(queryText, params);

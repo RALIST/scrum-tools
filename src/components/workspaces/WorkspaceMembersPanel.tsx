@@ -101,8 +101,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
   return (
     <VStack spacing={6} align="stretch">
       {/* Invite Section (Only for Admins) */}
-      {isAdmin && (
-        <Box p={4} borderWidth={1} borderRadius="md">
+      {isAdmin ? <Box p={4} borderWidth={1} borderRadius="md">
           <Heading size="sm" mb={3}>
             Invite New Members
           </Heading>
@@ -126,8 +125,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
               Add by Email
             </Button>
           </HStack>
-          {inviteToken && (
-            <Box
+          {inviteToken ? <Box
               mt={4}
               p={3}
               bg={colorMode === "light" ? "gray.100" : "gray.600"}
@@ -158,10 +156,8 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
                   Copy
                 </Button>
               </HStack>
-            </Box>
-          )}
-        </Box>
-      )}
+            </Box> : null}
+        </Box> : null}
 
       {/* Members Table Section */}
       <Box>

@@ -162,8 +162,7 @@ const RetroCard: FC<RetroCardProps> = ({
                 {votes.length}
               </Button>
             </Tooltip>
-            {isAuthor &&
-              (isEditing ? (
+            {isAuthor ? isEditing ? (
                 <ButtonGroup size="sm" spacing={1}>
                   <IconButton
                     aria-label="Save edit"
@@ -197,7 +196,7 @@ const RetroCard: FC<RetroCardProps> = ({
                     onClick={() => { onDelete(id); }}
                   />
                 </ButtonGroup>
-              ))}
+              ) : null}
           </HStack>
         </VStack>
       </CardBody>

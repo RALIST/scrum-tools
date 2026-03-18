@@ -67,7 +67,7 @@ export default function setupWorkspaceRoutes(
         // Assert req.user exists
         const userId = getAuthUserId(req);
         // Use injected dependency
-        const workspaces: Array<Workspace & { role: WorkspaceRole }> = await workspaceDb.getUserWorkspaces(userId);
+        const workspaces: (Workspace & { role: WorkspaceRole })[] = await workspaceDb.getUserWorkspaces(userId);
 
         res.json(workspaces);
       } catch (error: unknown) {
@@ -155,7 +155,7 @@ export default function setupWorkspaceRoutes(
 
         // Use injected dependency
         // Assert user is not null
-        await workspaceDb.addWorkspaceMember(workspaceId, user.id, (role || 'member') as WorkspaceRole);
+        await workspaceDb.addWorkspaceMember(workspaceId, user.id, (role ?? 'member') as WorkspaceRole);
 
         res.status(201).json({
           message: 'Member added successfully',

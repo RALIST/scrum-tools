@@ -14,28 +14,28 @@ import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import Home from './pages/Home';
 
 // Lazy load major route components for code splitting
-const DailyStandup = lazy(() => import('./pages/DailyStandup'));
-const Profile = lazy(() => import('./pages/Profile'));
+const DailyStandup = lazy(async () => import('./pages/DailyStandup'));
+const Profile = lazy(async () => import('./pages/Profile'));
 
 // Planning Poker routes
-const PlanningPoker = lazy(() => import('./pages/poker/PlanningPoker'));
-const PlanningPokerRoom = lazy(() => import('./pages/poker/PlanningPokerRoom'));
+const PlanningPoker = lazy(async () => import('./pages/poker/PlanningPoker'));
+const PlanningPokerRoom = lazy(async () => import('./pages/poker/PlanningPokerRoom'));
 
 // Retro routes
-const RetroBoard = lazy(() => import('./pages/retro/RetroBoard'));
-const RetroLanding = lazy(() => import('./pages/retro/RetroLanding'));
+const RetroBoard = lazy(async () => import('./pages/retro/RetroBoard'));
+const RetroLanding = lazy(async () => import('./pages/retro/RetroLanding'));
 
 // Velocity routes
-const TeamVelocity = lazy(() => import('./pages/velocity/TeamVelocity'));
+const TeamVelocity = lazy(async () => import('./pages/velocity/TeamVelocity'));
 
 // Auth routes
-const Login = lazy(() => import('./pages/auth/Login'));
-const Register = lazy(() => import('./pages/auth/Register'));
+const Login = lazy(async () => import('./pages/auth/Login'));
+const Register = lazy(async () => import('./pages/auth/Register'));
 
 // Workspace routes
-const Workspaces = lazy(() => import('./pages/workspaces/Workspaces'));
-const WorkspaceDetail = lazy(() => import('./pages/workspaces/WorkspaceDetail'));
-const JoinWorkspacePage = lazy(() => import('./pages/workspaces/JoinWorkspacePage'));
+const Workspaces = lazy(async () => import('./pages/workspaces/Workspaces'));
+const WorkspaceDetail = lazy(async () => import('./pages/workspaces/WorkspaceDetail'));
+const JoinWorkspacePage = lazy(async () => import('./pages/workspaces/JoinWorkspacePage'));
 
 const App: FC = () => {
   return (

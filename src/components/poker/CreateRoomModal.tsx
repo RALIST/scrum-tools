@@ -55,7 +55,7 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
         <ModalBody>
           <VStack spacing={4}>
             {/* Room Name is required only if the user is authenticated AND a specific workspace is selected (not 'No Workspace') */}
-            <FormControl isRequired={isAuthenticated && !!currentWorkspaceId}>
+            <FormControl isRequired={isAuthenticated ? !!currentWorkspaceId : undefined}>
               <FormLabel>Room Name</FormLabel>
               <Input
                 placeholder="Enter room name (optional for public rooms)"
@@ -65,12 +65,11 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
             </FormControl>
 
             {/* Workspace selection only shown if authenticated */}
-            {isAuthenticated && workspaces && workspaces.length > 0 && (
-              <FormControl>
+            {isAuthenticated && workspaces && workspaces.length > 0 ? <FormControl>
                 <FormLabel>Workspace (Optional)</FormLabel>
                 <Select
                   name="workspaceId"
-                  value={settings.workspaceId || ""}
+                  value={settings.workspaceId ?? ""}
                   onChange={(e) => {
                     onSettingsChange({
                       workspaceId: e.target.value || undefined,
@@ -87,8 +86,7 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
                 <Text fontSize="sm" color="gray.500" mt={1}>
                   Workspace rooms are only visible to workspace members.
                 </Text>
-              </FormControl>
-            )}
+              </FormControl> : null}
 
             <FormControl>
               <FormLabel>Estimation Sequence</FormLabel>
@@ -111,7 +109,7 @@ export const CreateRoomModal: FC<CreateRoomModalProps> = ({
               <Input
                 type="password"
                 placeholder="Leave empty for no password"
-                value={settings.password || ""}
+                value={settings.password ?? ""}
                 onChange={(e) => {
                   onSettingsChange({ password: e.target.value || undefined });
                 }}

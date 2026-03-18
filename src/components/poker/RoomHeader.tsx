@@ -50,7 +50,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
     const currentParticipantName = useMemo(() => {
       if (!participants || !socketId) return userName; // Fallback to state/prop userName
       const currentUser = participants.find(p => p.id === socketId);
-      return currentUser?.name || userName;
+      return currentUser?.name ?? userName;
     }, [participants, socketId, userName]);
 
     // Memoize copy handler to prevent recreation
@@ -75,7 +75,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
 
     return (
       <Box textAlign="center" w="full">
-        <Heading size={{ base: 'lg', md: 'xl' }} mb={4} textAlign={'center'}>
+        <Heading size={{ base: 'lg', md: 'xl' }} mb={4} textAlign="center">
           <Stack
             direction={{ base: 'column', md: 'row' }}
             spacing={2}
@@ -84,8 +84,8 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
           >
             {/* Reverted display */}
             <Text>Room {roomId}</Text>
-            <Stack direction={'row'} spacing={2}>
-              <Tooltip label={'Copy link to room'}>
+            <Stack direction="row" spacing={2}>
+              <Tooltip label="Copy link to room">
                 <IconButton
                   title="Copy link"
                   aria-label="Copy link"
@@ -95,7 +95,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
                 />
               </Tooltip>
               {/* Show settings only if joined? Or always? Let's assume always for now */}
-              <Tooltip label={'Change room settings'}>
+              <Tooltip label="Change room settings">
                 <IconButton
                   aria-label="Room Settings"
                   icon={<SettingsIcon />}
@@ -109,8 +109,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
         </Heading>
         <Divider my={2} />
         {/* Show user name only if joined */}
-        {isJoined && (
-          <VStack spacing={2}>
+        {isJoined ? <VStack spacing={2}>
             <Stack direction="row" spacing={2} align="center">
               <Text
                 fontSize={{ base: 'md', md: 'lg' }}
@@ -128,8 +127,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
                 />
               )}
             </Stack>
-          </VStack>
-        )}
+          </VStack> : null}
       </Box>
     );
   }

@@ -442,7 +442,7 @@ describe('Workspace DB Functions (Integration Tests)', () => {
             expect(invite.expires_at.getTime()).toBeGreaterThan(Date.now());
             expect(invite.expires_at.getTime()).toBeLessThan(expectedExpiry + 10000); // Allow 10s margin
             expect(invite.used_at).toBeNull();
-            expect(invite.used_by_user_id == null).toBe(true); // Check for null or undefined
+            expect(invite.used_by_user_id === null || invite.used_by_user_id === undefined).toBe(true); // Check for null or undefined
         });
     });
 

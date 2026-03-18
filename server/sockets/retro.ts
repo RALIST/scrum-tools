@@ -48,7 +48,7 @@ const handleRetroSocketEvents = (
                 }
             }
 
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             await socket.join(roomName)
             userNames.set(socket.id, name)
             // debugLog('Socket joined room', { socketId: socket.id, roomName })
@@ -86,7 +86,7 @@ const handleRetroSocketEvents = (
         const { boardId, hideCards } = payload;
         try {
             // debugLog('Toggling cards visibility', { boardId, hideCards })
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
 
             // Update visibility state
             boardVisibility.set(boardId, hideCards)
@@ -117,7 +117,7 @@ const handleRetroSocketEvents = (
                 socket.emit('error', { message: 'Board not found after adding card.' } as SocketErrorPayload);
                 return;
             }
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName });
             io.to(roomName).emit('retroBoardUpdated', board);
         } catch {
@@ -135,7 +135,7 @@ const handleRetroSocketEvents = (
                 socket.emit('error', { message: 'Board not found after editing card.' } as SocketErrorPayload);
                 return;
             }
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
         } catch {
@@ -150,7 +150,7 @@ const handleRetroSocketEvents = (
             await retroDb.deleteRetroCard(cardId); // Use injected retroDb
             const board: RetroBoardDetails | null = await retroDb.getRetroBoard(boardId); // Use injected retroDb
             // No need to check if board exists here, as we emit even if it's null (meaning board was deleted)
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             if (!board) {
                 socket.emit('error', { message: 'Board not found after deleting card.' } as SocketErrorPayload);
@@ -178,7 +178,7 @@ const handleRetroSocketEvents = (
                 socket.emit('error', { message: 'Board not found after toggling vote.' } as SocketErrorPayload);
                 return;
             }
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
         } catch {
@@ -196,7 +196,7 @@ const handleRetroSocketEvents = (
                 socket.emit('error', { message: 'Board not found after updating settings.' } as SocketErrorPayload);
                 return;
             }
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             // debugLog('Emitting settings update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', board);
         } catch {
@@ -230,7 +230,7 @@ const handleRetroSocketEvents = (
                 socket.emit('error', { message: 'Board not found after changing name.' } as SocketErrorPayload);
                 return;
             }
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
             // debugLog('Emitting board update', { roomName })
             io.to(roomName).emit('retroBoardUpdated', updatedBoard);
         } catch {
@@ -248,7 +248,7 @@ const handleRetroSocketEvents = (
                 socket.emit('error', { message: 'Board not found when starting timer.' } as SocketErrorPayload);
                 return;
             }
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
 
             // Start a new timer interval
             if (activeTimers.has(boardId)) {
@@ -281,7 +281,7 @@ const handleRetroSocketEvents = (
         try {
             // debugLog('Stopping timer', { boardId })
             await retroDb.stopRetroTimer(boardId); // Use injected retroDb
-            const roomName: string = `retro:${boardId}`;
+            const roomName = `retro:${boardId}`;
 
             // Clear the timer interval
             if (activeTimers.has(boardId)) {

@@ -99,8 +99,7 @@ const JoinRetroBoardModal: FC<JoinRetroBoardModalProps> = ({
               />
             </FormControl>
 
-            {hasPassword && (
-              <FormControl isRequired>
+            {hasPassword ? <FormControl isRequired>
                 <FormLabel>Board Password</FormLabel>
                 <InputGroup>
                   <Input
@@ -126,8 +125,7 @@ const JoinRetroBoardModal: FC<JoinRetroBoardModalProps> = ({
                     />
                   </InputRightElement>
                 </InputGroup>
-              </FormControl>
-            )}
+              </FormControl> : null}
           </VStack>
         </ModalBody>
         <ModalFooter>

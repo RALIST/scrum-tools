@@ -46,9 +46,7 @@ export const RoomListTable: FC<RoomListTableProps> = ({
       <Box w="full">
         <HStack mb={3}>
           <Heading size="sm">{title}</Heading>
-          {showWorkspaceInfo && workspaceName && (
-            <Badge colorScheme="blue">{workspaceName}</Badge>
-          )}
+          {showWorkspaceInfo && workspaceName ? <Badge colorScheme="blue">{workspaceName}</Badge> : null}
         </HStack>
         <Text>No active rooms found.</Text>
       </Box>
@@ -59,16 +57,14 @@ export const RoomListTable: FC<RoomListTableProps> = ({
     <Box w="full">
       <HStack mb={3}>
         <Heading size="sm">{title}</Heading>
-        {showWorkspaceInfo && workspaceName && (
-          <Badge colorScheme="blue">{workspaceName}</Badge>
-        )}
+        {showWorkspaceInfo && workspaceName ? <Badge colorScheme="blue">{workspaceName}</Badge> : null}
       </HStack>
       <Box w="full" overflowX="auto">
         <TableContainer>
           <Table variant="simple" size={{ base: "sm", md: "md" }}>
             <Thead>
               <Tr>
-                {showWorkspaceInfo && <Th>Room Name</Th>}
+                {showWorkspaceInfo ? <Th>Room Name</Th> : null}
                 <Th>Room ID</Th>
                 <Th>Participants</Th>
                 <Th>Sequence</Th>
@@ -79,9 +75,7 @@ export const RoomListTable: FC<RoomListTableProps> = ({
             <Tbody>
               {rooms.map((room) => (
                 <Tr key={room.id}>
-                  {showWorkspaceInfo && (
-                    <Td fontWeight="medium">{room.name}</Td>
-                  )}
+                  {showWorkspaceInfo ? <Td fontWeight="medium">{room.name}</Td> : null}
                   <Td>{room.id}</Td>
                   <Td>{room.participantCount}</Td>
                   {/* Display sequence key directly */}

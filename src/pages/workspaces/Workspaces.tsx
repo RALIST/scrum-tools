@@ -143,7 +143,7 @@ const Workspaces: FC = () => {
                 </HStack>
 
                 <Text noOfLines={2}>
-                  {workspace.description || "No description"}
+                  {workspace.description ?? "No description"}
                 </Text>
 
                 <HStack spacing={4} mt={2}>

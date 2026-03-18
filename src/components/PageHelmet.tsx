@@ -30,10 +30,10 @@ const PageHelmet: FC<PageHelmetProps> = memo(
     );
 
     // Memoize the final JSON-LD computation
-    const finalJsonLd = useMemo(() => jsonLd || defaultJsonLd, [jsonLd, defaultJsonLd]);
+    const finalJsonLd = useMemo(() => jsonLd ?? defaultJsonLd, [jsonLd, defaultJsonLd]);
 
     // Memoize the image URL computation
-    const finalImageUrl = useMemo(() => imageUrl || '/og-image.svg', [imageUrl]);
+    const finalImageUrl = useMemo(() => imageUrl ?? '/og-image.svg', [imageUrl]);
 
     return (
       <Helmet>
@@ -41,13 +41,13 @@ const PageHelmet: FC<PageHelmetProps> = memo(
         <title>{title}</title>
         <meta name="description" content={description} />
         <meta name="keywords" content={keywords} />
-        {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+        {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
 
         {/* Open Graph */}
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:type" content="website" />
-        {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+        {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
         <meta property="og:image" content={finalImageUrl} />
         <meta property="og:site_name" content="Scrum Tools" />
 

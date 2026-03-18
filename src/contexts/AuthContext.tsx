@@ -75,11 +75,11 @@ function useAuthMutation<TVariables>(
       // Error is automatically thrown by mutateAsync
     },
     // Spread other options correctly
-    ...(options || {}),
+    ...(options ?? {}),
   });
 }
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }): ReactNode => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isInitialCheckLoading, setIsInitialCheckLoading] = useState(true);
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("user", JSON.stringify(fullUser));
         setIsInitialCheckLoading(false);
       } else if (isVerifyError) {
-        console.log("Token verification failed, logging out.", verifyError);
+        console.warn("Token verification failed, logging out.", verifyError);
         logout();
         setIsInitialCheckLoading(false);
       }
@@ -210,7 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");

@@ -31,7 +31,7 @@ const Register: FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
   const toast = useToast();
   const navigate = useNavigate();
   const { colorMode } = useColorMode();
@@ -41,7 +41,7 @@ const Register: FC = () => {
   }
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: { name?: string; email?: string; password?: string; confirmPassword?: string } = {};
 
     if (!name) {
       newErrors.name = "Name is required";

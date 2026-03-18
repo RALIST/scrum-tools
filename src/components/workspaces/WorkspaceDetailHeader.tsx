@@ -31,15 +31,12 @@ const WorkspaceDetailHeader: FC<WorkspaceDetailHeaderProps> = ({
             {workspace.role}
           </Badge>
         </HStack>
-        {workspace.description && (
-          <Text color="gray.500" fontSize="md">
+        {workspace.description ? <Text color="gray.500" fontSize="md">
             {workspace.description}
-          </Text>
-        )}
+          </Text> : null}
       </VStack>
 
-      {isAdmin && (
-        <Button
+      {isAdmin ? <Button
           leftIcon={<Icon as={FaEdit} />}
           colorScheme="blue"
           variant="outline"
@@ -48,8 +45,7 @@ const WorkspaceDetailHeader: FC<WorkspaceDetailHeaderProps> = ({
           alignSelf="start" // Align button to the top if wrapping occurs
         >
           Edit Workspace
-        </Button>
-      )}
+        </Button> : null}
     </HStack>
   );
 };

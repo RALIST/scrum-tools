@@ -102,7 +102,7 @@ export default function setupVelocityRoutes(
             res.json({
                 success: true,
                 team: team,
-                sprints: velocityData || [],
+                sprints: velocityData ?? [],
                 averages: averageData // Already defaulted above
             });
 
@@ -144,7 +144,7 @@ export default function setupVelocityRoutes(
             const averageData: TeamAverageVelocity | null = await velocityDb.getTeamAverageVelocityByWorkspace(name, workspaceId);
 
             res.json({
-                sprints: velocityData || [],
+                sprints: velocityData ?? [],
                 averages: averageData ?? { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' } // Use nullish coalescing and string type
             });
 
@@ -252,7 +252,7 @@ export default function setupVelocityRoutes(
             }
 
             // --- Refined Authorization Logic ---
-            const isWorkspaceTeam: boolean = !!team.workspace_id;
+            const isWorkspaceTeam = !!team.workspace_id;
 
             if (isWorkspaceTeam) {
                 // Workspace Team Authorization

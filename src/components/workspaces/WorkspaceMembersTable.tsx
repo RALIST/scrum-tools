@@ -42,7 +42,7 @@ const WorkspaceMembersTable: FC<WorkspaceMembersTableProps> = ({
             <Th>Name</Th>
             <Th>Email</Th>
             <Th>Role</Th>
-            {isAdmin && <Th width="100px">Actions</Th>}
+            {isAdmin ? <Th width="100px">Actions</Th> : null}
           </Tr>
         </Thead>
         <Tbody>
@@ -55,8 +55,7 @@ const WorkspaceMembersTable: FC<WorkspaceMembersTableProps> = ({
                   {member.role}
                 </Badge>
               </Td>
-              {isAdmin && (
-                <Td>
+              {isAdmin ? <Td>
                   {/* Prevent admin from removing themselves */}
                   {member.id !== currentUserId && (
                     <Button
@@ -69,8 +68,7 @@ const WorkspaceMembersTable: FC<WorkspaceMembersTableProps> = ({
                       Remove
                     </Button>
                   )}
-                </Td>
-              )}
+                </Td> : null}
             </Tr>
           ))}
         </Tbody>

@@ -100,14 +100,14 @@ export const getTeamByWorkspace = async (name: string, workspaceId: string): Pro
     const result = await executeQuery<Omit<VelocityTeam, 'password'>>(queryText, params); // Use imported executeQuery
 
     // Return the found team or null
-    return result.rows[0] || null; 
+    return result.rows[0] ?? null;
 };
 
 export const getTeamById = async (teamId: string): Promise<VelocityTeam | null> => {
     const queryText = 'SELECT * FROM teams WHERE id = $1'; // Fetch all columns including password hash
     const params = [teamId];
     const result = await executeQuery<VelocityTeam>(queryText, params); // Use imported executeQuery
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
 };
 
 
@@ -115,7 +115,7 @@ export const getSprintById = async (sprintId: string): Promise<VelocitySprint | 
     const queryText = 'SELECT * FROM sprints WHERE id = $1';
     const params = [sprintId];
     const result = await executeQuery<VelocitySprint>(queryText, params); // Use imported executeQuery
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
 };
 
 
@@ -250,7 +250,7 @@ export const getTeamAverageVelocity = async (
     const params = [team.id]; // Use the verified team's ID
     const result = await executeQuery<TeamAverageVelocity>(queryText, params); // Use imported executeQuery
     // Return the averages, providing defaults if no data exists
-    return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
+    return result.rows[0] ?? { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
 
 export const getTeamAverageVelocityByWorkspace = async (
@@ -283,7 +283,7 @@ export const getTeamAverageVelocityByWorkspace = async (
     const params = [team.id]; // Use the verified team's ID
     const result = await executeQuery<TeamAverageVelocity>(queryText, params); // Use imported executeQuery
      // Return the averages, providing defaults if no data exists
-    return result.rows[0] || { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
+    return result.rows[0] ?? { average_velocity: '0.00', average_commitment: '0.00', completion_rate: '0.00' };
 };
 
 // Get all velocity teams associated with a workspace

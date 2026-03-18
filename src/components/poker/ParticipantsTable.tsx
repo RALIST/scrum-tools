@@ -39,7 +39,7 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = memo(
       if (!participants) return 0;
       const numericVotes = participants
         .map(p => p.vote)
-        .filter(v => v && v !== '?' && !isNaN(Number(v)))
+        .filter(v => v !== null && v !== '' && v !== '?' && !isNaN(Number(v)))
         .map(Number);
       if (numericVotes.length === 0) return 0;
       return numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
@@ -86,7 +86,7 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = memo(
               <Tr>
                 <Th>Participant</Th>
                 <Th>Status</Th>
-                {isRevealed && <Th>Vote</Th>}
+                {isRevealed ? <Th>Vote</Th> : null}
               </Tr>
             </Thead>
             <Tbody>
@@ -98,23 +98,19 @@ export const ParticipantsTable: FC<ParticipantsTableProps> = memo(
                       {participant.vote ? 'Voted' : 'Not Voted'}
                     </Badge>
                   </Td>
-                  {isRevealed && (
-                    <Td>
+                  {isRevealed ? <Td>
                       <Text color={getVoteColor(participant.vote)} fontWeight="bold">
-                        {participant.vote || 'No vote'}
+                        {participant.vote ?? 'No vote'}
                       </Text>
-                    </Td>
-                  )}
+                    </Td> : null}
                 </Tr>
               ))}
             </Tbody>
           </Table>
         </TableContainer>
-        {isRevealed && (
-          <Text mt={4} fontWeight="bold" textAlign={{ base: 'center', md: 'left' }}>
+        {isRevealed ? <Text mt={4} fontWeight="bold" textAlign={{ base: 'center', md: 'left' }}>
             Average (excluding &apos;?&apos;): {average.toFixed(1)}
-          </Text>
-        )}
+          </Text> : null}
       </Box>
     );
   }

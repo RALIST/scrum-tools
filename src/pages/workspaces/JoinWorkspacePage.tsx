@@ -35,6 +35,7 @@ const JoinWorkspacePage: FC = () => {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // eslint-disable-next-line react/hook-use-state
   const [, setJoinedWorkspaceId] = useState<string | null>(
     null
   );
@@ -107,7 +108,7 @@ const JoinWorkspacePage: FC = () => {
       const processedToken = sessionStorage.getItem("processedInvitationToken");
       if (processedToken === token) {
         // Avoid reprocessing if already done after login redirect
-        console.log("Invitation already processed, navigating...");
+        // Invitation already processed
         // Maybe redirect to workspace or dashboard?
         // navigate('/workspaces'); // Or find the workspace ID if stored
         return;
@@ -217,7 +218,7 @@ const JoinWorkspacePage: FC = () => {
                 Error
               </AlertTitle>
               <AlertDescription maxWidth="sm">
-                {errorMsg || "Could not process the invitation."}
+                {errorMsg ?? "Could not process the invitation."}
               </AlertDescription>
               <Button mt={4} as={RouterLink} to="/workspaces" variant="outline">
                 Go to My Workspaces

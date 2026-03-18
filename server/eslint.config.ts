@@ -4,7 +4,7 @@ import importX from 'eslint-plugin-import-x';
 import globals from 'globals';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', 'knexfile.cjs', 'data/migrations/**/*.cjs', 'eslint.config.ts'] },
+  { ignores: ['dist', 'coverage', 'node_modules', 'knexfile.cjs', 'data/migrations/**/*.cjs', 'eslint.config.ts', 'vitest.*.ts'] },
 
   // TypeScript source files with type-checked rules
   {
@@ -13,6 +13,7 @@ export default tseslint.config(
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.strictTypeChecked,
+      ...tseslint.configs.stylisticTypeChecked,
     ],
     languageOptions: {
       globals: { ...globals.node, ...globals.es2021 },
@@ -25,6 +26,10 @@ export default tseslint.config(
       'import-x': importX,
     },
     rules: {
+      // Core JS strictness
+      'eqeqeq': ['error', 'always'],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+
       // Import ordering and hygiene
       'import-x/order': ['error', {
         'groups': ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
@@ -37,6 +42,24 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/consistent-type-exports': ['error', { fixMixedExportsWithInlineTypeSpecifier: true }],
       '@typescript-eslint/no-import-type-side-effects': 'error',
+
+      // Additional typescript-eslint strictness
+      // Align dot-notation with tsconfig's noPropertyAccessFromIndexSignature
+      '@typescript-eslint/dot-notation': ['error', { allowIndexSignaturePropertyAccess: true }],
+
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/explicit-module-boundary-types': 'warn',
+      '@typescript-eslint/promise-function-async': 'error',
+      '@typescript-eslint/require-array-sort-compare': 'error',
+      '@typescript-eslint/prefer-readonly': 'warn',
+      '@typescript-eslint/strict-boolean-expressions': ['warn', {
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableNumber: false,
+        allowNullableObject: true,
+        allowNumber: true,
+        allowString: true,
+      }],
     },
   },
 
@@ -54,6 +77,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off',
       'no-async-promise-executor': 'warn',
       'no-useless-catch': 'warn',
+      'eqeqeq': ['error', 'always'],
     },
   },
 );

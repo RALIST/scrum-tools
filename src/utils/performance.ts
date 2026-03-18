@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Performance tracking utilities for monitoring app performance
  * Tracks bundle performance, Core Web Vitals, and custom metrics
@@ -36,7 +37,7 @@ export interface PerformanceMetrics {
 /**
  * Track Core Web Vitals and custom performance metrics
  */
-export const trackPerformanceMetrics = (): Promise<PerformanceMetrics> => {
+export const trackPerformanceMetrics = async (): Promise<PerformanceMetrics> => {
   return new Promise(resolve => {
     const metrics: PerformanceMetrics = {};
 
@@ -109,35 +110,35 @@ export const trackPerformanceMetrics = (): Promise<PerformanceMetrics> => {
 /**
  * Log performance metrics to console (and could send to analytics)
  */
-export const logPerformanceMetrics = async () => {
+export const logPerformanceMetrics = async (): Promise<PerformanceMetrics> => {
   const metrics = await trackPerformanceMetrics();
 
   console.group('🚀 Performance Metrics');
   console.log(
     'First Paint (FP):',
-    metrics.firstPaint ? `${metrics.firstPaint.toFixed(2)}ms` : 'N/A'
+    metrics.firstPaint !== undefined ? `${metrics.firstPaint.toFixed(2)}ms` : 'N/A'
   );
   console.log(
     'First Contentful Paint (FCP):',
-    metrics.firstContentfulPaint ? `${metrics.firstContentfulPaint.toFixed(2)}ms` : 'N/A'
+    metrics.firstContentfulPaint !== undefined ? `${metrics.firstContentfulPaint.toFixed(2)}ms` : 'N/A'
   );
   console.log(
     'Largest Contentful Paint (LCP):',
-    metrics.largestContentfulPaint ? `${metrics.largestContentfulPaint.toFixed(2)}ms` : 'N/A'
+    metrics.largestContentfulPaint !== undefined ? `${metrics.largestContentfulPaint.toFixed(2)}ms` : 'N/A'
   );
   console.log(
     'Cumulative Layout Shift (CLS):',
-    metrics.cumulativeLayoutShift ? metrics.cumulativeLayoutShift.toFixed(4) : 'N/A'
+    metrics.cumulativeLayoutShift !== undefined ? metrics.cumulativeLayoutShift.toFixed(4) : 'N/A'
   );
   console.log(
     'First Input Delay (FID):',
-    metrics.firstInputDelay ? `${metrics.firstInputDelay.toFixed(2)}ms` : 'N/A'
+    metrics.firstInputDelay !== undefined ? `${metrics.firstInputDelay.toFixed(2)}ms` : 'N/A'
   );
   console.log(
     'DOM Content Loaded:',
-    metrics.domContentLoaded ? `${metrics.domContentLoaded.toFixed(2)}ms` : 'N/A'
+    metrics.domContentLoaded !== undefined ? `${metrics.domContentLoaded.toFixed(2)}ms` : 'N/A'
   );
-  console.log('Window Load:', metrics.windowLoad ? `${metrics.windowLoad.toFixed(2)}ms` : 'N/A');
+  console.log('Window Load:', metrics.windowLoad !== undefined ? `${metrics.windowLoad.toFixed(2)}ms` : 'N/A');
   console.groupEnd();
 
   return metrics;
@@ -146,7 +147,7 @@ export const logPerformanceMetrics = async () => {
 /**
  * Track bundle performance after Phase 3 optimizations
  */
-export const trackBundlePerformance = () => {
+export const trackBundlePerformance = (): { totalResources: number; totalSize: number; resources: { name: string | undefined; size: number; loadTime: number }[] } | null => {
   if ('performance' in window) {
     const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
     const jsResources = resources.filter(
@@ -189,7 +190,7 @@ export const trackBundlePerformance = () => {
 /**
  * Initialize performance tracking on app load
  */
-export const initPerformanceTracking = () => {
+export const initPerformanceTracking = (): void => {
   // Track metrics after page load
   window.addEventListener('load', () => {
     setTimeout(() => {

@@ -47,7 +47,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log the error
     logger.error('Error caught by boundary:', {
       error: error.message,
@@ -73,7 +73,7 @@ class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  handleRetry = () => {
+  handleRetry = (): void => {
     // Reset error state to retry rendering
     this.setState({
       hasError: false,
@@ -82,15 +82,15 @@ class ErrorBoundary extends Component<Props, State> {
     });
   };
 
-  handleReload = () => {
+  handleReload = (): void => {
     // Reload the entire page
     window.location.reload();
   };
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       // If custom fallback is provided, use it
-      if (this.props.fallback) {
+      if (this.props.fallback !== undefined) {
         return this.props.fallback;
       }
 
@@ -152,8 +152,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onRetry, onReload 
               Error Details
             </Heading>
 
-            {error && (
-              <Box
+            {error ? <Box
                 w="full"
                 p={4}
                 bg={colorMode === 'light' ? 'gray.100' : 'gray.700'}
@@ -169,18 +168,15 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onRetry, onReload 
                 </Text>
                 <Text mb={4}>{error.message}</Text>
 
-                {error.stack && import.meta.env.DEV && (
-                  <>
+                {error.stack && import.meta.env.DEV ? <>
                     <Text fontWeight="bold" mb={2}>
                       Stack Trace:
                     </Text>
                     <Text whiteSpace="pre-wrap" fontSize="xs">
                       {error.stack}
                     </Text>
-                  </>
-                )}
-              </Box>
-            )}
+                  </> : null}
+              </Box> : null}
 
             <VStack spacing={3} w="full">
               <Button colorScheme="blue" size="lg" onClick={onRetry} w="full">
@@ -219,22 +215,22 @@ export const withErrorBoundary = <P extends object>(
   Component: React.ComponentType<P>,
   fallback?: ReactNode,
   onError?: (error: Error, errorInfo: ErrorInfo) => void
-) => {
+): React.FC<P> => {
   const WrappedComponent = (props: P) => (
     <ErrorBoundary fallback={fallback} onError={onError}>
       <Component {...props} />
     </ErrorBoundary>
   );
 
-  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
+  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName ?? Component.name})`;
 
   return WrappedComponent;
 };
 
 // Hook for error boundary functionality in functional components
 // eslint-disable-next-line react-refresh/only-export-components
-export const useErrorHandler = () => {
-  return (error: Error, errorInfo?: ErrorInfo) => {
+export const useErrorHandler = (): ((error: Error, errorInfo?: ErrorInfo) => never) => {
+  return (error: Error, errorInfo?: ErrorInfo): never => {
     logger.error('Manual error reported:', { error: error.message, stack: error.stack, errorInfo });
 
     // You could trigger a re-render or show a toast notification here

@@ -31,11 +31,11 @@ import { useWorkspaceTools } from '../../hooks/useWorkspaceTools';
 
 // Lazy load modal components for better code splitting
 const EditWorkspaceModal = lazy(
-  () => import('../../components/workspaces/modals/EditWorkspaceModal')
+  async () => import('../../components/workspaces/modals/EditWorkspaceModal')
 );
-const AddMemberModal = lazy(() => import('../../components/workspaces/modals/AddMemberModal'));
+const AddMemberModal = lazy(async () => import('../../components/workspaces/modals/AddMemberModal'));
 const RemoveMemberDialog = lazy(
-  () => import('../../components/workspaces/modals/RemoveMemberDialog')
+  async () => import('../../components/workspaces/modals/RemoveMemberDialog')
 );
 
 // Modal loading component
@@ -145,7 +145,7 @@ const WorkspaceDetail: FC = () => {
           <AlertIcon />
           <AlertTitle>Error Loading Workspace</AlertTitle>
           <AlertDescription>
-            {workspaceError?.message || 'Could not load workspace data.'}
+            {workspaceError?.message ?? 'Could not load workspace data.'}
           </AlertDescription>
         </Alert>
       </Center>
@@ -182,12 +182,10 @@ const WorkspaceDetail: FC = () => {
         <TabPanels>
           {/* Tools Panel */}
           <TabPanel px={0} py={4}>
-            {toolsError && (
-              <Alert status="warning" mb={4}>
+            {toolsError ? <Alert status="warning" mb={4}>
                 <AlertIcon />
                 Could not load workspace tools.
-              </Alert>
-            )}
+              </Alert> : null}
             <WorkspaceToolsPanel
               pokerRooms={pokerRooms}
               retroBoards={retroBoards}
@@ -198,14 +196,12 @@ const WorkspaceDetail: FC = () => {
 
           {/* Members Panel */}
           <TabPanel px={0} py={4}>
-            {membersError && (
-              <Alert status="warning" mb={4}>
+            {membersError ? <Alert status="warning" mb={4}>
                 <AlertIcon />
                 Could not load workspace members.
-              </Alert>
-            )}
+              </Alert> : null}
             <WorkspaceMembersPanel
-              workspaceId={workspaceId || ''}
+              workspaceId={workspaceId ?? ''}
               members={members}
               isLoadingMembers={isLoadingMembers}
               isAdmin={isAdmin}

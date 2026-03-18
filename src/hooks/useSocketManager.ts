@@ -60,8 +60,9 @@ export const useSocketManager = ({
     let manager: Manager;
     const socketUrl = config.socketUrl;
 
-    if (managers.has(socketUrl)) {
-      manager = managers.get(socketUrl) as Manager;
+    const existingManager = managers.get(socketUrl);
+    if (existingManager) {
+      manager = existingManager;
       logger.debug('Reusing existing Manager instance');
     } else {
       logger.debug('Creating new Manager instance');

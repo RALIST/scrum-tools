@@ -15,8 +15,8 @@ import { RetroHeader, RetroColumn } from '.'; // Assuming index.ts exports these
 // Import the correct type name 'RetroBoard' and also 'RetroCard'
 
 // Lazy load modal components
-const RetroBoardSettingsModal = lazy(() => import('../modals/RetroBoardSettingsModal'));
-const ChangeRetroBoardNameModal = lazy(() => import('../modals/ChangeRetroBoardNameModal'));
+const RetroBoardSettingsModal = lazy(async () => import('../modals/RetroBoardSettingsModal'));
+const ChangeRetroBoardNameModal = lazy(async () => import('../modals/ChangeRetroBoardNameModal'));
 
 // Modal loading component for retro
 const RetroModalLoadingSpinner: FC = () => (
@@ -89,7 +89,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
 
   // Memoize column cards calculation
   const columnCards = useMemo(() => {
-    return COLUMNS.reduce<{ [key: string]: typeof board.cards }>(
+    return COLUMNS.reduce<Record<string, typeof board.cards>>(
       (acc, column) => {
         // Add explicit type for 'card' using the imported RetroCard type
         acc[column.id] = board.cards.filter((card: RetroCard) => card.column_id === column.id);
@@ -119,7 +119,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
           {/* Reduced spacing */}
           <RetroHeader
             boardName={board.name}
-            userName={userName || 'User'} // Provide a fallback for null userName
+            userName={userName ?? 'User'} // Provide a fallback for null userName
             boardId={board.id}
             isTimerRunning={isTimerRunning}
             timeLeft={timeLeft}
@@ -145,10 +145,10 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
                   key={column.id}
                   title={column.title}
                   color={column.color}
-                  cards={columnCards[column.id] || []}
+                  cards={columnCards[column.id] ?? []}
                   hideCards={hideCards}
                   hideAuthorNames={board.hide_author_names}
-                  userName={userName || ''} // Provide fallback for null userName
+                  userName={userName ?? ''} // Provide fallback for null userName
                   isTimerRunning={isTimerRunning}
                   onAddCard={(text) => { onAddCard(column.id, text); }} // Pass columnId
                   onDeleteCard={onDeleteCard}
@@ -180,7 +180,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
             <ChangeRetroBoardNameModal
               isOpen={isChangeNameOpen}
               onClose={onChangeNameClose}
-              currentName={userName || ''} // Pass current name
+              currentName={userName ?? ''} // Pass current name
               onChangeName={onChangeNameSubmit} // Pass handler from props
             />
           </Suspense>

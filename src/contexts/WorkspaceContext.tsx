@@ -56,7 +56,7 @@ export const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
   undefined
 );
 
-export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
+export const WorkspaceProvider = ({ children }: { children: ReactNode }): ReactNode => {
   const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   // Get the initial ID from localStorage only once at mount
@@ -210,7 +210,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         await refreshWorkspaces();
 
         // Update currentWorkspace if it's the one being edited
-        if (currentWorkspace && currentWorkspace.id === id) {
+        if (currentWorkspace?.id === id) {
           setCurrentWorkspace(data.workspace);
         }
 
@@ -345,7 +345,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useWorkspace = () => {
+export const useWorkspace = (): WorkspaceContextType => {
   const context = useContext(WorkspaceContext);
   if (context === undefined) {
     throw new Error("useWorkspace must be used within a WorkspaceProvider");

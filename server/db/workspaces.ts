@@ -1,10 +1,14 @@
 import crypto from 'crypto'; // Import the full crypto module
 import type {PoolClient, QueryResult} from 'pg';
-import type pg from 'pg'; // Import pg types
 import { v4 as uuidv4 } from 'uuid';
 import type { Workspace, WorkspaceRole, WorkspaceMemberDetails, ValidWorkspaceInvitation } from '../types/db.js'; // Import types (needs .js)
 import { pool as defaultPool } from './pool.js'; // Rename default import (needs .js)
 import * as velocityDb from './velocity.js'; // Import velocityDb namespace (needs .js)
+
+function getPool() {
+  if (!defaultPool) throw new Error('Database pool is not initialized');
+  return defaultPool;
+}
 
 // Create a new workspace
 export const createWorkspace = async (
@@ -12,7 +16,7 @@ export const createWorkspace = async (
     description: string | null,
     ownerId: string
 ): Promise<Workspace> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     // Generate a unique ID
     const id: string = uuidv4();
@@ -56,8 +60,8 @@ export const createWorkspace = async (
 
 // Get workspaces for a user
 // Type needs to include the joined 'role'
-export const getUserWorkspaces = async (userId: string): Promise<Array<Workspace & { role: WorkspaceRole }>> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+export const getUserWorkspaces = async (userId: string): Promise<(Workspace & { role: WorkspaceRole })[]> => {
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     const result: QueryResult<Workspace & { role: WorkspaceRole }> = await client.query(`
       SELECT w.*, wm.role 
@@ -75,14 +79,14 @@ export const getUserWorkspaces = async (userId: string): Promise<Array<Workspace
 
 // Get workspace by ID
 export const getWorkspaceById = async (workspaceId: string): Promise<Workspace | null> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     const result: QueryResult<Workspace> = await client.query(
       'SELECT * FROM workspaces WHERE id = $1',
       [workspaceId]
     );
     
-    return result.rows[0] || null;
+    return result.rows[0] ?? null;
   } finally {
     client.release();
   }
@@ -94,7 +98,7 @@ export const addWorkspaceMember = async (
     userId: string,
     role: WorkspaceRole = 'member'
 ): Promise<void> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     await client.query(
       'INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, $3)',
@@ -107,7 +111,7 @@ export const addWorkspaceMember = async (
 
 // Remove a member from a workspace
 export const removeWorkspaceMember = async (workspaceId: string, userId: string): Promise<void> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     await client.query(
       'DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
@@ -120,7 +124,7 @@ export const removeWorkspaceMember = async (workspaceId: string, userId: string)
 
 // Get workspace members
 export const getWorkspaceMembers = async (workspaceId: string): Promise<WorkspaceMemberDetails[]> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     const result: QueryResult<WorkspaceMemberDetails> = await client.query(`
       SELECT u.id, u.name, u.email, wm.role, wm.joined_at
@@ -142,7 +146,7 @@ export const updateWorkspace = async (
     name: string,
     description: string | null
 ): Promise<Workspace | null> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect();
+  const client: PoolClient = await getPool().connect();
   try {
     const result: QueryResult<Workspace> = await client.query(
       'UPDATE workspaces SET name = $1, description = $2 WHERE id = $3 RETURNING *',
@@ -157,7 +161,7 @@ export const updateWorkspace = async (
 
 // Check if user is a member of workspace
 export const isWorkspaceMember = async (workspaceId: string, userId: string): Promise<boolean> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     // Query doesn't need a specific result type, just checking rows.length
     const result: QueryResult<{ workspace_id: string; user_id: string }> = await client.query(
@@ -173,7 +177,7 @@ export const isWorkspaceMember = async (workspaceId: string, userId: string): Pr
 
 // Get user role in workspace
 export const getUserWorkspaceRole = async (workspaceId: string, userId: string): Promise<WorkspaceRole | null> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     const result: QueryResult<{ role: WorkspaceRole }> = await client.query(
       'SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
@@ -193,9 +197,9 @@ export const createInvitation = async (
     workspaceId: string,
     createdBy: string,
     roleToAssign: WorkspaceRole,
-    expiresInDays: number = 7
+    expiresInDays = 7
 ): Promise<string> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     // Use the globally imported crypto module (which is spied on in tests)
     const token: string = crypto.randomBytes(16).toString('hex');
@@ -219,7 +223,7 @@ export const createInvitation = async (
 
 // Find a valid invitation by token
 export const findValidInvitationByToken = async (token: string): Promise<ValidWorkspaceInvitation | null> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     const queryText = `
       SELECT id, workspace_id, role_to_assign
@@ -228,7 +232,7 @@ export const findValidInvitationByToken = async (token: string): Promise<ValidWo
     `;
     const params = [token];
     const result: QueryResult<ValidWorkspaceInvitation> = await client.query(queryText, params);
-    return result.rows[0] || null; // Return the invite details or null if not found/valid
+    return result.rows[0] ?? null; // Return the invite details or null if not found/valid
   } finally {
     client.release();
   }
@@ -236,7 +240,7 @@ export const findValidInvitationByToken = async (token: string): Promise<ValidWo
 
 // Mark an invitation as used
 export const markInvitationAsUsed = async (invitationId: number, usedByUserId: string): Promise<boolean> => {
-  const client: PoolClient = await (defaultPool as pg.Pool).connect(); // Use internal defaultPool, assert type
+  const client: PoolClient = await getPool().connect(); // Use internal defaultPool, assert type
   try {
     const queryText = `
       UPDATE workspace_invitations

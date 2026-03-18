@@ -62,14 +62,14 @@ const PlanningPokerRoom: FC = () => {
 
   // --- Callbacks for the socket hook ---
   const onRoomJoined = useCallback(() => {
-    console.log("[PlanningPokerRoom] onRoomJoined callback triggered.");
+    // Room joined callback triggered
     toast({ title: "Joined Room", status: "success", duration: 2000 });
     onJoinModalClose(); // Close modal on successful join
   }, [toast, onJoinModalClose]);
 
   const handleJoinError = useCallback(
     (message: string) => {
-      console.log(
+      console.warn(
         "[PlanningPokerRoom] handleJoinError callback triggered:",
         message
       );
@@ -116,7 +116,7 @@ const PlanningPokerRoom: FC = () => {
     updateSettings: updateRoomSettings,
     isConnectingOrJoining,
   } = usePokerSocket({
-    roomId: roomExists === true ? roomId || "" : "", // Only connect if room exists
+    roomId: roomExists === true ? roomId ?? "" : "", // Only connect if room exists
     initialUserName: initialJoinName,
     onRoomJoined,
     onJoinError: handleJoinError,
@@ -130,7 +130,7 @@ const PlanningPokerRoom: FC = () => {
       setUserName(user.name);
     } else {
       const savedName = localStorage.getItem(LOCAL_STORAGE_USERNAME_KEY);
-      setUserName(savedName || "");
+      setUserName(savedName ?? "");
     }
   }, [isAuthenticated, user?.name]);
 
@@ -140,9 +140,7 @@ const PlanningPokerRoom: FC = () => {
       navigate("/planning-poker");
       return;
     }
-    console.log(
-      `[PlanningPokerRoom] Checking room existence for roomId: ${roomId}`
-    );
+    // Checking room existence for roomId
     let isActive = true;
     setRoomExists(null);
     setIsLoadingRoomInfo(true);
@@ -152,7 +150,7 @@ const PlanningPokerRoom: FC = () => {
     )
       .then((roomInfo) => {
         if (!isActive) return;
-        console.log(`[PlanningPokerRoom] API /info returned:`, roomInfo);
+        // API /info returned successfully
         setIsPasswordProtected(roomInfo.hasPassword);
         setRoomExists(true);
       })
@@ -192,7 +190,7 @@ const PlanningPokerRoom: FC = () => {
     }
 
     if (!isAuthenticated || isPasswordProtected) {
-      console.log("[PlanningPokerRoom] Conditions met for showing join modal.");
+      // Conditions met for showing join modal
       if (!isJoinModalOpen) onJoinModalOpen();
     } else {
       if (isJoinModalOpen) onJoinModalClose();
@@ -351,8 +349,7 @@ const PlanningPokerRoom: FC = () => {
           />
 
           {/* Show spinner overlay if connecting/joining */}
-          {showConnectingSpinner && (
-            <Center
+          {showConnectingSpinner ? <Center
               position="absolute"
               top="50%"
               left="50%"
@@ -360,12 +357,10 @@ const PlanningPokerRoom: FC = () => {
               zIndex="overlay"
             >
               <Spinner size="xl" />
-            </Center>
-          )}
+            </Center> : null}
 
           {/* Main Content Area - Render only if joined */}
-          {isJoined && (
-            <Box
+          {isJoined ? <Box
               w="full"
               p={{ base: 4, md: 8 }}
               borderRadius="lg"
@@ -390,8 +385,7 @@ const PlanningPokerRoom: FC = () => {
                   settings={settings} // Pass settings object (contains key)
                 />
               </VStack>
-            </Box>
-          )}
+            </Box> : null}
         </VStack>
 
         {/* Change Name Modal */}

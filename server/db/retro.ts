@@ -24,10 +24,10 @@ export const createRetroBoard = async (
         ) VALUES ($1, $2, false, $3, $4, $5, $6, $7, $8)
     `;
     // Use defaultTimer for time_left ($3) and the actual value from settings for default_timer ($4)
-    const timerValueToInsert: number = settings.defaultTimer !== undefined ? settings.defaultTimer : 300;
+    const timerValueToInsert: number = settings.defaultTimer ?? 300;
     const params = [
-        boardId, name || boardId, timerValueToInsert, timerValueToInsert, 
-        hideCardsByDefault, hideAuthorNames, hashedPassword, workspaceId || null
+        boardId, name ?? boardId, timerValueToInsert, timerValueToInsert,
+        hideCardsByDefault, hideAuthorNames, hashedPassword, workspaceId ?? null
     ];
     await executeQuery(queryText, params); // Use executeQuery
 };
@@ -197,7 +197,7 @@ export const startRetroTimer = async (boardId: string): Promise<void> => {
     // Consider passing defaultTimer if already available in the calling context
     const getTimerQuery = 'SELECT default_timer FROM retro_boards WHERE id = $1';
     const result = await executeQuery<{ default_timer: number }>(getTimerQuery, [boardId]); // Use executeQuery
-    const defaultTimer: number = result.rows[0]?.default_timer || 300;
+    const defaultTimer: number = result.rows[0]?.default_timer ?? 300;
 
     const updateQuery = 'UPDATE retro_boards SET timer_running = true, time_left = $2 WHERE id = $1';
     await executeQuery(updateQuery, [boardId, defaultTimer]); // Use executeQuery

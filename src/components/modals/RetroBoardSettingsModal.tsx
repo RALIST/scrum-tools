@@ -66,7 +66,7 @@ const RetroBoardSettingsModal: FC<RetroBoardSettingsModalProps> = ({
 
         onSave({
             ...newSettings,
-            password: newSettings.password || undefined
+            password: newSettings.password ?? undefined
         })
         onClose()
     }

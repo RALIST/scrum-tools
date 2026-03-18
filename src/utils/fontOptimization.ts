@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Font optimization utilities for better loading performance
  * Implements font preloading, display swap, and loading strategies
@@ -18,7 +19,7 @@ export const generateFontPreloads = (fonts: FontConfig[]): string => {
   return fonts
     .filter(font => font.preload)
     .map(font => {
-      const weights = font.weights || [400];
+      const weights = font.weights ?? [400];
       return weights
         .map(
           weight =>
@@ -35,8 +36,8 @@ export const generateFontPreloads = (fonts: FontConfig[]): string => {
 export const generateFontFaceCSS = (fonts: FontConfig[]): string => {
   return fonts
     .map(font => {
-      const weights = font.weights || [400];
-      const display = font.display || 'swap';
+      const weights = font.weights ?? [400];
+      const display = font.display ?? 'swap';
 
       return weights
         .map(
@@ -104,9 +105,9 @@ export const defaultFontConfig: FontConfig[] = [
 /**
  * Font loading performance monitoring
  */
-export const trackFontLoadingPerformance = () => {
+export const trackFontLoadingPerformance = (): void => {
   if ('fonts' in document) {
-    const fontLoadPromises = Array.from(document.fonts).map(font => {
+    const fontLoadPromises = Array.from(document.fonts).map(async font => {
       const startTime = performance.now();
 
       return font
@@ -139,7 +140,7 @@ export const trackFontLoadingPerformance = () => {
 /**
  * Initialize font optimization
  */
-export const initFontOptimization = () => {
+export const initFontOptimization = (): void => {
   // Track font loading performance
   document.addEventListener('DOMContentLoaded', trackFontLoadingPerformance);
 

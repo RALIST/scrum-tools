@@ -66,8 +66,7 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
               onChange={(e) => { setInternalUserName(e.target.value); }} // Update internal state
               isDisabled={isNameDisabled}
             />
-            {isPasswordProtected && (
-              <InputGroup>
+            {isPasswordProtected ? <InputGroup>
                 <Input
                   type={internalShowPassword ? "text" : "password"} // Use internal state
                   placeholder="Enter room password"
@@ -87,8 +86,7 @@ const JoinRoomModal: FC<JoinRoomModalProps> = ({
                     variant="ghost"
                   />
                 </InputRightElement>
-              </InputGroup>
-            )}
+              </InputGroup> : null}
           </VStack>
         </ModalBody>
         <ModalFooter>

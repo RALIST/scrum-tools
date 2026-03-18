@@ -10,7 +10,7 @@ export const createRoom = async (
 ): Promise<void> => {
     const queryText = 'INSERT INTO rooms (id, name, sequence, password, workspace_id) VALUES ($1, $2, $3, $4, $5)';
     // Pass sequence string directly
-    const params = [roomId, name || roomId, sequence, password, workspaceId || null];
+    const params = [roomId, name ?? roomId, sequence, password, workspaceId ?? null];
     await executeQuery(queryText, params); // Use imported executeQuery
 };
 

@@ -21,6 +21,7 @@ export default tseslint.config(
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.strictTypeChecked,
+      ...tseslint.configs.stylisticTypeChecked,
     ],
     languageOptions: {
       globals: {
@@ -47,6 +48,10 @@ export default tseslint.config(
       'react/prop-types': 'off',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 
+      // Core JS strictness
+      'eqeqeq': ['error', 'always'],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+
       // Import ordering and hygiene
       'import-x/order': ['error', {
         'groups': ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
@@ -60,9 +65,32 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-exports': ['error', { fixMixedExportsWithInlineTypeSpecifier: true }],
       '@typescript-eslint/no-import-type-side-effects': 'error',
 
+      // Align dot-notation with tsconfig's noPropertyAccessFromIndexSignature
+      '@typescript-eslint/dot-notation': ['error', { allowIndexSignaturePropertyAccess: true }],
+
+      // Additional typescript-eslint strictness
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/explicit-module-boundary-types': 'warn',
+      '@typescript-eslint/promise-function-async': 'error',
+      '@typescript-eslint/require-array-sort-compare': 'error',
+      '@typescript-eslint/prefer-readonly': 'warn',
+      '@typescript-eslint/strict-boolean-expressions': ['warn', {
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableNumber: false,
+        allowNullableObject: true,
+        allowNumber: true,
+        allowString: true,
+      }],
+
       // React quality
-      'react/no-unstable-nested-components': 'warn',
+      'react/no-unstable-nested-components': 'error',
       'react/no-array-index-key': 'warn',
+      'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
+      'react/self-closing-comp': 'error',
+      'react/jsx-curly-brace-presence': ['error', { props: 'never', children: 'ignore' }],
+      'react/hook-use-state': 'warn',
+      'react/jsx-boolean-value': ['error', 'never'],
     },
   },
 
@@ -89,6 +117,7 @@ export default tseslint.config(
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
       'react/prop-types': 'off',
+      'eqeqeq': ['error', 'always'],
     },
   },
 

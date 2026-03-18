@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // src/utils/logger.ts
 /**
  * Centralized logging utility for the application
@@ -50,7 +51,7 @@ class Logger {
     const formattedMessage = this.formatMessage(
       LogLevel[level],
       message,
-      prefix || this.config.prefix
+      prefix ?? this.config.prefix
     );
 
     const logMethod = this.getConsoleMethod(level);

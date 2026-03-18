@@ -76,7 +76,7 @@ const RetroBoard: FC = () => {
     updateSettings,
     isConnectingOrJoining, // Combined socket connecting/joining state
   } = useRetroSocket({
-    boardId: boardId || null,
+    boardId: boardId ?? null,
     onBoardJoined,
     onJoinError,
     onNameChanged,
@@ -145,7 +145,7 @@ const RetroBoard: FC = () => {
     }
 
     // Determine if auto-join should happen
-    const shouldAutoJoin = isAuthenticated && user?.name && !initialBoardData.hasPassword;
+    const shouldAutoJoin = isAuthenticated && user?.name !== undefined && user.name !== '' && !initialBoardData.hasPassword;
 
     if (shouldAutoJoin) {
       if (!isConnectingOrJoining) {
@@ -271,7 +271,7 @@ const RetroBoard: FC = () => {
 
     return (
       <JoinRetroBoardModal
-        isOpen={true}
+        isOpen
         onClose={() => { navigate('/retro'); }}
         onJoin={handleJoinBoard}
         hasPassword={initialBoardData.hasPassword} // Use initial data here
@@ -297,7 +297,7 @@ const RetroBoard: FC = () => {
       }
     }
     // Default to empty string if still null after checking localStorage
-    nameToDisplay = nameToDisplay || '';
+    nameToDisplay = nameToDisplay ?? '';
 
     return (
       <RetroBoardView

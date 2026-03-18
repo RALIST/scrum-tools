@@ -18,7 +18,7 @@ export const useRetroUser = (): UseRetroUserResult => {
       return user.name;
     }
     try {
-      return localStorage.getItem(STORAGE_KEY) || null; // Return null if nothing found
+      return localStorage.getItem(STORAGE_KEY) ?? null; // Return null if nothing found
     } catch (error) {
       console.error('Error reading username from localStorage', error);
       return null;

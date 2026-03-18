@@ -113,7 +113,7 @@ const RetroLanding: FC = () => {
     if (currentWorkspace?.id !== createSettings.workspaceId) {
       setCreateSettings((prev) => ({
         ...prev,
-        workspaceId: currentWorkspace?.id || undefined,
+        workspaceId: currentWorkspace?.id ?? undefined,
         // Optionally reset board name when workspace changes
         // boardName: "",
       }));
@@ -297,17 +297,14 @@ const RetroLanding: FC = () => {
           <Center p={8}>
             <VStack spacing={6} w={{ base: "full", md: "500px" }}>
               {/* Use isLoadingBoards for the spinner/conditional rendering */}
-              {isAuthenticated && currentWorkspace && isLoadingBoards && (
-                <Center h="100px">
+              {isAuthenticated && currentWorkspace && isLoadingBoards ? <Center h="100px">
                   <Spinner />
-                </Center>
-              )}
+                </Center> : null}
               {/* Show board list only if authenticated, in workspace, not loading, and boards exist */}
               {isAuthenticated &&
                 currentWorkspace &&
                 !isLoadingBoards &&
-                workspaceBoards.length > 0 && (
-                  <Box w="full" mt={4}>
+                workspaceBoards.length > 0 ? <Box w="full" mt={4}>
                     <Text fontWeight="bold" mb={2}>
                       Your Workspace Boards:
                     </Text>
@@ -344,8 +341,7 @@ const RetroLanding: FC = () => {
                         </Button>
                       )}
                     </VStack>
-                  </Box>
-                )}
+                  </Box> : null}
               <Button
                 colorScheme="blue"
                 size="lg"
@@ -387,8 +383,7 @@ const RetroLanding: FC = () => {
               <ModalHeader>Create Retrospective Board</ModalHeader>
               <ModalBody>
                 <VStack spacing={4}>
-                  {isAuthenticated && (
-                    <>
+                  {isAuthenticated ? <>
                       <FormControl
                         isRequired={!!currentWorkspace}
                       >
@@ -405,11 +400,10 @@ const RetroLanding: FC = () => {
                         />
                       </FormControl>
 
-                      {workspaces && workspaces.length > 0 && (
-                        <FormControl>
+                      {workspaces && workspaces.length > 0 ? <FormControl>
                           <FormLabel>Workspace (Optional)</FormLabel>
                           <Select
-                            value={createSettings.workspaceId || ""}
+                            value={createSettings.workspaceId ?? ""}
                             onChange={(e) => {
                               setCreateSettings((prev) => ({
                                 ...prev,
@@ -428,17 +422,15 @@ const RetroLanding: FC = () => {
                             Workspace boards are only visible to workspace
                             members
                           </Text>
-                        </FormControl>
-                      )}
-                    </>
-                  )}
+                        </FormControl> : null}
+                    </> : null}
 
                   <FormControl>
                     <FormLabel>Board Password (Optional)</FormLabel>
                     <Input
                       type="password"
                       placeholder="Leave empty for no password"
-                      value={createSettings.password || ""}
+                      value={createSettings.password ?? ""}
                       onChange={(e) => {
                         setCreateSettings((prev) => ({
                           ...prev,

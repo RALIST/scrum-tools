@@ -28,7 +28,7 @@ import { apiRequest } from '../../utils/apiUtils';
 // Import new components
 
 // Lazy load modal component
-const CreateRoomModal = lazy(() =>
+const CreateRoomModal = lazy(async () =>
   import('../../components/poker/CreateRoomModal').then(module => ({
     default: module.CreateRoomModal,
   }))
@@ -79,7 +79,7 @@ const PlanningPoker: FC = () => {
       ...prev,
       // Reset room name when workspace changes? Optional.
       // roomName: '',
-      workspaceId: currentWorkspace?.id || undefined,
+      workspaceId: currentWorkspace?.id ?? undefined,
     }));
   }, [currentWorkspace]);
 

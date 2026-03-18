@@ -87,7 +87,7 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
             <FormControl>
               <FormLabel>Estimation Sequence</FormLabel>
               <Select
-                value={internalSettings.sequence || currentSequence} // Use internal state
+                value={internalSettings.sequence ?? currentSequence} // Use internal state
                 onChange={(e) => {
                   handleSettingsChange(
                     "sequence",
@@ -108,7 +108,7 @@ const RoomSettingsModal: FC<RoomSettingsModalProps> = ({
                 <Input
                   type={internalShowPassword ? "text" : "password"}
                   placeholder="Leave empty to keep current" // Changed placeholder
-                  value={internalSettings.password || ""} // Use internal state
+                  value={internalSettings.password ?? ""} // Use internal state
                   onChange={(e) => {
                     handleSettingsChange(
                       "password",

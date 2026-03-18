@@ -37,7 +37,7 @@ export const apiRequest = async <T>(endpoint: string, options: ApiOptions = {}):
     headers: requestHeaders
   };
 
-  if (body) {
+  if (body !== undefined) {
     requestOptions.body = JSON.stringify(body);
   }
 
@@ -73,7 +73,7 @@ export const apiRequest = async <T>(endpoint: string, options: ApiOptions = {}):
         errorData = { error: response.statusText };
     }
     // Throw a generic error for other non-OK responses
-    throw new Error(errorData.error || `API request failed with status ${String(response.status)}`);
+    throw new Error(errorData.error ?? `API request failed with status ${String(response.status)}`);
   }
 
   // Handle cases where the response might be OK but have no content (e.g., 204 No Content)

@@ -116,7 +116,7 @@ export const useWorkspaceTools = (workspaceId: string | undefined): UseWorkspace
   const isLoading = isLoadingPoker || isLoadingRetro || isLoadingVelocity;
   const isError = isPokerError || isRetroError || isVelocityError;
   // Store the first error encountered for simplicity
-  const error = pokerError || retroError || velocityError || null;
+  const error = pokerError ?? retroError ?? velocityError ?? null;
 
   // Effect to show toast on any error
   useEffect(() => {

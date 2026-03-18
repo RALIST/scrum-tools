@@ -42,7 +42,7 @@ const EditWorkspaceModal: FC<EditWorkspaceModalProps> = ({
   useEffect(() => {
     if (workspace) {
       setName(workspace.name);
-      setDescription(workspace.description || "");
+      setDescription(workspace.description ?? "");
     }
   }, [workspace]); // Update local state when workspace prop changes
 
@@ -83,7 +83,7 @@ const EditWorkspaceModal: FC<EditWorkspaceModalProps> = ({
   const handleClose = () => {
     if (workspace) {
       setName(workspace.name);
-      setDescription(workspace.description || "");
+      setDescription(workspace.description ?? "");
     }
     onClose();
   };

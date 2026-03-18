@@ -26,7 +26,7 @@ export default function setupRetroRoutes(
     router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         const boardId: string = Math.random().toString(36).substring(2, 8);
         const { name, settings = {}, workspaceId } = req.body as { name?: string; settings?: RetroBoardSettings; workspaceId?: string }; // Expect settings object again
-        const defaultName: string = `Retro ${formatDate(new Date())}`;
+        const defaultName = `Retro ${formatDate(new Date())}`;
 
         const userId: string | undefined = req.user?.userId; // Get userId from auth middleware
         try {
@@ -46,7 +46,7 @@ export default function setupRetroRoutes(
             // Use injected dependency
             // Use injected dependency
             // Type settings explicitly
-            await retroDb.createRetroBoard(boardId, name || defaultName, workspaceId, settings); // Pass settings object directly
+            await retroDb.createRetroBoard(boardId, name ?? defaultName, workspaceId, settings); // Pass settings object directly
             res.json({ success: true, boardId });
         } catch (error: unknown) {
             next(error);

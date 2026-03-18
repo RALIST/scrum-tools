@@ -29,7 +29,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Profile: FC = () => {
   const { user, logout } = useAuth();
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(user?.name ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameError, setNameError] = useState('');
   const toast = useToast();
