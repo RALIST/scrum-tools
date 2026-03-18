@@ -14,7 +14,8 @@
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
-        "lint:fix": "eslint . --fix --report-unused-disable-directives --max-warnings 0"
+        "lint:fix": "eslint . --fix --report-unused-disable-directives --max-warnings 0",
+        "knip": "knip"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
@@ -30,7 +31,6 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.4",
-        "jiti": "^2.6.1",
         "@types/bcryptjs": "^2.4.6",
         "@types/cors": "^2.8.17",
         "@types/express": "^5.0.1",
@@ -43,7 +43,9 @@
         "eslint": "^9.39.4",
         "eslint-plugin-import-x": "^4.16.2",
         "globals": "^17.4.0",
+        "jiti": "^2.6.1",
         "knex": "^3.1.0",
+        "knip": "^5.88.0",
         "nodemon": "^3.0.1",
         "socket.io-client": "^4.8.1",
         "supertest": "^7.1.0",

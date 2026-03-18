@@ -15,7 +15,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "knip": "knip"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
@@ -53,6 +54,7 @@
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
     "jsdom": "^26.0.0",
+    "knip": "^5.88.0",
     "rollup-plugin-visualizer": "^6.0.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.57.1",
