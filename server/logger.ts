@@ -29,7 +29,7 @@ const logFormat = printf((info: Logform.TransformableInfo): string => {
 
 // Create the logger instance
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL ?? 'info', // Default to 'info', can be configured via env var
+  level: process.env['LOG_LEVEL'] ?? 'info', // Default to 'info', can be configured via env var
   format: combine(
     colorize(), // Add colors to the output
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), // Add timestamp

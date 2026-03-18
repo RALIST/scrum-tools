@@ -8,7 +8,7 @@ import type { User } from '../types/db.js'; // Import User type (needs .js)
 // Define the type for the injected userDb module
 type UserDbModule = typeof userDbFunctions;
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key'; // TODO: Ensure this is properly set in .env
+const JWT_SECRET = process.env['JWT_SECRET'] ?? 'your-secret-key'; // TODO: Ensure this is properly set in .env
 
 // Wrap routes in a setup function that accepts db dependency
 export default function setupAuthRoutes(userDb: UserDbModule): Router {

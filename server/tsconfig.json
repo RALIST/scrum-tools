@@ -38,6 +38,7 @@
     "data/migrations/**/*.cjs",
     "**/*.test.ts",
     "**/*.test.js",
-    "vitest.*.ts"
+    "vitest.*.ts",
+    "eslint.config.ts"
   ]
 }

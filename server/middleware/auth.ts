@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt, { type JwtPayload, type VerifyErrors } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'your-secret-key'; // Should be in env variables
+const JWT_SECRET = process.env['JWT_SECRET'] ?? 'your-secret-key'; // Should be in env variables
 
 // Define the structure of your JWT payload
 interface UserPayload extends JwtPayload {
