@@ -8,7 +8,6 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
-  useColorMode,
 } from '@chakra-ui/react';
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { createLogger } from '../utils/logger';
@@ -116,12 +115,10 @@ interface ErrorFallbackProps {
 }
 
 const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onRetry, onReload }) => {
-  const { colorMode } = useColorMode();
-
   return (
     <Box
       minH="100vh"
-      bg={colorMode === 'light' ? 'gray.50' : 'gray.900'}
+      bg="bg.page"
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -130,7 +127,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onRetry, onReload 
       <Box
         maxW="md"
         w="full"
-        bg={colorMode === 'light' ? 'white' : 'gray.800'}
+        bg="bg.chrome"
         borderRadius="lg"
         p={8}
         shadow="lg"
@@ -148,14 +145,14 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onRetry, onReload 
           </Alert>
 
           <VStack spacing={4} w="full">
-            <Heading size="md" color={colorMode === 'light' ? 'gray.700' : 'gray.300'}>
+            <Heading size="md" color="text.subtle">
               Error Details
             </Heading>
 
             {error ? <Box
                 w="full"
                 p={4}
-                bg={colorMode === 'light' ? 'gray.100' : 'gray.700'}
+                bg="bg.inset"
                 borderRadius="md"
                 fontSize="sm"
                 fontFamily="mono"

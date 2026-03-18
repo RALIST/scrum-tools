@@ -2,7 +2,6 @@ import {
   Box,
   SimpleGrid,
   VStack,
-  useColorMode,
   useDisclosure,
   Flex,
   Spinner,
@@ -75,7 +74,6 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
   onUpdateSettings,
   isNameFixed, // Destructure the new prop
 }) => {
-  const { colorMode } = useColorMode();
   const {
     isOpen: isSettingsOpen,
     onOpen: onSettingsOpen,
@@ -107,7 +105,7 @@ const RetroBoardView: FC<RetroBoardViewProps> = ({
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <Box
-        bg={colorMode === 'light' ? 'gray.50' : 'gray.900'}
+        bg="bg.page"
         borderRadius="lg"
         display="flex"
         flexDirection="column"

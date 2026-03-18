@@ -11,7 +11,6 @@ import {
   VStack,
   Button,
   Text,
-  useColorMode,
   HStack,
   IconButton,
   List,
@@ -58,7 +57,6 @@ interface WorkspaceMember {
 }
 
 const DailyStandup: FC = () => {
-  const { colorMode } = useColorMode();
   const toast = useToast();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [currentMember, setCurrentMember] = useState<number>(-1);
@@ -394,7 +392,7 @@ const DailyStandup: FC = () => {
           <Box
             p={6}
             borderRadius="lg"
-            bg={colorMode === "light" ? "white" : "gray.700"}
+            bg="bg.surface"
             shadow="md"
           >
             <VStack spacing={6}>

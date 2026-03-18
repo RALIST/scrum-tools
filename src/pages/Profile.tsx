@@ -10,7 +10,6 @@ import {
   Input,
   FormErrorMessage,
   useToast,
-  useColorMode,
   Card,
   CardHeader,
   CardBody,
@@ -34,7 +33,6 @@ const Profile: FC = () => {
   const [nameError, setNameError] = useState('');
   const toast = useToast();
   const navigate = useNavigate();
-  const { colorMode } = useColorMode();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef(null);
 
@@ -82,7 +80,7 @@ const Profile: FC = () => {
       
       <Heading size="xl" mb={6}>My Profile</Heading>
       
-      <Card bg={colorMode === 'light' ? 'white' : 'gray.700'} shadow="md" mb={6}>
+      <Card bg="bg.surface" shadow="md" mb={6}>
         <CardHeader pb={0}>
           <Heading size="md">Account Information</Heading>
         </CardHeader>
@@ -118,7 +116,7 @@ const Profile: FC = () => {
         </CardBody>
       </Card>
       
-      <Card bg={colorMode === 'light' ? 'white' : 'gray.700'} shadow="md">
+      <Card bg="bg.surface" shadow="md">
         <CardHeader pb={0}>
           <Heading size="md">Account Actions</Heading>
         </CardHeader>

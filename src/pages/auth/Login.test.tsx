@@ -111,7 +111,7 @@ describe("Login Page", () => {
 
   it("renders login form correctly", () => {
     renderLoginComponent();
-    expect(screen.getByRole("heading", { name: /login/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /log in/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByText("Password")).toBeInTheDocument(); // More specific selector for the label
     expect(screen.getByRole("button", { name: /log in/i })).toBeInTheDocument();
@@ -209,7 +209,7 @@ describe("Login Page", () => {
     // Check if the content of the target page is rendered (or if navigation happened)
     // Since we mock navigate, we check if it was called immediately or if the target content appears
     expect(
-      screen.queryByRole("heading", { name: /login/i })
+      screen.queryByRole("heading", { name: /log in/i })
     ).not.toBeInTheDocument();
     expect(screen.getByText("Workspaces Page")).toBeInTheDocument(); // Check if redirected content is shown
   });

@@ -13,7 +13,6 @@ import {
   InputGroup,
   InputRightElement,
   IconButton,
-  useColorMode,
 } from "@chakra-ui/react";
 import { type FC, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
@@ -32,7 +31,6 @@ const Login: FC = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const toast = useToast();
   const navigate = useNavigate();
-  const { colorMode } = useColorMode();
 
   if (isAuthenticated) {
     return <Navigate to="/workspaces" />;
@@ -134,7 +132,13 @@ const Login: FC = () => {
   };
 
   return (
-    <Box maxWidth="400px" mx="auto" my={8}>
+    <Box
+      maxWidth="480px"
+      width="100%"
+      mx="auto"
+      my={12}
+      px={4}
+    >
       <PageHelmet
         title="Login - Scrum Tools"
         description="Log in to your Scrum Tools account to access your workspaces and teams."
@@ -145,20 +149,21 @@ const Login: FC = () => {
       <VStack
         spacing={6}
         align="stretch"
-        bg={colorMode === "light" ? "white" : "gray.700"}
-        p={8}
-        borderRadius="md"
-        boxShadow="md"
+        bg="bg.surface"
+        p={{ base: 6, sm: 10 }}
+        borderRadius="lg"
+        boxShadow="lg"
       >
         <Heading as="h1" size="xl" textAlign="center">
-          Login
+          Log In
         </Heading>
 
         <form onSubmit={(e) => { void handleSubmit(e); }}>
-          <VStack spacing={4}>
+          <VStack spacing={5}>
             <FormControl isInvalid={!!errors.email}>
               <FormLabel>Email</FormLabel>
               <Input
+                size="lg"
                 type="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); }}
@@ -169,7 +174,7 @@ const Login: FC = () => {
 
             <FormControl isInvalid={!!errors.password}>
               <FormLabel>Password</FormLabel>
-              <InputGroup>
+              <InputGroup size="lg">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -194,6 +199,7 @@ const Login: FC = () => {
             <Button
               type="submit"
               colorScheme="blue"
+              size="lg"
               width="full"
               mt={4}
               isLoading={isSubmitting}

@@ -14,7 +14,6 @@ import {
   Button,
   IconButton,
   Tooltip,
-  useColorMode,
   Box,
   Textarea,
   ButtonGroup,
@@ -46,7 +45,6 @@ const RetroCard: FC<RetroCardProps> = ({
   onVote,
   onEdit,
 }) => {
-  const { colorMode } = useColorMode();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -124,7 +122,7 @@ const RetroCard: FC<RetroCardProps> = ({
                     width: "6px",
                   },
                   "&::-webkit-scrollbar-thumb": {
-                    background: colorMode === "light" ? "gray.300" : "gray.600",
+                    background: "scrollbar.thumb",
                     borderRadius: "24px",
                   },
                 }}
@@ -135,7 +133,7 @@ const RetroCard: FC<RetroCardProps> = ({
             {!hideAuthorNames && (
               <Text
                 fontSize="xs"
-                color={colorMode === "light" ? "gray.500" : "gray.400"}
+                color="text.muted"
                 mt={1}
               >
                 Added by: {authorName}

@@ -5,7 +5,6 @@ import {
   Text,
   VStack,
   IconButton,
-  useColorMode,
   Stack,
   useClipboard,
   useToast,
@@ -39,7 +38,6 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
     participants,
     socketId,
   }) => {
-    const { colorMode } = useColorMode();
     const toast = useToast();
 
     // Memoize the shareable link to avoid recreation on every render
@@ -113,7 +111,7 @@ export const RoomHeader: FC<RoomHeaderProps> = memo(
             <Stack direction="row" spacing={2} align="center">
               <Text
                 fontSize={{ base: 'md', md: 'lg' }}
-                color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
+                color="text.secondary"
               >
                 Playing as: {currentParticipantName}
               </Text>

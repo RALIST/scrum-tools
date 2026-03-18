@@ -211,7 +211,6 @@ WorkspaceMenu.displayName = "WorkspaceMenu"; // Add display name
 // --- Main Navbar Component ---
 
 const Navbar: FC = () => {
-  const { colorMode } = useColorMode(); // Only need colorMode here now
   const { user, isAuthenticated, logout } = useAuth();
   // Use the correct name from context 'setCurrentWorkspace' which was memoized as 'updateCurrentWorkspace'
   const {
@@ -228,8 +227,8 @@ const Navbar: FC = () => {
       as="nav"
       py={4}
       borderBottom="1px"
-      borderColor={colorMode === "light" ? "gray.200" : "gray.700"}
-      bg={colorMode === "light" ? "white" : "gray.800"}
+      borderColor="border.default"
+      bg="bg.chrome"
       position="sticky"
       top={0}
       zIndex="sticky"

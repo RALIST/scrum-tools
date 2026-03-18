@@ -8,7 +8,6 @@ import {
   SimpleGrid,
   Spinner,
   Center,
-  useColorMode,
 } from "@chakra-ui/react";
 import type { FC } from "react";
 import { Link as RouterLink } from "react-router-dom";
@@ -20,7 +19,6 @@ const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
   velocityTeams,
   isLoadingTools,
 }) => {
-  const { colorMode } = useColorMode();
 
   if (isLoadingTools) {
     return (
@@ -53,7 +51,7 @@ const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
                 p={4}
                 borderWidth={1}
                 borderRadius="md"
-                bg={colorMode === "light" ? "white" : "gray.700"}
+                bg="bg.surface"
               >
                 <HStack justify="space-between">
                   <Text fontWeight="medium">{room.name || room.id}</Text>{" "}
@@ -98,7 +96,7 @@ const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
                 p={4}
                 borderWidth={1}
                 borderRadius="md"
-                bg={colorMode === "light" ? "white" : "gray.700"}
+                bg="bg.surface"
               >
                 <HStack justify="space-between">
                   <Text fontWeight="medium">{board.name}</Text>
@@ -138,7 +136,7 @@ const WorkspaceToolsPanel: FC<WorkspaceToolsPanelProps> = ({
                 p={4}
                 borderWidth={1}
                 borderRadius="md"
-                bg={colorMode === "light" ? "white" : "gray.700"}
+                bg="bg.surface"
               >
                 <HStack justify="space-between">
                   <Text fontWeight="medium">{team.name}</Text>

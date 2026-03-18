@@ -17,7 +17,6 @@ import {
   HStack,
   Badge,
   Divider,
-  useColorMode,
   Tooltip,
   useClipboard,
   useToast,
@@ -59,7 +58,6 @@ const RetroHeader: FC<RetroHeaderProps> = ({
   boardId,
   isNameFixed, // Destructure the new prop
 }) => {
-  const { colorMode } = useColorMode();
   const shareableLink = useMemo(
     () => `${config.siteUrl}/retro/${boardId}`,
     [boardId]
@@ -96,7 +94,7 @@ const RetroHeader: FC<RetroHeaderProps> = ({
         </Heading>
         <Text
           fontSize={{ base: "md", md: "lg" }}
-          color={colorMode === "light" ? "gray.600" : "gray.300"}
+          color="text.secondary"
         >
           ID: {boardId}
         </Text>
@@ -137,7 +135,7 @@ const RetroHeader: FC<RetroHeaderProps> = ({
         <Divider />
         <Text
           fontSize="lg"
-          color={colorMode === "light" ? "gray.600" : "gray.300"}
+          color="text.secondary"
         >
           Share your thoughts about the sprint
         </Text>

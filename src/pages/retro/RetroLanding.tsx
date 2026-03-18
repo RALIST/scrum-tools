@@ -4,7 +4,6 @@ import {
   Button,
   VStack,
   Text,
-  useColorMode,
   Center,
   useToast,
   Input,
@@ -57,7 +56,6 @@ interface CreateBoardResponse {
 }
 
 const RetroLanding: FC = () => {
-  const { colorMode } = useColorMode();
   const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient(); // Get query client instance
@@ -264,7 +262,7 @@ const RetroLanding: FC = () => {
         jsonLd={jsonLd}
       />
       <Box
-        bg={colorMode === "light" ? "gray.50" : "gray.900"}
+        bg="bg.page"
         borderRadius="lg"
       >
         <VStack spacing={{ base: 6, md: 8 }} align="stretch">
@@ -279,14 +277,14 @@ const RetroLanding: FC = () => {
             </Heading>
             <Text
               fontSize={{ base: "lg", md: "xl" }}
-              color={colorMode === "light" ? "gray.600" : "gray.300"}
+              color="text.secondary"
               px={{ base: 2, md: 0 }}
             >
               Collaborate with your team to improve your process
             </Text>
             <Text
               fontSize={{ base: "md", md: "lg" }}
-              color={colorMode === "light" ? "gray.500" : "gray.400"}
+              color="text.muted"
               mt={2}
               px={{ base: 2, md: 0 }}
             >
@@ -311,7 +309,7 @@ const RetroLanding: FC = () => {
                     <VStack
                       spacing={2}
                       align="stretch"
-                      bg={colorMode === "light" ? "white" : "gray.700"}
+                      bg="bg.surface"
                       p={4}
                       borderRadius="md"
                       shadow="sm"

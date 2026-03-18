@@ -10,7 +10,6 @@ import {
   Icon,
   Input, // For invite link display
   useToast, // For copy feedback
-  useColorMode, // For invite link background
 } from "@chakra-ui/react";
 import { useMutation } from "@tanstack/react-query"; // Import useMutation
 import React, { type FC, useState } from "react";
@@ -46,7 +45,6 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
   onRemoveMember,
 }) => {
   const toast = useToast();
-  const { colorMode } = useColorMode();
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   // Remove isGeneratingInvite state, use mutation state
   // const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
@@ -128,7 +126,7 @@ const WorkspaceMembersPanel: FC<WorkspaceMembersPanelProps> = ({
           {inviteToken ? <Box
               mt={4}
               p={3}
-              bg={colorMode === "light" ? "gray.100" : "gray.600"}
+              bg="bg.subtle"
               borderRadius="md"
             >
               <Text fontSize="sm" mb={1}>

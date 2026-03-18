@@ -1,4 +1,4 @@
-import { Button, useColorMode } from '@chakra-ui/react';
+import { Button } from '@chakra-ui/react';
 import { type FC, memo } from 'react';
 
 interface CardProps {
@@ -14,8 +14,6 @@ export const Card: FC<CardProps> = memo(({
   onClick,
   disabled,
 }) => {
-  const { colorMode } = useColorMode();
-
   return (
     <Button
       h={{ base: "100px", md: "120px" }}
@@ -23,13 +21,7 @@ export const Card: FC<CardProps> = memo(({
       fontSize={{ base: "xl", md: "2xl" }}
       variant="outline"
       colorScheme={isSelected ? "blue" : "gray"}
-      bg={
-        isSelected
-          ? colorMode === "light"
-            ? "blue.50"
-            : "blue.900"
-          : "transparent"
-      }
+      bg={isSelected ? "bg.selected" : "transparent"}
       onClick={onClick}
       disabled={disabled}
       _hover={{

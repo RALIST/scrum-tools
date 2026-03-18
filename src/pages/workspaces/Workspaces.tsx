@@ -23,7 +23,6 @@ import {
   Spinner,
   Center,
   Badge,
-  useColorMode,
 } from "@chakra-ui/react";
 import { type FC, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
@@ -38,7 +37,6 @@ const Workspaces: FC = () => {
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
-  const { colorMode } = useColorMode();
 
   const handleCreateWorkspace = async () => {
     if (!name.trim()) {
@@ -107,7 +105,7 @@ const Workspaces: FC = () => {
           textAlign="center"
           borderWidth={1}
           borderRadius="md"
-          bg={colorMode === "light" ? "white" : "gray.700"}
+          bg="bg.surface"
         >
           <Heading size="md" mb={4}>
             No workspaces yet
@@ -127,7 +125,7 @@ const Workspaces: FC = () => {
               p={5}
               borderWidth={1}
               borderRadius="md"
-              bg={colorMode === "light" ? "white" : "gray.700"}
+              bg="bg.surface"
               shadow="md"
               transition="all 0.2s"
               _hover={{ transform: "translateY(-4px)", shadow: "lg" }}

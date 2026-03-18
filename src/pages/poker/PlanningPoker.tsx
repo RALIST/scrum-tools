@@ -3,7 +3,6 @@ import {
   Heading,
   Button,
   VStack,
-  useColorMode,
   useToast,
   Center,
   HStack, // Keep HStack if used by PokerLandingActions
@@ -55,7 +54,6 @@ const PlanningPoker: FC = () => {
   // const [isLoading, setIsLoading] = useState(false);
   // Remove isCreating state, use state from useMutation
   // const [isCreating, setIsCreating] = useState(false);
-  const { colorMode } = useColorMode();
   const navigate = useNavigate();
   const toast = useToast();
   const {
@@ -233,7 +231,7 @@ const PlanningPoker: FC = () => {
         canonicalUrl={`${config.siteUrl}/planning-poker`}
         jsonLd={jsonLd}
       />
-      <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)" py={8}>
+      <Box bg="bg.page" minH="calc(100vh - 60px)" py={8}>
         <VStack spacing={{ base: 4, md: 8 }}>
           <Box textAlign="center" w="full" px={4}>
             <Heading as="h1" size={{ base: 'lg', md: 'xl' }} mb={4}>
@@ -259,7 +257,7 @@ const PlanningPoker: FC = () => {
               mx="auto" // Center the box
               p={{ base: 4, md: 8 }}
               borderRadius="lg"
-              bg={colorMode === 'light' ? 'white' : 'gray.700'}
+              bg="bg.surface"
               shadow="md"
             >
               <VStack spacing={6}>

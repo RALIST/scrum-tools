@@ -13,7 +13,6 @@ import {
   InputGroup,
   InputRightElement,
   IconButton,
-  useColorMode,
 } from "@chakra-ui/react";
 import { type FC, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
@@ -34,7 +33,6 @@ const Register: FC = () => {
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
   const toast = useToast();
   const navigate = useNavigate();
-  const { colorMode } = useColorMode();
 
   if (isAuthenticated) {
     return <Navigate to="/workspaces" />;
@@ -153,7 +151,13 @@ const Register: FC = () => {
   };
 
   return (
-    <Box maxWidth="400px" mx="auto" my={8}>
+    <Box
+      maxWidth="480px"
+      width="100%"
+      mx="auto"
+      my={12}
+      px={4}
+    >
       <PageHelmet
         title="Register - Scrum Tools"
         description="Create a new Scrum Tools account to access team workspaces and collaboration features."
@@ -164,20 +168,21 @@ const Register: FC = () => {
       <VStack
         spacing={6}
         align="stretch"
-        bg={colorMode === "light" ? "white" : "gray.700"}
-        p={8}
-        borderRadius="md"
-        boxShadow="md"
+        bg="bg.surface"
+        p={{ base: 6, sm: 10 }}
+        borderRadius="lg"
+        boxShadow="lg"
       >
         <Heading as="h1" size="xl" textAlign="center">
           Register
         </Heading>
 
         <form onSubmit={(e) => { void handleSubmit(e); }}>
-          <VStack spacing={4}>
+          <VStack spacing={5}>
             <FormControl isInvalid={!!errors.name}>
               <FormLabel>Name</FormLabel>
               <Input
+                size="lg"
                 type="text"
                 value={name}
                 onChange={(e) => { setName(e.target.value); }}
@@ -189,6 +194,7 @@ const Register: FC = () => {
             <FormControl isInvalid={!!errors.email}>
               <FormLabel>Email</FormLabel>
               <Input
+                size="lg"
                 type="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); }}
@@ -199,7 +205,7 @@ const Register: FC = () => {
 
             <FormControl isInvalid={!!errors.password}>
               <FormLabel>Password</FormLabel>
-              <InputGroup>
+              <InputGroup size="lg">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -224,6 +230,7 @@ const Register: FC = () => {
             <FormControl isInvalid={!!errors.confirmPassword}>
               <FormLabel>Confirm Password</FormLabel>
               <Input
+                size="lg"
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); }}
@@ -235,6 +242,7 @@ const Register: FC = () => {
             <Button
               type="submit"
               colorScheme="blue"
+              size="lg"
               width="full"
               mt={4}
               isLoading={isSubmitting}

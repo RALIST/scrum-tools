@@ -1,4 +1,4 @@
-import { Box, Heading, SimpleGrid, Text, Button, VStack, useColorMode } from '@chakra-ui/react'
+import { Box, Heading, SimpleGrid, Text, Button, VStack } from '@chakra-ui/react'
 import type { FC } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import PageContainer from '../components/PageContainer'
@@ -14,13 +14,11 @@ interface FeatureCardProps {
 }
 
 const FeatureCard: FC<FeatureCardProps> = ({ title, description, link, isComingSoon }) => {
-    const { colorMode } = useColorMode()
-
     return (
         <Box
             p={{ base: 4, md: 6 }}
             borderRadius="lg"
-            bg={colorMode === 'light' ? 'white' : 'gray.700'}
+            bg="bg.surface"
             shadow="md"
             _hover={{ transform: 'translateY(-4px)', transition: 'transform 0.2s' }}
             height="full"
@@ -47,8 +45,6 @@ const FeatureCard: FC<FeatureCardProps> = ({ title, description, link, isComingS
 }
 
 const Home: FC = () => {
-    const { colorMode } = useColorMode()
-
     const jsonLd = {
         "@context": "https://schema.org",
         "@type": "WebApplication",
@@ -75,7 +71,7 @@ const Home: FC = () => {
     }
 
     return (
-        <Box bg={colorMode === 'light' ? 'gray.50' : 'gray.900'} minH="calc(100vh - 60px)">
+        <Box bg="bg.page" minH="calc(100vh - 60px)">
             <PageHelmet
                 title="Scrum Tools - Free Online Tools for Agile Teams"
                 description="Free online tools for agile teams including Planning Poker, Daily Standup Timer, Retrospective Board, and Team Velocity Tracker. Real-time collaboration, password protection, and mobile support included."
@@ -96,7 +92,7 @@ const Home: FC = () => {
                         </Heading>
                         <Text
                             fontSize={{ base: "lg", md: "xl" }}
-                            color={colorMode === 'light' ? 'gray.600' : 'gray.300'}
+                            color="text.secondary"
                             px={{ base: 2, md: 0 }}
                         >
                             Boost your team&apos;s agile workflow with our secure, real-time collaboration tools

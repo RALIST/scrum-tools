@@ -4,7 +4,6 @@ import {
   Button,
   Text,
   VStack,
-  useColorMode,
   useToast,
   useDisclosure,
   Spinner,
@@ -33,7 +32,6 @@ const LOCAL_STORAGE_USERNAME_KEY = "planningPokerUsername";
 // Removed PokerRoomDetailsFrontend interface
 
 const PlanningPokerRoom: FC = () => {
-  const { colorMode } = useColorMode();
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const toast = useToast();
@@ -318,7 +316,7 @@ const PlanningPokerRoom: FC = () => {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <Box
-        bg={colorMode === "light" ? "gray.50" : "gray.900"}
+        bg="bg.page"
         minH="calc(100vh - 60px)"
       >
         {/* Join Modal - controlled by isJoinModalOpen state */}
@@ -364,7 +362,7 @@ const PlanningPokerRoom: FC = () => {
               w="full"
               p={{ base: 4, md: 8 }}
               borderRadius="lg"
-              bg={colorMode === "light" ? "white" : "gray.700"}
+              bg="bg.surface"
               shadow="md"
             >
               <VStack spacing={{ base: 4, md: 8 }}>

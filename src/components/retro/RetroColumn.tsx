@@ -1,4 +1,4 @@
-import { VStack, Heading, Box, useColorMode } from "@chakra-ui/react";
+import { VStack, Heading, Box } from "@chakra-ui/react";
 import React, { type FC, useState } from "react"; // Import React for memo
 import type { RetroCard as RetroCardType } from "../../hooks/useRetroSocket";
 import RetroCard from "./RetroCard";
@@ -36,7 +36,6 @@ const RetroColumn: FC<RetroColumnProps> = ({
   onVoteCard,
   onEditCard,
 }) => {
-  const { colorMode } = useColorMode();
   const [inputValue, setInputValue] = useState(""); // Internal state for input
 
   const handleAddClick = () => {
@@ -48,7 +47,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
 
   return (
     <Box
-      bg={colorMode === "light" ? "white" : "gray.700"}
+      bg="bg.surface"
       borderRadius="lg"
       shadow="md"
       h="full"
@@ -58,7 +57,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
       <Box
         p={4}
         borderBottom="1px"
-        borderColor={colorMode === "light" ? "gray.100" : "gray.600"}
+        borderColor="border.subtle"
       >
         <Heading size="md" color={color} textAlign="center">
           {title}
@@ -80,7 +79,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
             width: "6px",
           },
           "&::-webkit-scrollbar-thumb": {
-            background: colorMode === "light" ? "gray.300" : "gray.600",
+            background: "scrollbar.thumb",
             borderRadius: "24px",
           },
         }}
@@ -105,7 +104,7 @@ const RetroColumn: FC<RetroColumnProps> = ({
       <Box
         p={4}
         borderTop="1px"
-        borderColor={colorMode === "light" ? "gray.100" : "gray.600"}
+        borderColor="border.subtle"
       >
         <RetroCardInput
           isTimerRunning={isTimerRunning}

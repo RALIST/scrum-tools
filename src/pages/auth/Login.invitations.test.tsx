@@ -120,14 +120,14 @@ describe("Login - Pending Invitation Flow", () => {
       renderLoginComponent(false);
 
       // Should show login form
-      expect(screen.getByText(/login/i)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /log in/i })).toBeInTheDocument();
     });
 
     it("should handle missing invitation token gracefully", () => {
       renderLoginComponent(false);
 
       // Should render normal login form
-      expect(screen.getByText(/login/i)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /log in/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     });
@@ -137,7 +137,7 @@ describe("Login - Pending Invitation Flow", () => {
       renderLoginComponent(false);
 
       // Should still render login form
-      expect(screen.getByText(/login/i)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /log in/i })).toBeInTheDocument();
     });
   });
 

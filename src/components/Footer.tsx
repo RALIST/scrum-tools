@@ -3,28 +3,25 @@ import {
   Container,
   Text,
   HStack,
-  useColorMode,
   Link,
   Spacer,
 } from "@chakra-ui/react";
 import type { FC } from "react";
 
 const Footer: FC = () => {
-  const { colorMode } = useColorMode();
-
   return (
     <Box
       as="footer"
       py={4}
       borderTop="1px"
-      borderColor={colorMode === "light" ? "gray.200" : "gray.700"}
-      bg={colorMode === "light" ? "white" : "gray.800"}
+      borderColor="border.default"
+      bg="bg.chrome"
     >
       <Container maxW="container.xl">
         <HStack justify="space-between" align="center">
           <Text
             fontSize="sm"
-            color={colorMode === "light" ? "gray.600" : "gray.400"}
+            color="text.footnote"
           >
             © {new Date().getFullYear()} Scrum Tools. All rights reserved.
           </Text>
@@ -34,7 +31,7 @@ const Footer: FC = () => {
               href="https://online-dev-tools.com/"
               isExternal
               fontSize="sm"
-              color={colorMode === "light" ? "blue.600" : "blue.300"}
+              color="link.accent"
             >
               Online Dev Tools
             </Link>
@@ -42,7 +39,7 @@ const Footer: FC = () => {
               href="mailto:dev@scrumtools.app"
               isExternal
               fontSize="sm"
-              color={colorMode === "light" ? "blue.600" : "blue.300"}
+              color="link.accent"
             >
               Contactme: dev@scrumtools.app
             </Link>
