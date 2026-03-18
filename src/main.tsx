@@ -15,13 +15,10 @@ const queryClient = new QueryClient();
 initPerformanceTracking();
 initFontOptimization();
 
-
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    {' '}
     {/* Add StrictMode */}
     <QueryClientProvider client={queryClient}>
-      {' '}
       {/* Add QueryClientProvider */}
       <ChakraProvider theme={theme}>
         <ColorModeScript initialColorMode={(theme.config as ThemeConfig).initialColorMode} />

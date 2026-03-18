@@ -1,158 +1,182 @@
 # Scrum Tools
 
-A comprehensive suite of free online tools for Agile/Scrum teams. Built with React, Node.js, and PostgreSQL.
+A full-stack agile collaboration suite for distributed teams. Supports both anonymous public rooms and authenticated workspaces with role-based access.
+
+Built with React, TypeScript, Express, Socket.IO, and PostgreSQL.
 
 ## Features
 
-### Planning Poker 🎯
-- Real-time voting system for story points estimation
-- Room-based collaboration with team members
-- Configurable voting sequences (Fibonacci, T-Shirt sizes)
-- Instant result visualization
-- Password protection for rooms
+### Planning Poker
+- Real-time voting with configurable sequences (Fibonacci, T-Shirt sizes, etc.)
+- Room-based sessions with optional password protection
+- Live participant tracking, vote reveal, and reset
+- Works anonymously or within a workspace
 
-### Retrospective Board 📝
-- Digital board for sprint retrospectives
-- Three-column format (What went well, What needs improvement, Action items)
-- Real-time collaboration with team members
-- Card voting system
-- Timer for time-boxed discussions
+### Retrospective Board
+- Three-column board: What went well / What needs improvement / Action items
+- Real-time card creation, editing, and deletion
+- Per-card voting system
+- Configurable timer for time-boxed discussions
+- Toggle card visibility and author name hiding
 - Password-protected boards
-- Configurable card visibility
 
-### Daily Standup Timer ⏱️
-- Configurable timer for each team member
-- Visual and audio notifications
-- Easy team member management
-- Total meeting duration tracking
-- Mobile-friendly interface
-
-### Team Velocity Tracker 📈
-- Sprint velocity tracking and visualization
-- Team-based data management
-- Committed vs. Completed points tracking
-- Average velocity statistics
-- Completion rate analysis
+### Team Velocity Tracker
+- Sprint-by-sprint committed vs. completed points
+- Average velocity and completion rate statistics
+- Interactive velocity chart (Chart.js)
 - Password-protected team data
-- Interactive velocity chart
 
-## Tech Stack
+### Daily Standup Timer
+- Per-person configurable timer
+- Visual and audio notifications
+- Total meeting duration tracking
 
-### Frontend
-- React with TypeScript
-- Chakra UI for components
-- Chart.js for data visualization
-- Socket.io client for real-time features
-- React Router for navigation
-- Dark/Light theme support
+### Workspaces
+- Authenticated multi-user collaboration spaces
+- Role-based access (admin / member)
+- Invitation system with time-limited tokens
+- All tools (Poker, Retro, Velocity) available within workspace context
 
-### Backend
-- Node.js with Express
-- PostgreSQL database
-- Socket.io for real-time communication
-- RESTful API architecture
-- JWT for authentication
+## Architecture
+
+The project is split into two separate Node.js packages:
+
+```
+scrum-tools/
+├── src/                  # React frontend (Vite + Chakra UI)
+├── server/               # Express backend (TypeScript, ESM)
+│   ├── routes/           # REST API endpoints
+│   ├── sockets/          # Socket.IO namespace handlers
+│   ├── db/               # Database query modules
+│   ├── middleware/        # Auth & error handling
+│   ├── data/migrations/  # Knex migrations (.cjs)
+│   └── __tests__/        # Backend tests
+├── e2e/                  # Playwright E2E tests
+└── public/               # Static assets
+```
+
+- **Frontend**: React 18, Chakra UI v2, React Router, React Query, Socket.IO client
+- **Backend**: Express, PostgreSQL (via `pg`), Socket.IO with `/poker` and `/retro` namespaces
+- **Auth**: JWT-based with dual middleware (`authenticateToken` / `optionalAuthenticateToken`)
+- **Real-time**: Socket.IO with typed events for Planning Poker and Retro Board
+
+## Prerequisites
+
+- Node.js v22+
+- PostgreSQL v12+
+- npm
 
 ## Getting Started
 
-### Prerequisites
-- Node.js (v14 or higher)
-- PostgreSQL (v12 or higher)
-- npm or yarn
+### 1. Clone and install dependencies
 
-### Installation
-
-1. Clone the repository:
-\`\`\`bash
-git clone https://github.com/yourusername/scrum-tools.git
+```bash
+git clone <repo-url>
 cd scrum-tools
-\`\`\`
 
-2. Install dependencies for both frontend and backend:
-\`\`\`bash
-# Install frontend dependencies
+# Frontend dependencies
 npm install
 
-# Install backend dependencies
+# Backend dependencies
 cd server
 npm install
-\`\`\`
+```
 
-3. Set up the database:
-\`\`\`bash
-# Create a PostgreSQL database
-createdb scrum_tools
+### 2. Configure the database
 
-# Run the schema setup script
+Create a PostgreSQL database and user:
+
+```sql
+CREATE USER scrum_user WITH PASSWORD 'your_password';
+CREATE DATABASE scrum_tools OWNER scrum_user;
+-- For running tests:
+CREATE DATABASE scrum_tools_test OWNER scrum_user;
+```
+
+### 3. Set up environment variables
+
+```bash
 cd server
-node db/schema.js
-\`\`\`
-
-4. Configure environment variables:
-\`\`\`bash
-# In the server directory, create .env file
 cp .env.example .env
+```
 
-# Update the .env file with your database credentials
-\`\`\`
+Edit `.env` with your database credentials:
 
-5. Start the development servers:
-\`\`\`bash
-# Start the backend server
-npm run server
+```env
+DB_USER=scrum_user
+DB_HOST=localhost
+DB_NAME=scrum_tools
+DB_PASSWORD=your_password
+DB_PORT=5432
+JWT_SECRET=your-secret-key
+```
 
-# In a new terminal, start the frontend (from project root)
+### 4. Run database migrations
+
+```bash
+cd server
+npm run db:migrate:latest
+```
+
+### 5. Start development servers
+
+In two separate terminals:
+
+```bash
+# Terminal 1 - Backend (from server/ directory)
 npm run dev
-\`\`\`
 
-The application will be available at http://localhost:5173
+# Terminal 2 - Frontend (from project root)
+npm run dev
+```
 
-## Usage
+The app will be available at http://localhost:5173 (frontend) and http://localhost:3001 (API).
 
-### Planning Poker
-1. Create a new room or join existing
-2. Share room ID with team members
-3. Select voting sequence
-4. Vote on stories in real-time
-5. Reveal votes and discuss
+## Scripts
 
-### Retrospective Board
-1. Create a new board with password
-2. Share board ID with team
-3. Add cards to appropriate columns
-4. Vote on important items
-5. Use timer for focused discussions
-6. Track action items
+### Frontend (project root)
 
-### Daily Standup Timer
-1. Add team members
-2. Set time limit per person
-3. Start the timer
-4. Get notifications when time is up
-5. Track total meeting duration
+| Command | Description |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | ESLint (zero warnings enforced) |
+| `npm run lint:fix` | ESLint with auto-fix |
+| `npm run typecheck` | TypeScript type checking |
+| `npm test` | Vitest unit tests |
+| `npm run test:coverage` | Test coverage report |
+| `npm run test:e2e` | Playwright E2E tests |
 
-### Team Velocity Tracker
-1. Create a team with password
-2. Add sprint data (committed/completed points)
-3. View velocity trends
-4. Analyze team performance
-5. Track completion rates
+### Backend (`server/`)
 
-## Contributing
+| Command | Description |
+|---|---|
+| `npm run dev` | tsx watch mode |
+| `npm run build` | Compile TypeScript to `dist/` |
+| `npm start` | Run compiled production build |
+| `npm test` | Vitest tests (requires PostgreSQL) |
+| `npm run db:migrate:latest` | Run pending migrations |
+| `npm run db:migrate:rollback` | Rollback last migration batch |
+| `npm run db:migrate:make <name>` | Create a new migration |
 
-1. Fork the repository
-2. Create your feature branch (\`git checkout -b feature/AmazingFeature\`)
-3. Commit your changes (\`git commit -m 'Add some AmazingFeature'\`)
-4. Push to the branch (\`git push origin feature/AmazingFeature\`)
-5. Open a Pull Request
+## Testing
+
+- **Frontend unit tests**: Vitest + jsdom + React Testing Library
+- **Backend tests**: Vitest against a real PostgreSQL database (`scrum_tools_test`)
+- **E2E tests**: Playwright across Chromium, Firefox, and WebKit
+
+```bash
+# Frontend tests
+npm test
+
+# Backend tests
+cd server && npm test
+
+# E2E tests (auto-starts Vite dev server)
+npm run test:e2e
+```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- [Chakra UI](https://chakra-ui.com/) for the component library
-- [Socket.io](https://socket.io/) for real-time functionality
-- [Chart.js](https://www.chartjs.org/) for data visualization
-- All contributors who have helped improve this project
+MIT

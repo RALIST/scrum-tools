@@ -14,7 +14,6 @@ npm run dev              # Vite dev server at http://localhost:5173
 npm run build            # Production build
 npm run lint             # ESLint (zero warnings enforced)
 npm run lint:fix         # ESLint with auto-fix
-npm run format           # Prettier format
 npm test                 # Vitest unit tests (single run)
 npm run test:e2e         # Playwright E2E tests (starts Vite dev server automatically)
 ```
@@ -23,7 +22,7 @@ npm run test:e2e         # Playwright E2E tests (starts Vite dev server automati
 ```bash
 npm run dev              # tsx watch mode
 npm run build            # TypeScript compile to dist/
-npm test                 # Jest tests (requires running PostgreSQL)
+npm test                 # Vitest tests (requires running PostgreSQL)
 npm run db:migrate:latest    # Run Knex migrations
 npm run db:migrate:rollback  # Rollback last migration
 npm run db:migrate:make <name>  # Create new migration
@@ -71,12 +70,11 @@ Two typed namespaces: `/poker` and `/retro`. Event types defined in `server/type
 ## Testing
 
 - **Frontend unit tests**: Vitest + jsdom + React Testing Library. Config in `vitest.config.ts`. Tests in `src/**/*.{test,spec}.{ts,tsx}`.
-- **Backend tests**: Jest with ts-jest ESM preset. Config in `server/jest.config.js`. Tests in `server/__tests__/`. Requires real PostgreSQL — no mocks for DB.
+- **Backend tests**: Vitest. Config in `server/vitest.config.ts`. Tests in `server/__tests__/`. Requires real PostgreSQL — no mocks for DB.
 - **E2E**: Playwright (Chromium, Firefox, WebKit). Config in `playwright.config.ts`. Tests in `e2e/` directory.
 
 ## Key Conventions
 
 - **Backend ESM imports require `.js` extensions** — e.g., `import foo from './bar.js'` even for `.ts` source files (NodeNext module resolution)
-- **Pre-commit hook**: runs `lint-staged` (Prettier + ESLint fix on staged files)
 - **Knex migrations use `.cjs` extension** (CommonJS required)
 - Frontend ESLint excludes `server/` directory — server has its own linting context
