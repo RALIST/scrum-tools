@@ -17,6 +17,7 @@ import { type FC, useState, useEffect, useCallback, Suspense, lazy } from 'react
 import { AddSprintModal } from '../../components/modals';
 import PageContainer from '../../components/PageContainer';
 import PageHelmet from '../../components/PageHelmet';
+import RelatedTools from '../../components/RelatedTools';
 import SeoText from '../../components/SeoText';
 import { VelocityStats, TeamSetupForm, WorkspaceTeamHeader } from '../../components/velocity';
 import config from '../../config';
@@ -381,20 +382,52 @@ const TeamVelocity: FC = () => {
   };
   // --- End React Query Mutation ---
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: 'Team Velocity Tracker',
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Any',
-    description: teamVelocitySeo.description,
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'USD',
+  const jsonLd: Record<string, unknown>[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Team Velocity Tracker',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Any',
+      description: teamVelocitySeo.description,
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+      featureList: teamVelocitySeo.content.features,
     },
-    featureList: teamVelocitySeo.content.features,
-  };
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: teamVelocitySeoSections.map(section => ({
+        '@type': 'Question',
+        name: section.title,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${section.description} ${section.items.join('. ')}.`,
+        },
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://scrumtools.app/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Team Velocity Tracker',
+          item: 'https://scrumtools.app/velocity',
+        },
+      ],
+    },
+  ];
 
   // Loading state for initial auth/workspace check
   if (isAuthLoading || (isAuthenticated && isWorkspaceLoading)) {
@@ -481,6 +514,8 @@ const TeamVelocity: FC = () => {
 
           <Divider my={8} />
           <SeoText sections={teamVelocitySeoSections} />
+
+          <RelatedTools currentPath="/velocity" />
         </VStack>
       </Container>
 

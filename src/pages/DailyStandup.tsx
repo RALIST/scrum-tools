@@ -30,6 +30,7 @@ import { type FC, useState, useEffect, useCallback } from "react";
 import { AddTeamMemberModal } from "../components/modals";
 import PageContainer from "../components/PageContainer";
 import PageHelmet from "../components/PageHelmet";
+import RelatedTools from "../components/RelatedTools";
 import SeoText from "../components/SeoText";
 import config from "../config";
 import {
@@ -354,20 +355,52 @@ const DailyStandup: FC = () => {
     return formatTime(totalSeconds);
   };
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: "Daily Standup Timer",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Any",
-    description: dailyStandupSeo.description,
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
+  const jsonLd: Record<string, unknown>[] = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: "Daily Standup Timer",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      description: dailyStandupSeo.description,
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+      featureList: dailyStandupSeo.content.features,
     },
-    featureList: dailyStandupSeo.content.features,
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: dailyStandupSeoSections.map(section => ({
+        "@type": "Question",
+        name: section.title,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${section.description} ${section.items.join(". ")}.`,
+        },
+      })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://scrumtools.app/",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Daily Standup Timer",
+          item: "https://scrumtools.app/daily-standup",
+        },
+      ],
+    },
+  ];
 
   return (
     <PageContainer>
@@ -506,6 +539,8 @@ const DailyStandup: FC = () => {
           <Divider my={8} />
 
           <SeoText sections={dailyStandupSeoSections} />
+
+          <RelatedTools currentPath="/daily-standup" />
         </VStack>
       </Container>
 

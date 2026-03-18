@@ -17,6 +17,7 @@ import PageContainer from '../../components/PageContainer';
 import PageHelmet from '../../components/PageHelmet';
 import { PokerLandingActions } from '../../components/poker/PokerLandingActions';
 import { RoomListTable, type Room } from '../../components/poker/RoomListTable'; // Import Room type too
+import RelatedTools from '../../components/RelatedTools';
 import SeoText from '../../components/SeoText';
 import config from '../../config';
 import type { SequenceType } from '../../constants/poker'; // Keep SequenceType
@@ -118,27 +119,59 @@ const PlanningPoker: FC = () => {
   }, [isError, error, toast]);
   // --- End React Query ---
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: 'Planning Poker - Online Estimation Tool',
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Any',
-    description:
-      'Free online Planning Poker tool for agile teams. Real-time story point estimation with your team. No registration required.',
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'USD',
+  const jsonLd: Record<string, unknown>[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Planning Poker - Online Estimation Tool',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Any',
+      description:
+        'Free online Planning Poker tool for agile teams. Real-time story point estimation with your team. No registration required.',
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+      featureList: [
+        'Real-time team collaboration',
+        'Multiple estimation sequences',
+        'Password-protected rooms',
+        'Instant voting results',
+        'No registration required',
+      ],
     },
-    featureList: [
-      'Real-time team collaboration',
-      'Multiple estimation sequences',
-      'Password-protected rooms',
-      'Instant voting results',
-      'No registration required',
-    ],
-  };
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: planningPokerSeoSections.map(section => ({
+        '@type': 'Question',
+        name: section.title,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${section.description} ${section.items.join('. ')}.`,
+        },
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://scrumtools.app/',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Planning Poker',
+          item: 'https://scrumtools.app/planning-poker',
+        },
+      ],
+    },
+  ];
 
   // Remove loadRooms and the useEffect that calls it
 
@@ -303,6 +336,8 @@ const PlanningPoker: FC = () => {
           <Divider my={8} />
 
           <SeoText sections={planningPokerSeoSections} />
+
+          <RelatedTools currentPath="/planning-poker" />
         </VStack>
       </Box>
     </PageContainer>

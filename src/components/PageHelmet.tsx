@@ -7,11 +7,12 @@ interface PageHelmetProps {
   keywords: string;
   canonicalUrl?: string;
   imageUrl?: string;
-  jsonLd?: Record<string, unknown>;
+  robots?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const PageHelmet: FC<PageHelmetProps> = memo(
-  ({ title, description, keywords, canonicalUrl, imageUrl, jsonLd }) => {
+  ({ title, description, keywords, canonicalUrl, imageUrl, robots, jsonLd }) => {
     // Memoize the default JSON-LD to avoid recreation on every render
     const defaultJsonLd = useMemo(
       () => ({
@@ -32,8 +33,14 @@ const PageHelmet: FC<PageHelmetProps> = memo(
     // Memoize the final JSON-LD computation
     const finalJsonLd = useMemo(() => jsonLd ?? defaultJsonLd, [jsonLd, defaultJsonLd]);
 
+    // Normalize to array for rendering
+    const jsonLdItems = useMemo(
+      () => (Array.isArray(finalJsonLd) ? finalJsonLd : [finalJsonLd]),
+      [finalJsonLd]
+    );
+
     // Memoize the image URL computation
-    const finalImageUrl = useMemo(() => imageUrl ?? '/og-image.svg', [imageUrl]);
+    const finalImageUrl = useMemo(() => imageUrl ?? 'https://scrumtools.app/og-image.png', [imageUrl]);
 
     return (
       <Helmet>
@@ -42,6 +49,7 @@ const PageHelmet: FC<PageHelmetProps> = memo(
         <meta name="description" content={description} />
         <meta name="keywords" content={keywords} />
         {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
+        {robots ? <meta name="robots" content={robots} /> : null}
 
         {/* Open Graph */}
         <meta property="og:title" content={title} />
@@ -58,7 +66,11 @@ const PageHelmet: FC<PageHelmetProps> = memo(
         <meta name="twitter:image" content={finalImageUrl} />
 
         {/* JSON-LD Structured Data */}
-        <script type="application/ld+json">{JSON.stringify(finalJsonLd)}</script>
+        {jsonLdItems.map((item) => (
+          <script key={(item as Record<string, string>)['@type'] ?? 'jsonld'} type="application/ld+json">
+            {JSON.stringify(item)}
+          </script>
+        ))}
       </Helmet>
     );
   }

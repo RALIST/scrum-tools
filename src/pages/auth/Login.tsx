@@ -17,6 +17,7 @@ import {
 import { type FC, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import PageHelmet from "../../components/PageHelmet";
+import config from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext"; // Import useWorkspace
 import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest for accepting invite
@@ -143,7 +144,8 @@ const Login: FC = () => {
         title="Login - Scrum Tools"
         description="Log in to your Scrum Tools account to access your workspaces and teams."
         keywords="scrum tools, login, agile, team management"
-        canonicalUrl="/login"
+        canonicalUrl={`${config.siteUrl}/login`}
+        robots="noindex, nofollow"
       />
 
       <VStack

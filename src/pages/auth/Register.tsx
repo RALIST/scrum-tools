@@ -17,6 +17,7 @@ import {
 import { type FC, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import PageHelmet from "../../components/PageHelmet";
+import config from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext"; // Import useWorkspace
 import { apiRequest } from "../../utils/apiUtils"; // Import apiRequest
@@ -162,7 +163,8 @@ const Register: FC = () => {
         title="Register - Scrum Tools"
         description="Create a new Scrum Tools account to access team workspaces and collaboration features."
         keywords="scrum tools, register, sign up, agile, team management"
-        canonicalUrl="/register"
+        canonicalUrl={`${config.siteUrl}/register`}
+        robots="noindex, nofollow"
       />
 
       <VStack

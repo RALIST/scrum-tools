@@ -41,7 +41,7 @@ const Footer: FC = () => {
               fontSize="sm"
               color="link.accent"
             >
-              Contactme: dev@scrumtools.app
+              Contact: dev@scrumtools.app
             </Link>
           </HStack>
         </HStack>

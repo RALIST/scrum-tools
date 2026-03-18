@@ -24,6 +24,7 @@ import {
 import React, { type FC, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHelmet from '../components/PageHelmet';
+import config from '../config';
 import { useAuth } from '../contexts/AuthContext';
 
 const Profile: FC = () => {
@@ -75,7 +76,8 @@ const Profile: FC = () => {
         title="My Profile - Scrum Tools"
         description="Manage your Scrum Tools profile and account settings"
         keywords="scrum profile, account settings, user profile"
-        canonicalUrl="/profile"
+        canonicalUrl={`${config.siteUrl}/profile`}
+        robots="noindex, nofollow"
       />
       
       <Heading size="xl" mb={6}>My Profile</Heading>

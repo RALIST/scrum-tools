@@ -27,6 +27,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; /
 import { type FC, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHelmet from "../../components/PageHelmet";
+import RelatedTools from "../../components/RelatedTools";
 import SeoText from "../../components/SeoText";
 import config from "../../config";
 import { retroBoardSeoSections } from "../../content/retroBoardSeo";
@@ -78,32 +79,64 @@ const RetroLanding: FC = () => {
     hideAuthorNames: false,
   });
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Sprint Retrospective Board",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Any",
-    description:
-      "Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved. Features include real-time voting, timer control, and card management.",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
+  const jsonLd: Record<string, unknown>[] = [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Sprint Retrospective Board",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      description:
+        "Free online retrospective board for agile teams. Collaborate with your team to identify what went well and what could be improved. Features include real-time voting, timer control, and card management.",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+      featureList: [
+        "Real-time team collaboration",
+        "Three-column retro format",
+        "Action item tracking",
+        "Card voting system",
+        "Timer control",
+        "Card visibility toggle",
+        "Author name management",
+        "No registration required",
+        "Instant board sharing",
+        "Password protection option",
+      ],
     },
-    featureList: [
-      "Real-time team collaboration",
-      "Three-column retro format",
-      "Action item tracking",
-      "Card voting system",
-      "Timer control",
-      "Card visibility toggle",
-      "Author name management",
-      "No registration required",
-      "Instant board sharing",
-      "Password protection option",
-    ],
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: retroBoardSeoSections.map(section => ({
+        "@type": "Question",
+        name: section.title,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${section.description} ${section.items.join(". ")}.`,
+        },
+      })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://scrumtools.app/",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Retro Board",
+          item: "https://scrumtools.app/retro",
+        },
+      ],
+    },
+  ];
 
   // Update workspaceId when currentWorkspace changes
   useEffect(() => {
@@ -491,6 +524,8 @@ const RetroLanding: FC = () => {
           <Divider my={8} />
 
           <SeoText sections={retroBoardSeoSections} />
+
+          <RelatedTools currentPath="/retro" />
         </VStack>
       </Box>
     </>

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'; // Import useQuery
 import { type FC, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { JoinRetroBoardModal } from '../../components/modals';
+import PageHelmet from '../../components/PageHelmet';
 import RetroBoardView from '../../components/retro/RetroBoardView';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -283,6 +284,7 @@ const RetroBoard: FC = () => {
 
   // Board View Check: Show only if joined and socketBoard data exists
   if (hasJoined && socketBoard) {
+    const boardTitle = socketBoard.name ? `${socketBoard.name} - Retro Board | Scrum Tools` : 'Retro Board | Scrum Tools';
     // Determine the name to display, falling back to localStorage if state is null/empty
     // This ensures the header shows the name immediately after joining.
     let nameToDisplay = userName;
@@ -300,6 +302,13 @@ const RetroBoard: FC = () => {
     nameToDisplay = nameToDisplay ?? '';
 
     return (
+      <>
+      <PageHelmet
+        title={boardTitle}
+        description="Retrospective board session on Scrum Tools."
+        keywords="retro board, retrospective, agile"
+        robots="noindex, nofollow"
+      />
       <RetroBoardView
         board={socketBoard} // Use data from socket hook
         userName={nameToDisplay} // Pass the potentially corrected name
@@ -316,6 +325,7 @@ const RetroBoard: FC = () => {
         onUpdateSettings={updateSettings}
         isNameFixed={isNameFixed}
       />
+      </>
     );
   }
 

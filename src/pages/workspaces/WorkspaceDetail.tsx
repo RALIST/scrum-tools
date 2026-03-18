@@ -21,6 +21,7 @@ import PageHelmet from '../../components/PageHelmet';
 import WorkspaceDetailHeader from '../../components/workspaces/WorkspaceDetailHeader';
 import WorkspaceMembersPanel from '../../components/workspaces/WorkspaceMembersPanel';
 import WorkspaceToolsPanel from '../../components/workspaces/WorkspaceToolsPanel';
+import config from '../../config';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useWorkspaceData } from '../../hooks/useWorkspaceData';
@@ -159,7 +160,8 @@ const WorkspaceDetail: FC = () => {
         title={`${workspace.name} - Workspace | Scrum Tools`}
         description={`Manage your "${workspace.name}" workspace, team members, and Scrum tools.`}
         keywords="scrum workspace, team management, agile teams, collaboration"
-        canonicalUrl={`/workspaces/${workspaceId ?? ''}`}
+        canonicalUrl={`${config.siteUrl}/workspaces/${workspaceId ?? ''}`}
+        robots="noindex, nofollow"
       />
 
       <WorkspaceDetailHeader

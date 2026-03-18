@@ -20,6 +20,8 @@ import {
   Link as RouterLink,
 } from "react-router-dom";
 import PageContainer from "../../components/PageContainer";
+import PageHelmet from "../../components/PageHelmet";
+import config from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { apiRequest } from "../../utils/apiUtils";
@@ -130,6 +132,13 @@ const JoinWorkspacePage: FC = () => {
 
   return (
     <PageContainer>
+      <PageHelmet
+        title="Join Workspace - Scrum Tools"
+        description="Accept a workspace invitation and join your team on Scrum Tools."
+        keywords="scrum tools, join workspace, team invitation"
+        canonicalUrl={`${config.siteUrl}/join-workspace`}
+        robots="noindex, nofollow"
+      />
       <Center minH="60vh">
         <VStack spacing={6}>
           <Heading>Join Workspace</Heading>

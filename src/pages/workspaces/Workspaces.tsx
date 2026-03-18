@@ -27,6 +27,7 @@ import {
 import { type FC, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import PageHelmet from "../../components/PageHelmet";
+import config from "../../config";
 import { useWorkspace, type Workspace } from "../../contexts/WorkspaceContext";
 
 const Workspaces: FC = () => {
@@ -85,7 +86,8 @@ const Workspaces: FC = () => {
         title="My Workspaces - Scrum Tools"
         description="Manage your Scrum workspaces and teams. Access your planning poker sessions, retro boards, and more."
         keywords="scrum workspaces, team management, agile workspaces, collaboration"
-        canonicalUrl="/workspaces"
+        canonicalUrl={`${config.siteUrl}/workspaces`}
+        robots="noindex, nofollow"
       />
 
       <HStack justify="space-between" mb={6}>
