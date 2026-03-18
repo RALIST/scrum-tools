@@ -1,0 +1,39 @@
+{
+  "env": {
+    "ENABLE_LSP_TOOL": "1",
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "128000",
+    "MAX_THINKING_TOKENS": "31999",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "WebSearch",
+      "WebFetch",
+      "Skill",
+      "Task",
+      "TodoWrite",
+      "Glob",
+      "Grep",
+      "Bash",
+      "mcp__ide__**",
+      "mcp__plugin_context7_**"
+    ]
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "explanatory-output-style@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {},
+  "enableAllProjectMcpServers": true
+}
