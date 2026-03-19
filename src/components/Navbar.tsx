@@ -71,6 +71,24 @@ const NavLinks: FC = () => (
     >
       Team Velocity
     </Link>
+    <Link
+      as={RouterLink}
+      to="/blog"
+      fontSize="lg"
+      fontWeight="bold"
+      _hover={{ textDecoration: "none", color: "blue.500" }}
+    >
+      Blog
+    </Link>
+    <Link
+      as={RouterLink}
+      to="/faq"
+      fontSize="lg"
+      fontWeight="bold"
+      _hover={{ textDecoration: "none", color: "blue.500" }}
+    >
+      FAQ
+    </Link>
   </>
 );
 
@@ -277,6 +295,12 @@ const Navbar: FC = () => {
                   </MenuItem>
                   <MenuItem as={RouterLink} to="/velocity">
                     Team Velocity
+                  </MenuItem>
+                  <MenuItem as={RouterLink} to="/blog">
+                    Blog
+                  </MenuItem>
+                  <MenuItem as={RouterLink} to="/faq">
+                    FAQ
                   </MenuItem>
                   <Divider />
                   {isAuthenticated ? (

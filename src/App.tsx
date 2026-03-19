@@ -28,6 +28,18 @@ const RetroLanding = lazy(async () => import('./pages/retro/RetroLanding'));
 // Velocity routes
 const TeamVelocity = lazy(async () => import('./pages/velocity/TeamVelocity'));
 
+// Blog routes
+const BlogIndex = lazy(async () => import('./pages/blog/BlogIndex'));
+const BlogPost = lazy(async () => import('./pages/blog/BlogPost'));
+const BlogTagPage = lazy(async () => import('./pages/blog/BlogTagPage'));
+
+// FAQ
+const FaqPage = lazy(async () => import('./pages/FaqPage'));
+
+// Comparison routes
+const CompareIndex = lazy(async () => import('./pages/compare/CompareIndex'));
+const ComparisonPage = lazy(async () => import('./pages/compare/ComparisonPage'));
+
 // Auth routes
 const Login = lazy(async () => import('./pages/auth/Login'));
 const Register = lazy(async () => import('./pages/auth/Register'));
@@ -68,6 +80,12 @@ const App: FC = () => {
                       <Route path="/retro/:boardId" element={<RetroBoard />} />
                       <Route path="/velocity" element={<TeamVelocity />} />
                       <Route path="/daily-standup" element={<DailyStandup />} />
+                      <Route path="/blog" element={<BlogIndex />} />
+                      <Route path="/blog/:slug" element={<BlogPost />} />
+                      <Route path="/blog/tag/:tag" element={<BlogTagPage />} />
+                      <Route path="/faq" element={<FaqPage />} />
+                      <Route path="/compare" element={<CompareIndex />} />
+                      <Route path="/compare/:tool" element={<ComparisonPage />} />
                       {/* Workspace Invitation Route */}
                       <Route path="/join-workspace" element={<JoinWorkspacePage />} />
 

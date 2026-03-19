@@ -7,6 +7,7 @@ import {
   Spacer,
 } from "@chakra-ui/react";
 import type { FC } from "react";
+import { Link as RouterLink } from "react-router-dom";
 
 const Footer: FC = () => {
   return (
@@ -27,6 +28,30 @@ const Footer: FC = () => {
           </Text>
           <Spacer />
           <HStack spacing={4}>
+            <Link
+              as={RouterLink}
+              to="/blog"
+              fontSize="sm"
+              color="link.accent"
+            >
+              Blog
+            </Link>
+            <Link
+              as={RouterLink}
+              to="/faq"
+              fontSize="sm"
+              color="link.accent"
+            >
+              FAQ
+            </Link>
+            <Link
+              as={RouterLink}
+              to="/compare"
+              fontSize="sm"
+              color="link.accent"
+            >
+              Compare
+            </Link>
             <Link
               href="https://online-dev-tools.com/"
               isExternal

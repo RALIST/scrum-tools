@@ -23,6 +23,7 @@ export default defineConfig({
           ui: ['@chakra-ui/react', '@emotion/react', '@emotion/styled', 'framer-motion'],
           charts: ['chart.js', 'react-chartjs-2'],
           utils: ['date-fns', 'socket.io-client'],
+          markdown: ['react-markdown'],
         },
       },
     },
