@@ -61,6 +61,14 @@ const Footer: FC = () => {
               Online Dev Tools
             </Link>
             <Link
+              href="https://authr.app/en/"
+              isExternal
+              fontSize="sm"
+              color="link.accent"
+            >
+              Writer Studio
+            </Link>
+            <Link
               href="mailto:dev@scrumtools.app"
               isExternal
               fontSize="sm"
